@@ -1,5 +1,5 @@
+﻿'use client'
 export const dynamic = 'force-dynamic'
-'use client'
 import { useEffect, useState } from 'react'
 import { Home, Users, GitMerge, TrendingUp, ArrowRight, DollarSign, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -11,7 +11,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 
-// ── Tipos ──────────────────────────────────────────────────────────────────
+// â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Imovel {
   id: string; titulo: string; preco: number; cidade: string; bairro: string
   finalidade: string; status: string
@@ -24,12 +24,12 @@ interface Match {
   perfil: { clienteNome: string }
 }
 
-// ── Constantes ─────────────────────────────────────────────────────────────
+// â”€â”€ Constantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STATUS_FUNIL = [
   { key: 'NOTIFICADO',    label: 'Notificado',    color: '#94A3B8' },
   { key: 'VISUALIZADO',   label: 'Visualizado',   color: '#60A5FA' },
   { key: 'INTERESSADO',   label: 'Interessado',   color: '#FBBF24' },
-  { key: 'EM_NEGOCIACAO', label: 'Em negociação', color: '#F97316' },
+  { key: 'EM_NEGOCIACAO', label: 'Em negociaÃ§Ã£o', color: '#F97316' },
   { key: 'FECHADO',       label: 'Fechado',       color: '#34D399' },
   { key: 'DESCARTADO',    label: 'Descartado',    color: '#F87171' },
 ]
@@ -44,7 +44,7 @@ const STATUS_BADGE: Record<string, string> = {
 }
 const STATUS_LABEL: Record<string, string> = {
   NOTIFICADO: 'Notificado', VISUALIZADO: 'Visualizado', INTERESSADO: 'Interessado',
-  EM_NEGOCIACAO: 'Em negociação', FECHADO: 'Fechado', DESCARTADO: 'Descartado',
+  EM_NEGOCIACAO: 'Em negociaÃ§Ã£o', FECHADO: 'Fechado', DESCARTADO: 'Descartado',
 }
 
 const DONUT_COLORS = ['#3B82F6','#8B5CF6','#F59E0B','#10B981','#EF4444','#06B6D4','#EC4899']
@@ -53,7 +53,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-// ── Componente Donut simples ───────────────────────────────────────────────
+// â”€â”€ Componente Donut simples â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DonutChart({ data, title }: { data: { name: string; value: number }[]; title: string }) {
   const total = data.reduce((s, d) => s + d.value, 0)
   return (
@@ -84,7 +84,7 @@ function DonutChart({ data, title }: { data: { name: string; value: number }[]; 
   )
 }
 
-// ── Página ─────────────────────────────────────────────────────────────────
+// â”€â”€ PÃ¡gina â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function DashboardPage() {
   const [imoveis,  setImoveis]  = useState<Imovel[]>([])
   const [perfis,   setPerfis]   = useState<Perfil[]>([])
@@ -101,7 +101,7 @@ export default function DashboardPage() {
     }).finally(() => setLoading(false))
   }, [])
 
-  // ── Derivações ──
+  // â”€â”€ DerivaÃ§Ãµes â”€â”€
   const hoje        = new Date().toDateString()
   const disponiveis = imoveis.filter((i) => i.status === 'DISPONIVEL').length
   const vendidos    = imoveis.filter((i) => ['VENDIDO', 'ALUGADO'].includes(i.status)).length
@@ -119,48 +119,48 @@ export default function DashboardPage() {
     color: s.color,
   }))
 
-  // Donut — tipos de imóvel
+  // Donut â€” tipos de imÃ³vel
   const tiposMap: Record<string, number> = {}
   imoveis.forEach((i) => { tiposMap[i.tipo?.nome ?? 'Outros'] = (tiposMap[i.tipo?.nome ?? 'Outros'] ?? 0) + 1 })
   const tiposData = Object.entries(tiposMap).map(([name, value]) => ({ name, value }))
 
-  // Donut — finalidade
+  // Donut â€” finalidade
   const finalidadeData = [
     { name: 'Venda',   value: imoveis.filter((i) => i.finalidade === 'VENDA').length   },
     { name: 'Aluguel', value: imoveis.filter((i) => i.finalidade === 'ALUGUEL').length },
   ].filter((d) => d.value > 0)
 
-  // Imóveis sem match
+  // ImÃ³veis sem match
   const idsComMatch = new Set(matches.map((m) => m.imovel.id))
   const imoveisSemMatch = imoveis
     .filter((i) => i.status === 'DISPONIVEL' && !idsComMatch.has(i.id))
     .slice(0, 6)
 
-  const Skeleton = () => <span className="text-muted-foreground/30">—</span>
+  const Skeleton = () => <span className="text-muted-foreground/30">â€”</span>
 
   return (
     <div className="space-y-6">
-      {/* ── Cabeçalho ── */}
+      {/* â”€â”€ CabeÃ§alho â”€â”€ */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Visão geral da sua imobiliária</p>
+        <p className="text-sm text-muted-foreground mt-0.5">VisÃ£o geral da sua imobiliÃ¡ria</p>
       </div>
 
-      {/* ── KPIs ── */}
+      {/* â”€â”€ KPIs â”€â”€ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Imóveis */}
+        {/* ImÃ³veis */}
         <Card className="rounded-xl shadow-sm border-l-4 border-l-blue-500">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Imóveis</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">ImÃ³veis</p>
                 <p className="text-3xl font-bold mt-2 tabular-nums">
                   {loading ? <Skeleton /> : imoveis.length}
                 </p>
                 {!loading && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    <span className="text-emerald-600 font-medium">{disponiveis} disponíveis</span>
-                    {vendidos > 0 && ` · ${vendidos} concluídos`}
+                    <span className="text-emerald-600 font-medium">{disponiveis} disponÃ­veis</span>
+                    {vendidos > 0 && ` Â· ${vendidos} concluÃ­dos`}
                   </p>
                 )}
               </div>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
                   {loading ? <Skeleton /> : perfis.length}
                 </p>
                 {!loading && (
-                  <p className="text-xs text-muted-foreground mt-1">clientes buscando imóvel</p>
+                  <p className="text-xs text-muted-foreground mt-1">clientes buscando imÃ³vel</p>
                 )}
               </div>
               <div className="p-2.5 rounded-xl bg-violet-50 shrink-0">
@@ -203,7 +203,7 @@ export default function DashboardPage() {
                 {!loading && (
                   <p className="text-xs text-muted-foreground mt-1">
                     <span className="text-emerald-600 font-medium">{taxaConv}% convertidos</span>
-                    {matchesHoje > 0 && ` · ${matchesHoje} hoje`}
+                    {matchesHoje > 0 && ` Â· ${matchesHoje} hoje`}
                   </p>
                 )}
               </div>
@@ -214,20 +214,20 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Ticket médio */}
+        {/* Ticket mÃ©dio */}
         <Card className="rounded-xl shadow-sm border-l-4 border-l-amber-500">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ticket médio</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ticket mÃ©dio</p>
                 <p className="text-2xl font-bold mt-2 tabular-nums">
                   {loading ? <Skeleton /> : formatCurrency(ticketMedio)}
                 </p>
                 {!loading && (
                   <p className="text-xs text-muted-foreground mt-1">
                     {fechados > 0
-                      ? <span className="text-emerald-600 font-medium">{fechados} negócio(s) fechado(s)</span>
-                      : 'média dos imóveis ativos'}
+                      ? <span className="text-emerald-600 font-medium">{fechados} negÃ³cio(s) fechado(s)</span>
+                      : 'mÃ©dia dos imÃ³veis ativos'}
                   </p>
                 )}
               </div>
@@ -239,7 +239,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* ── Gráficos: Funil + Donuts ── */}
+      {/* â”€â”€ GrÃ¡ficos: Funil + Donuts â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Funil de matches (ocupa 1/3) */}
         <Card className="rounded-xl shadow-sm lg:col-span-1">
@@ -272,18 +272,18 @@ export default function DashboardPage() {
         </Card>
 
         {/* Donut tipos */}
-        <DonutChart data={tiposData} title="Imóveis por tipo" />
+        <DonutChart data={tiposData} title="ImÃ³veis por tipo" />
 
         {/* Donut finalidade */}
-        <DonutChart data={finalidadeData} title="Imóveis por finalidade" />
+        <DonutChart data={finalidadeData} title="ImÃ³veis por finalidade" />
       </div>
 
-      {/* ── Linha inferior: Últimos matches + Imóveis sem match ── */}
+      {/* â”€â”€ Linha inferior: Ãšltimos matches + ImÃ³veis sem match â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Últimos matches */}
+        {/* Ãšltimos matches */}
         <Card className="rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-sm font-semibold">Últimos matches</CardTitle>
+            <CardTitle className="text-sm font-semibold">Ãšltimos matches</CardTitle>
             <Link href="/dashboard/matches"
               className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
               Ver todos <ArrowRight className="h-3.5 w-3.5" />
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{m.imovel.titulo}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {m.perfil.clienteNome} · {m.imovel.cidade} · {formatDate(m.createdAt)}
+                        {m.perfil.clienteNome} Â· {m.imovel.cidade} Â· {formatDate(m.createdAt)}
                       </p>
                     </div>
                     <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[m.status] ?? ''}`}>
@@ -317,12 +317,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Imóveis sem match */}
+        {/* ImÃ³veis sem match */}
         <Card className="rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-amber-500" />
-              Imóveis disponíveis sem match
+              ImÃ³veis disponÃ­veis sem match
             </CardTitle>
             <Link href="/dashboard/imoveis"
               className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
@@ -337,8 +337,8 @@ export default function DashboardPage() {
                 <TrendingUp className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
                 <p className="text-sm text-muted-foreground">
                   {imoveis.filter((i) => i.status === 'DISPONIVEL').length === 0
-                    ? 'Nenhum imóvel disponível cadastrado.'
-                    : '✅ Todos os imóveis disponíveis têm match!'}
+                    ? 'Nenhum imÃ³vel disponÃ­vel cadastrado.'
+                    : 'âœ… Todos os imÃ³veis disponÃ­veis tÃªm match!'}
                 </p>
               </div>
             ) : (
@@ -348,7 +348,7 @@ export default function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{i.titulo}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {i.tipo?.nome} · {i.bairro}, {i.cidade} · {formatCurrency(i.preco)}
+                        {i.tipo?.nome} Â· {i.bairro}, {i.cidade} Â· {formatCurrency(i.preco)}
                       </p>
                     </div>
                     <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -362,7 +362,7 @@ export default function DashboardPage() {
                 ))}
                 {imoveis.filter((i) => i.status === 'DISPONIVEL' && !idsComMatch.has(i.id)).length > 6 && (
                   <p className="text-xs text-muted-foreground pt-2 text-center">
-                    +{imoveis.filter((i) => i.status === 'DISPONIVEL' && !idsComMatch.has(i.id)).length - 6} imóveis sem match
+                    +{imoveis.filter((i) => i.status === 'DISPONIVEL' && !idsComMatch.has(i.id)).length - 6} imÃ³veis sem match
                   </p>
                 )}
               </div>

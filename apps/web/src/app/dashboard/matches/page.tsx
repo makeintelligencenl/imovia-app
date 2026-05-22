@@ -1,5 +1,5 @@
+﻿'use client'
 export const dynamic = 'force-dynamic'
-'use client'
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { GitMerge, Search, X, Home, Users } from 'lucide-react'
@@ -38,8 +38,8 @@ const STATUS_OPTIONS = [
   { value: 'NOTIFICADO',    label: 'Notificado',    color: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'   },
   { value: 'VISUALIZADO',   label: 'Visualizado',   color: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'       },
   { value: 'INTERESSADO',   label: 'Interessado',   color: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'    },
-  { value: 'EM_NEGOCIACAO', label: 'Em negociação', color: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' },
-  { value: 'FECHADO',       label: 'Fechado ✓',     color: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
+  { value: 'EM_NEGOCIACAO', label: 'Em negociaÃ§Ã£o', color: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' },
+  { value: 'FECHADO',       label: 'Fechado âœ“',     color: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
   { value: 'DESCARTADO',    label: 'Descartado',    color: 'bg-red-50 text-red-600 ring-1 ring-red-200'          },
 ]
 
@@ -69,7 +69,7 @@ export default function MatchesPage() {
   const [filtroStatus,     setFiltroStatus]     = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
 
-  // Paginação
+  // PaginaÃ§Ã£o
   const [page, setPage]         = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -89,7 +89,7 @@ export default function MatchesPage() {
     }
   }
 
-  // ── Filtro client-side ──
+  // â”€â”€ Filtro client-side â”€â”€
   const matchesFiltrados = matches.filter((m) => {
     // Filtro por URL (vindo do overlay)
     if (urlImovelId && m.imovel.id !== urlImovelId) return false
@@ -123,7 +123,7 @@ export default function MatchesPage() {
 
   return (
     <div className="space-y-4">
-      {/* ── Cabeçalho ── */}
+      {/* â”€â”€ CabeÃ§alho â”€â”€ */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Matches</h1>
@@ -135,14 +135,14 @@ export default function MatchesPage() {
         </div>
       </div>
 
-      {/* ── Banner de contexto (vindo do overlay de match) ── */}
+      {/* â”€â”€ Banner de contexto (vindo do overlay de match) â”€â”€ */}
       {(urlImovelId || urlPerfilId) && urlLabel && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
           {urlImovelId
             ? <Home className="h-4 w-4 shrink-0" />
             : <Users className="h-4 w-4 shrink-0" />}
           <span className="flex-1">
-            {urlImovelId ? 'Imóvel: ' : 'Cliente: '}
+            {urlImovelId ? 'ImÃ³vel: ' : 'Cliente: '}
             <span className="font-semibold">{urlLabel}</span>
           </span>
           <button
@@ -155,7 +155,7 @@ export default function MatchesPage() {
         </div>
       )}
 
-      {/* ── Filtros ── */}
+      {/* â”€â”€ Filtros â”€â”€ */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
@@ -165,7 +165,7 @@ export default function MatchesPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
-                  placeholder="Imóvel, cliente ou cidade..."
+                  placeholder="ImÃ³vel, cliente ou cidade..."
                   value={filtroTexto}
                   onChange={(e) => handleFiltroTexto(e.target.value)}
                 />
@@ -206,15 +206,15 @@ export default function MatchesPage() {
         </CardContent>
       </Card>
 
-      {/* ── Tabela ── */}
+      {/* â”€â”€ Tabela â”€â”€ */}
       <Card className="shadow-sm rounded-xl overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Imóvel</TableHead>
+                <TableHead>ImÃ³vel</TableHead>
                 <TableHead>Tipo / Finalidade</TableHead>
-                <TableHead className="text-right">Preço</TableHead>
+                <TableHead className="text-right">PreÃ§o</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead className="text-center">Data</TableHead>
@@ -235,7 +235,7 @@ export default function MatchesPage() {
                     <p className="text-sm text-muted-foreground">
                       {filtrosAtivos
                         ? 'Nenhum match com esses filtros.'
-                        : 'Nenhum match ainda. Cadastre imóveis para o motor rodar.'}
+                        : 'Nenhum match ainda. Cadastre imÃ³veis para o motor rodar.'}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -256,7 +256,7 @@ export default function MatchesPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span className="text-xs text-muted-foreground">
-                            {match.imovel.tipo?.nome ?? '—'}
+                            {match.imovel.tipo?.nome ?? 'â€”'}
                           </span>
                           <span className={`inline-flex w-fit items-center text-xs font-semibold px-2 py-0.5 rounded-full ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
                             {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}

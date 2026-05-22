@@ -1,5 +1,5 @@
+﻿'use client'
 export const dynamic = 'force-dynamic'
-'use client'
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -66,7 +66,7 @@ export default function PerfisPage() {
   const [matchCount, setMatchCount]     = useState(0)
   const [matchHref, setMatchHref]       = useState('/dashboard/matches')
 
-  // Paginação
+  // PaginaÃ§Ã£o
   const [page, setPage]         = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -85,7 +85,7 @@ export default function PerfisPage() {
 
   useEffect(() => { load() }, [])
 
-  // ── Filtro client-side ──
+  // â”€â”€ Filtro client-side â”€â”€
   const perfisFiltrados = perfis.filter((p) => {
     const texto = filtroTexto.toLowerCase()
     if (texto &&
@@ -112,7 +112,7 @@ export default function PerfisPage() {
 
   const perfisPaginados = perfisFiltrados.slice((page - 1) * pageSize, page * pageSize)
 
-  // ── Abrir criar ──
+  // â”€â”€ Abrir criar â”€â”€
   function abrirCriar() {
     setFormData({ ...BLANK_FORM })
     setTiposSel([])
@@ -120,7 +120,7 @@ export default function PerfisPage() {
     setFormMode('criar')
   }
 
-  // ── Abrir editar ──
+  // â”€â”€ Abrir editar â”€â”€
   function abrirEditar(p: Perfil) {
     setFormData({
       clienteNome:     p.clienteNome,
@@ -151,15 +151,15 @@ export default function PerfisPage() {
     }
   }
 
-  // ── Salvar ──
+  // â”€â”€ Salvar â”€â”€
   async function handleSalvar() {
     if (!formData.clienteNome || !formData.clienteEmail || !formData.finalidade ||
         !formData.precoMin || !formData.precoMax || !formData.areaMin || !formData.cidades) {
-      toast.error('Preencha os campos obrigatórios')
+      toast.error('Preencha os campos obrigatÃ³rios')
       return
     }
     if (tiposSelecionados.length === 0) {
-      toast.error('Selecione pelo menos um tipo de imóvel')
+      toast.error('Selecione pelo menos um tipo de imÃ³vel')
       return
     }
     setSaving(true)
@@ -209,13 +209,13 @@ export default function PerfisPage() {
     }
   }
 
-  // ── Excluir ──
+  // â”€â”€ Excluir â”€â”€
   async function handleExcluir() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
       await api.delete(`/perfis/${deleteTarget.id}`)
-      toast.success('Perfil excluído.')
+      toast.success('Perfil excluÃ­do.')
       setDeleteTarget(null)
       load()
     } catch {
@@ -227,12 +227,12 @@ export default function PerfisPage() {
 
   return (
     <div className="space-y-4">
-      {/* ── Overlay de Match ── */}
+      {/* â”€â”€ Overlay de Match â”€â”€ */}
       {matchCount > 0 && (
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
 
-      {/* ── Cabeçalho ── */}
+      {/* â”€â”€ CabeÃ§alho â”€â”€ */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Perfis de Busca</h1>
@@ -245,7 +245,7 @@ export default function PerfisPage() {
         </Button>
       </div>
 
-      {/* ── Filtros ── */}
+      {/* â”€â”€ Filtros â”€â”€ */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
@@ -273,7 +273,7 @@ export default function PerfisPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Tipo de imóvel</Label>
+              <Label className="text-xs">Tipo de imÃ³vel</Label>
               <Select value={filtroTipo} onValueChange={handleFiltroTipo}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -294,7 +294,7 @@ export default function PerfisPage() {
         </CardContent>
       </Card>
 
-      {/* ── Tabela ── */}
+      {/* â”€â”€ Tabela â”€â”€ */}
       <Card className="shadow-sm rounded-xl overflow-hidden">
         <CardContent className="p-0">
           <Table>
@@ -303,11 +303,11 @@ export default function PerfisPage() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Finalidade</TableHead>
                 <TableHead>Tipos</TableHead>
-                <TableHead>Faixa de preço</TableHead>
-                <TableHead className="text-right">Área mín.</TableHead>
-                <TableHead className="text-center">Quartos mín.</TableHead>
+                <TableHead>Faixa de preÃ§o</TableHead>
+                <TableHead className="text-right">Ãrea mÃ­n.</TableHead>
+                <TableHead className="text-center">Quartos mÃ­n.</TableHead>
                 <TableHead>Cidades / Bairros</TableHead>
-                <TableHead className="w-20 text-center">Ações</TableHead>
+                <TableHead className="w-20 text-center">AÃ§Ãµes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -344,10 +344,10 @@ export default function PerfisPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm whitespace-nowrap">
-                      {formatCurrency(p.precoMin)} – {formatCurrency(p.precoMax)}
+                      {formatCurrency(p.precoMin)} â€“ {formatCurrency(p.precoMax)}
                     </TableCell>
-                    <TableCell className="text-right">{Number(p.areaMin)} m²</TableCell>
-                    <TableCell className="text-center">{p.quartosMin ?? '—'}</TableCell>
+                    <TableCell className="text-right">{Number(p.areaMin)} mÂ²</TableCell>
+                    <TableCell className="text-center">{p.quartosMin ?? 'â€”'}</TableCell>
                     <TableCell className="text-sm">
                       <p>{p.cidades.join(', ')}</p>
                       {p.bairros?.length > 0 && (
@@ -379,7 +379,7 @@ export default function PerfisPage() {
         </CardContent>
       </Card>
 
-      {/* ── Modal Criar / Editar ── */}
+      {/* â”€â”€ Modal Criar / Editar â”€â”€ */}
       <Dialog open={formMode !== null} onOpenChange={(open) => !open && setFormMode(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -388,7 +388,7 @@ export default function PerfisPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Nome do cliente *</Label>
-              <Input placeholder="João Silva" {...field('clienteNome')} />
+              <Input placeholder="JoÃ£o Silva" {...field('clienteNome')} />
             </div>
             <div className="space-y-1">
               <Label>E-mail *</Label>
@@ -409,7 +409,7 @@ export default function PerfisPage() {
               </Select>
             </div>
             <div className="sm:col-span-2 space-y-2">
-              <Label>Tipos de imóvel aceitos *</Label>
+              <Label>Tipos de imÃ³vel aceitos *</Label>
               <div className="flex flex-wrap gap-4">
                 {tipos.map((t) => (
                   <div key={t.id} className="flex items-center gap-2">
@@ -424,47 +424,47 @@ export default function PerfisPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <Label>Preço mínimo (R$) *</Label>
+              <Label>PreÃ§o mÃ­nimo (R$) *</Label>
               <Input type="number" min="0" placeholder="500000" {...field('precoMin')} />
             </div>
             <div className="space-y-1">
-              <Label>Preço máximo (R$) *</Label>
+              <Label>PreÃ§o mÃ¡ximo (R$) *</Label>
               <Input type="number" min="0" placeholder="1000000" {...field('precoMax')} />
             </div>
             <div className="space-y-1">
-              <Label>Área mínima (m²) *</Label>
+              <Label>Ãrea mÃ­nima (mÂ²) *</Label>
               <Input type="number" min="1" placeholder="60" {...field('areaMin')} />
             </div>
             <div className="space-y-1">
-              <Label>Quartos mínimos</Label>
+              <Label>Quartos mÃ­nimos</Label>
               <Input type="number" min="1" placeholder="2" {...field('quartosMin')} />
             </div>
             <div className="space-y-1">
-              <Label>Cidades * <span className="text-xs text-muted-foreground">(separadas por vírgula)</span></Label>
-              <Input placeholder="Ipatinga, Timóteo" {...field('cidades')} />
+              <Label>Cidades * <span className="text-xs text-muted-foreground">(separadas por vÃ­rgula)</span></Label>
+              <Input placeholder="Ipatinga, TimÃ³teo" {...field('cidades')} />
             </div>
             <div className="space-y-1">
               <Label>Bairros preferidos <span className="text-xs text-muted-foreground">(opcional)</span></Label>
-              <Input placeholder="Cidade Nobre, Bethânia" {...field('bairros')} />
+              <Input placeholder="Cidade Nobre, BethÃ¢nia" {...field('bairros')} />
             </div>
           </div>
           <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setFormMode(null)}>Cancelar</Button>
             <Button onClick={handleSalvar} disabled={saving}>
-              {saving ? 'Salvando...' : formMode === 'criar' ? 'Cadastrar' : 'Salvar alterações'}
+              {saving ? 'Salvando...' : formMode === 'criar' ? 'Cadastrar' : 'Salvar alteraÃ§Ãµes'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Modal Confirmar Exclusão ── */}
+      {/* â”€â”€ Modal Confirmar ExclusÃ£o â”€â”€ */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Excluir perfil</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir o perfil de <strong>{deleteTarget?.clienteNome}</strong>?
-              Os matches associados também serão removidos. Essa ação não pode ser desfeita.
+              Os matches associados tambÃ©m serÃ£o removidos. Essa aÃ§Ã£o nÃ£o pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
