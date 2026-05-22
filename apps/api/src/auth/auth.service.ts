@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
 import * as bcrypt from 'bcryptjs'
@@ -12,7 +12,20 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(
+    dto: RegisterDto,
+    requester: { id: string; role: string; tenantId: string },
+  ) {
+    if (requester.role !== 'ADMIN') {
+      throw new ForbiddenException('Apenas administradores podem cadastrar usuários')
+    }
+    if (requester.tenantId !== dto.tenantId) {
+      throw new ForbiddenException('Não é permitido criar usuários em outro tenant')
+    }
+    if (dto.role === 'ADMIN' && requester.role !== 'ADMIN') {
+      throw new ForbiddenException('Apenas administradores podem criar outros administradores')
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, 12)
 
     const user = await this.prisma.user.create({
@@ -26,7 +39,7 @@ export class AuthService {
       select: { id: true, name: true, email: true, role: true, tenantId: true },
     })
 
-    return { user, token: this.signToken(user.id, user.tenantId) }
+    return { user }
   }
 
   async login(dto: LoginDto) {

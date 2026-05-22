@@ -21,14 +21,14 @@ export function Sidebar() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('user')
+      const stored = sessionStorage.getItem('user')
       if (stored) setUser(JSON.parse(stored))
     } catch {}
   }, [])
 
   function handleLogout() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
     router.push('/login')
   }
 

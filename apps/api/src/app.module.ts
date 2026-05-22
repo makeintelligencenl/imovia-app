@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { ThrottlerModule } from '@nestjs/throttler'
 import { PrismaModule } from './prisma/prisma.module'
 import { TenantsModule } from './tenants/tenants.module'
 import { AuthModule } from './auth/auth.module'
@@ -13,6 +14,8 @@ import { LocalidadesModule } from './localidades/localidades.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Máx 10 tentativas de login por minuto por IP
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
     PrismaModule,
     AuthModule,
     TenantsModule,

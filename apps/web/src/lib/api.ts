@@ -2,7 +2,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v
 
 function getToken() {
   if (typeof window === 'undefined') return ''
-  return localStorage.getItem('token') || ''
+  return sessionStorage.getItem('token') || ''
 }
 
 export async function apiRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
