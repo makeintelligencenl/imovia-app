@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { GitMerge, Search, X, Home, Users } from 'lucide-react'
 import { toast } from 'sonner'
@@ -52,7 +52,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-export default function MatchesPage() {
+function MatchesContent() {
   const searchParams = useSearchParams()
   const router       = useRouter()
 
@@ -320,5 +320,13 @@ export default function MatchesPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function MatchesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-slate-500">Carregando matches...</div>}>
+      <MatchesContent />
+    </Suspense>
   )
 }
