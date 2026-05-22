@@ -1,0 +1,25 @@
+{
+  "name": "corretor-imoveis-inteligente",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "turbo run db:migrate --filter=@corretor/api",
+    "db:generate": "turbo run db:generate --filter=@corretor/api",
+    "db:studio": "turbo run db:studio --filter=@corretor/api"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

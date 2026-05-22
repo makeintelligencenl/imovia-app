@@ -1,0 +1,21 @@
+node_modules
+dist
+.turbo
+.env
+.env.local
+.env.*.local
+*.log
+
+# Claude Code session data
+.claude/
+
+# Prisma
+apps/api/prisma/migrations/*.sql.bak
+
+# Next.js
+apps/web/.next
+apps/web/out
+
+# Build
+apps/*/dist
+packages/*/dist
