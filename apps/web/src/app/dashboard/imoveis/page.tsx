@@ -51,7 +51,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  DISPONIVEL: 'DisponÃ­vel',
+  DISPONIVEL: 'Disponível',
   RESERVADO:  'Reservado',
   ALUGADO:    'Alugado',
   VENDIDO:    'Vendido',
@@ -87,7 +87,7 @@ export default function ImoveisPage() {
   const [matchCount, setMatchCount]     = useState(0)
   const [matchHref, setMatchHref]       = useState('/dashboard/matches')
 
-  // PaginaÃ§Ã£o
+  // Paginação
   const [page, setPage]         = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -106,7 +106,7 @@ export default function ImoveisPage() {
     }
   }
 
-  // Carrega cidades quando o estado muda no formulÃ¡rio
+  // Carrega cidades quando o estado muda no formulário
   async function carregarCidades(estadoId: number) {
     if (!estadoId) { setCidades([]); return }
     const data = await api.get<Cidade[]>(`/localidades/cidades?estadoId=${estadoId}`)
@@ -135,13 +135,13 @@ export default function ImoveisPage() {
     setPage(1)
   }
 
-  // Reset pÃ¡gina quando filtros mudam
+  // Reset página quando filtros mudam
   const handleFiltroTexto = (v: string) => { setFiltroTexto(v); setPage(1) }
   const handleFiltroTipo = (v: string) => { setFiltroTipo(v); setPage(1) }
   const handleFiltroFinalidade = (v: string) => { setFiltroFinalidade(v); setPage(1) }
   const handleFiltroStatus = (v: string) => { setFiltroStatus(v); setPage(1) }
 
-  // Itens da pÃ¡gina atual
+  // Itens da página atual
   const imovelPaginado = imovelFiltrado.slice((page - 1) * pageSize, page * pageSize)
 
   const filtrosAtivos =
@@ -189,7 +189,7 @@ export default function ImoveisPage() {
 
   async function handleSalvar() {
     if (!formData.titulo || !formData.tipoId || !formData.finalidade || !formData.preco || !formData.areaM2 || !formData.bairro || !formData.cidade || !formData.estado) {
-      toast.error('Preencha os campos obrigatÃ³rios')
+      toast.error('Preencha os campos obrigatórios')
       return
     }
     setSaving(true)
@@ -218,7 +218,7 @@ export default function ImoveisPage() {
         const criado = await api.post<{ id: string; titulo: string }>('/imoveis', payload)
         setFormMode(null)
         load()
-        toast.success('ImÃ³vel cadastrado! Verificando matches...')
+        toast.success('Imóvel cadastrado! Verificando matches...')
 
         await new Promise((r) => setTimeout(r, 1800))
 
@@ -232,12 +232,12 @@ export default function ImoveisPage() {
         }
       } else {
         await api.patch(`/imoveis/${editId}`, payload)
-        toast.success('ImÃ³vel atualizado.')
+        toast.success('Imóvel atualizado.')
         setFormMode(null)
         load()
       }
     } catch {
-      toast.error('Erro ao salvar imÃ³vel')
+      toast.error('Erro ao salvar imóvel')
     } finally {
       setSaving(false)
     }
@@ -262,11 +262,11 @@ export default function ImoveisPage() {
     setDeleting(true)
     try {
       await api.delete(`/imoveis/${deleteTarget.id}`)
-      toast.success('ImÃ³vel excluÃ­do.')
+      toast.success('Imóvel excluído.')
       setDeleteTarget(null)
       load()
     } catch {
-      toast.error('Erro ao excluir imÃ³vel')
+      toast.error('Erro ao excluir imóvel')
     } finally {
       setDeleting(false)
     }
@@ -279,16 +279,16 @@ export default function ImoveisPage() {
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
 
-      {/* â”€â”€ CabeÃ§alho â”€â”€ */}
+      {/* â”€â”€ Cabeçalho â”€â”€ */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">ImÃ³veis</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Imóveis</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {loading ? 'Carregando...' : `${imovelFiltrado.length} de ${imoveis.length} imÃ³vel(is)`}
+            {loading ? 'Carregando...' : `${imovelFiltrado.length} de ${imoveis.length} imóvel(is)`}
           </p>
         </div>
         <Button onClick={abrirCriar} className="gap-2 shadow-sm">
-          <Plus className="h-4 w-4" /> Novo imÃ³vel
+          <Plus className="h-4 w-4" /> Novo imóvel
         </Button>
       </div>
 
@@ -302,7 +302,7 @@ export default function ImoveisPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
-                  placeholder="TÃ­tulo, bairro ou cidade..."
+                  placeholder="Título, bairro ou cidade..."
                   value={filtroTexto}
                   onChange={(e) => handleFiltroTexto(e.target.value)}
                 />
@@ -359,15 +359,15 @@ export default function ImoveisPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>TÃ­tulo</TableHead>
+                <TableHead>Título</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Finalidade</TableHead>
-                <TableHead className="text-right">PreÃ§o</TableHead>
+                <TableHead className="text-right">Preço</TableHead>
                 <TableHead className="text-right">Ãrea</TableHead>
                 <TableHead className="text-center">Quartos</TableHead>
-                <TableHead>LocalizaÃ§Ã£o</TableHead>
+                <TableHead>Localização</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-20 text-center">AÃ§Ãµes</TableHead>
+                <TableHead className="w-20 text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -378,7 +378,7 @@ export default function ImoveisPage() {
               ) : imovelFiltrado.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
-                    {filtrosAtivos ? 'Nenhum imÃ³vel com esses filtros.' : 'Nenhum imÃ³vel cadastrado.'}
+                    {filtrosAtivos ? 'Nenhum imóvel com esses filtros.' : 'Nenhum imóvel cadastrado.'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -464,11 +464,11 @@ export default function ImoveisPage() {
       <Dialog open={formMode !== null} onOpenChange={(open) => !open && setFormMode(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{formMode === 'criar' ? 'Novo imÃ³vel' : 'Editar imÃ³vel'}</DialogTitle>
+            <DialogTitle>{formMode === 'criar' ? 'Novo imóvel' : 'Editar imóvel'}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2 space-y-1">
-              <Label>TÃ­tulo *</Label>
+              <Label>Título *</Label>
               <Input placeholder="Ex: Apartamento 3 quartos no Jardins" {...field('titulo')} />
             </div>
             <div className="space-y-1">
@@ -491,11 +491,11 @@ export default function ImoveisPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>PreÃ§o (R$) *</Label>
+              <Label>Preço (R$) *</Label>
               <Input type="number" min="0" placeholder="350000" {...field('preco')} />
             </div>
             <div className="space-y-1">
-              <Label>Ãrea (mÂ²) *</Label>
+              <Label>Ãrea (m²) *</Label>
               <Input type="number" min="1" placeholder="85" {...field('areaM2')} />
             </div>
             <div className="space-y-1">
@@ -569,31 +569,31 @@ export default function ImoveisPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label>CÃ³digo de Origem</Label>
+              <Label>Código de Origem</Label>
               <Input maxLength={255} placeholder="Ex: IMV-00123" {...field('codigoOrigem')} />
             </div>
             <div className="sm:col-span-2 space-y-1">
-              <Label>DescriÃ§Ã£o</Label>
-              <Input placeholder="Detalhes do imÃ³vel..." {...field('descricao')} />
+              <Label>Descrição</Label>
+              <Input placeholder="Detalhes do imóvel..." {...field('descricao')} />
             </div>
           </div>
           <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setFormMode(null)}>Cancelar</Button>
             <Button onClick={handleSalvar} disabled={saving}>
-              {saving ? 'Salvando...' : formMode === 'criar' ? 'Cadastrar' : 'Salvar alteraÃ§Ãµes'}
+              {saving ? 'Salvando...' : formMode === 'criar' ? 'Cadastrar' : 'Salvar alterações'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* â”€â”€ Modal Confirmar ExclusÃ£o â”€â”€ */}
+      {/* â”€â”€ Modal Confirmar Exclusão â”€â”€ */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Excluir imÃ³vel</DialogTitle>
+            <DialogTitle>Excluir imóvel</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir <strong>{deleteTarget?.titulo}</strong>?
-              Os matches associados tambÃ©m serÃ£o removidos. Essa aÃ§Ã£o nÃ£o pode ser desfeita.
+              Os matches associados também serão removidos. Essa ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -38,7 +38,7 @@ const STATUS_OPTIONS = [
   { value: 'NOTIFICADO',    label: 'Notificado',    color: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'   },
   { value: 'VISUALIZADO',   label: 'Visualizado',   color: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'       },
   { value: 'INTERESSADO',   label: 'Interessado',   color: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'    },
-  { value: 'EM_NEGOCIACAO', label: 'Em negociaÃ§Ã£o', color: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' },
+  { value: 'EM_NEGOCIACAO', label: 'Em negociação', color: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' },
   { value: 'FECHADO',       label: 'Fechado âœ“',     color: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
   { value: 'DESCARTADO',    label: 'Descartado',    color: 'bg-red-50 text-red-600 ring-1 ring-red-200'          },
 ]
@@ -69,7 +69,7 @@ function MatchesContent() {
   const [filtroStatus,     setFiltroStatus]     = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
 
-  // PaginaÃ§Ã£o
+  // Paginação
   const [page, setPage]         = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -123,7 +123,7 @@ function MatchesContent() {
 
   return (
     <div className="space-y-4">
-      {/* â”€â”€ CabeÃ§alho â”€â”€ */}
+      {/* â”€â”€ Cabeçalho â”€â”€ */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Matches</h1>
@@ -142,7 +142,7 @@ function MatchesContent() {
             ? <Home className="h-4 w-4 shrink-0" />
             : <Users className="h-4 w-4 shrink-0" />}
           <span className="flex-1">
-            {urlImovelId ? 'ImÃ³vel: ' : 'Cliente: '}
+            {urlImovelId ? 'Imóvel: ' : 'Cliente: '}
             <span className="font-semibold">{urlLabel}</span>
           </span>
           <button
@@ -165,7 +165,7 @@ function MatchesContent() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
-                  placeholder="ImÃ³vel, cliente ou cidade..."
+                  placeholder="Imóvel, cliente ou cidade..."
                   value={filtroTexto}
                   onChange={(e) => handleFiltroTexto(e.target.value)}
                 />
@@ -212,9 +212,9 @@ function MatchesContent() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ImÃ³vel</TableHead>
+                <TableHead>Imóvel</TableHead>
                 <TableHead>Tipo / Finalidade</TableHead>
-                <TableHead className="text-right">PreÃ§o</TableHead>
+                <TableHead className="text-right">Preço</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead className="text-center">Data</TableHead>
@@ -235,7 +235,7 @@ function MatchesContent() {
                     <p className="text-sm text-muted-foreground">
                       {filtrosAtivos
                         ? 'Nenhum match com esses filtros.'
-                        : 'Nenhum match ainda. Cadastre imÃ³veis para o motor rodar.'}
+                        : 'Nenhum match ainda. Cadastre imóveis para o motor rodar.'}
                     </p>
                   </TableCell>
                 </TableRow>

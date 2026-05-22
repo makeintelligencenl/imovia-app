@@ -66,7 +66,7 @@ export default function PerfisPage() {
   const [matchCount, setMatchCount]     = useState(0)
   const [matchHref, setMatchHref]       = useState('/dashboard/matches')
 
-  // PaginaÃ§Ã£o
+  // Paginação
   const [page, setPage]         = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -155,11 +155,11 @@ export default function PerfisPage() {
   async function handleSalvar() {
     if (!formData.clienteNome || !formData.clienteEmail || !formData.finalidade ||
         !formData.precoMin || !formData.precoMax || !formData.areaMin || !formData.cidades) {
-      toast.error('Preencha os campos obrigatÃ³rios')
+      toast.error('Preencha os campos obrigatórios')
       return
     }
     if (tiposSelecionados.length === 0) {
-      toast.error('Selecione pelo menos um tipo de imÃ³vel')
+      toast.error('Selecione pelo menos um tipo de imóvel')
       return
     }
     setSaving(true)
@@ -215,7 +215,7 @@ export default function PerfisPage() {
     setDeleting(true)
     try {
       await api.delete(`/perfis/${deleteTarget.id}`)
-      toast.success('Perfil excluÃ­do.')
+      toast.success('Perfil excluído.')
       setDeleteTarget(null)
       load()
     } catch {
@@ -232,7 +232,7 @@ export default function PerfisPage() {
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
 
-      {/* â”€â”€ CabeÃ§alho â”€â”€ */}
+      {/* â”€â”€ Cabeçalho â”€â”€ */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Perfis de Busca</h1>
@@ -273,7 +273,7 @@ export default function PerfisPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Tipo de imÃ³vel</Label>
+              <Label className="text-xs">Tipo de imóvel</Label>
               <Select value={filtroTipo} onValueChange={handleFiltroTipo}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -303,11 +303,11 @@ export default function PerfisPage() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Finalidade</TableHead>
                 <TableHead>Tipos</TableHead>
-                <TableHead>Faixa de preÃ§o</TableHead>
-                <TableHead className="text-right">Ãrea mÃ­n.</TableHead>
-                <TableHead className="text-center">Quartos mÃ­n.</TableHead>
+                <TableHead>Faixa de preço</TableHead>
+                <TableHead className="text-right">Ãrea mín.</TableHead>
+                <TableHead className="text-center">Quartos mín.</TableHead>
                 <TableHead>Cidades / Bairros</TableHead>
-                <TableHead className="w-20 text-center">AÃ§Ãµes</TableHead>
+                <TableHead className="w-20 text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -346,7 +346,7 @@ export default function PerfisPage() {
                     <TableCell className="text-sm whitespace-nowrap">
                       {formatCurrency(p.precoMin)} â€“ {formatCurrency(p.precoMax)}
                     </TableCell>
-                    <TableCell className="text-right">{Number(p.areaMin)} mÂ²</TableCell>
+                    <TableCell className="text-right">{Number(p.areaMin)} m²</TableCell>
                     <TableCell className="text-center">{p.quartosMin ?? 'â€”'}</TableCell>
                     <TableCell className="text-sm">
                       <p>{p.cidades.join(', ')}</p>
@@ -388,7 +388,7 @@ export default function PerfisPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Nome do cliente *</Label>
-              <Input placeholder="JoÃ£o Silva" {...field('clienteNome')} />
+              <Input placeholder="João Silva" {...field('clienteNome')} />
             </div>
             <div className="space-y-1">
               <Label>E-mail *</Label>
@@ -409,7 +409,7 @@ export default function PerfisPage() {
               </Select>
             </div>
             <div className="sm:col-span-2 space-y-2">
-              <Label>Tipos de imÃ³vel aceitos *</Label>
+              <Label>Tipos de imóvel aceitos *</Label>
               <div className="flex flex-wrap gap-4">
                 {tipos.map((t) => (
                   <div key={t.id} className="flex items-center gap-2">
@@ -424,47 +424,47 @@ export default function PerfisPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <Label>PreÃ§o mÃ­nimo (R$) *</Label>
+              <Label>Preço mínimo (R$) *</Label>
               <Input type="number" min="0" placeholder="500000" {...field('precoMin')} />
             </div>
             <div className="space-y-1">
-              <Label>PreÃ§o mÃ¡ximo (R$) *</Label>
+              <Label>Preço máximo (R$) *</Label>
               <Input type="number" min="0" placeholder="1000000" {...field('precoMax')} />
             </div>
             <div className="space-y-1">
-              <Label>Ãrea mÃ­nima (mÂ²) *</Label>
+              <Label>Ãrea mínima (m²) *</Label>
               <Input type="number" min="1" placeholder="60" {...field('areaMin')} />
             </div>
             <div className="space-y-1">
-              <Label>Quartos mÃ­nimos</Label>
+              <Label>Quartos mínimos</Label>
               <Input type="number" min="1" placeholder="2" {...field('quartosMin')} />
             </div>
             <div className="space-y-1">
-              <Label>Cidades * <span className="text-xs text-muted-foreground">(separadas por vÃ­rgula)</span></Label>
-              <Input placeholder="Ipatinga, TimÃ³teo" {...field('cidades')} />
+              <Label>Cidades * <span className="text-xs text-muted-foreground">(separadas por vírgula)</span></Label>
+              <Input placeholder="Ipatinga, Timóteo" {...field('cidades')} />
             </div>
             <div className="space-y-1">
               <Label>Bairros preferidos <span className="text-xs text-muted-foreground">(opcional)</span></Label>
-              <Input placeholder="Cidade Nobre, BethÃ¢nia" {...field('bairros')} />
+              <Input placeholder="Cidade Nobre, Bethânia" {...field('bairros')} />
             </div>
           </div>
           <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setFormMode(null)}>Cancelar</Button>
             <Button onClick={handleSalvar} disabled={saving}>
-              {saving ? 'Salvando...' : formMode === 'criar' ? 'Cadastrar' : 'Salvar alteraÃ§Ãµes'}
+              {saving ? 'Salvando...' : formMode === 'criar' ? 'Cadastrar' : 'Salvar alterações'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* â”€â”€ Modal Confirmar ExclusÃ£o â”€â”€ */}
+      {/* â”€â”€ Modal Confirmar Exclusão â”€â”€ */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Excluir perfil</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir o perfil de <strong>{deleteTarget?.clienteNome}</strong>?
-              Os matches associados tambÃ©m serÃ£o removidos. Essa aÃ§Ã£o nÃ£o pode ser desfeita.
+              Os matches associados também serão removidos. Essa ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
