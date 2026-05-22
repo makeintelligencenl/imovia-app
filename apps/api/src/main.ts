@@ -6,6 +6,9 @@ import { AppModule } from './app.module'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
+  // Necessário para Railway/proxies: lê IP real do X-Forwarded-For
+  app.getHttpAdapter().getInstance().set('trust proxy', 1)
+
   app.setGlobalPrefix('api/v1')
 
   app.useGlobalPipes(

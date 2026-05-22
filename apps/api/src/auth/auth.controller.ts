@@ -1,10 +1,10 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { AuthService } from './auth.service'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
-import { ThrottlerGuard } from '@nestjs/throttler'
 
 @ApiTags('auth')
 @Controller('auth')
@@ -21,7 +21,8 @@ export class AuthController {
     return this.authService.register(dto, req.user)
   }
 
-  @UseGuards(ThrottlerGuard)
+  // Login: máx 5 tentativas por minuto por IP (mais restrito que o global)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto)
