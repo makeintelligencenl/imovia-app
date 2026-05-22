@@ -3,6 +3,7 @@ import {
   Building2, Bell, Users, ArrowRight, CheckCircle,
   GitMerge, LayoutDashboard, Home, Search, ChevronDown,
   Pencil, Trash2, TrendingUp, Zap, Shield, BarChart3,
+  Bot, MessageSquare, ClipboardList, Handshake,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -286,6 +287,11 @@ function MockMatches() {
 export default function LandingPage() {
   const features = [
     {
+      icon: Bot,
+      title: 'Agente IA de pré-atendimento',
+      desc: 'Conversa com o cliente, qualifica o perfil de busca e registra tudo no sistema — 24h por dia, sem intervenção humana.',
+    },
+    {
       icon: Zap,
       title: 'Matching automático',
       desc: 'Quando um imóvel é cadastrado, o sistema cruza automaticamente com todos os perfis de busca ativos e gera os matches — sem nenhuma ação manual.',
@@ -311,50 +317,52 @@ export default function LandingPage() {
       desc: 'Cadastre as preferências do cliente: tipo, finalidade, faixa de preço, área mínima, quartos, cidades e bairros específicos.',
     },
     {
-      icon: Shield,
-      title: 'Multi-imobiliária (SaaS)',
-      desc: 'Cada imobiliária tem seu ambiente isolado. Dados, usuários e matches completamente separados por tenant.',
-    },
-    {
-      icon: TrendingUp,
-      title: 'Inteligência de mercado',
-      desc: 'Identifique quais tipos de imóveis têm mais demanda, quais bairros são mais buscados e onde estão as oportunidades.',
-    },
-    {
       icon: Home,
       title: 'Gestão completa de imóveis',
       desc: 'Cadastre imóveis com tipo, finalidade, preço, área, quartos, bairro, cidade, CEP e código de origem da imobiliária.',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Integra com seu ERP atual',
+      desc: 'Não é preciso trocar de sistema. O ImovIA conecta ao ERP da sua imobiliária via API, importando imóveis e sincronizando dados automaticamente.',
     },
   ]
 
   const steps = [
     {
       step: '01',
-      icon: Users,
-      title: 'Cadastre o perfil do cliente',
-      desc: 'O cliente informa o que procura: tipo de imóvel, faixa de preço, metragem mínima, cidade e bairros de preferência.',
+      icon: Bot,
+      title: 'Agente IA inicia o atendimento',
+      desc: 'O cliente é atendido pelo Agente IA via WhatsApp, Instagram, Messenger ou diretamente no site da imobiliária — 24h por dia, 7 dias por semana.',
+      highlight: true,
     },
     {
       step: '02',
-      icon: Building2,
-      title: 'Novo imóvel é cadastrado',
-      desc: 'Um corretor adiciona um imóvel à plataforma. O motor de matching dispara automaticamente em milissegundos.',
+      icon: Users,
+      title: 'Perfil qualificado e registrado',
+      desc: 'O Agente conversa com o cliente, entende o que ele busca e registra automaticamente o perfil no ImovIA — sem intervenção humana.',
+      highlight: false,
     },
     {
       step: '03',
-      icon: GitMerge,
-      title: 'Match é gerado',
-      desc: 'O sistema cruza 7 critérios: finalidade, tipo, preço, área, quartos, cidade e bairro. Se compatível, cria o match.',
+      icon: Building2,
+      title: 'Imóvel cadastrado → Match gerado',
+      desc: 'Quando um imóvel é cadastrado, o sistema cruza automaticamente os critérios do imóvel com os perfis de busca ativos e gera os matches.',
+      highlight: false,
     },
     {
       step: '04',
       icon: Bell,
-      title: 'Cliente é notificado',
-      desc: 'Notificação automática por e-mail e WhatsApp com os detalhes do imóvel e o contato da imobiliária.',
+      title: 'Corretor fecha o negócio',
+      desc: 'O corretor recebe o match no painel, aborda o cliente com a proposta certa e acompanha o funil até o fechamento.',
+      highlight: false,
     },
   ]
 
   const comparisons = [
+    { feature: 'Integra com ERP existente (sem troca)',    nos: true,  zap: false },
+    { feature: 'Agente IA de pré-atendimento 24/7',       nos: true,  zap: false },
+    { feature: 'Qualificação automática de perfil',       nos: true,  zap: false },
     { feature: 'Matching automático ao cadastrar imóvel', nos: true,  zap: false },
     { feature: 'Notificação imediata ao cliente',         nos: true,  zap: false },
     { feature: 'Funil de negociação integrado',           nos: true,  zap: false },
@@ -381,6 +389,7 @@ export default function LandingPage() {
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-600">
             <a href="#como-funciona" className="hover:text-slate-900 transition-colors">Como funciona</a>
+            <a href="#agente-ia" className="hover:text-slate-900 transition-colors">Agente IA</a>
             <a href="#funcionalidades" className="hover:text-slate-900 transition-colors">Funcionalidades</a>
             <a href="#diferenciais" className="hover:text-slate-900 transition-colors">Diferenciais</a>
           </div>
@@ -389,7 +398,7 @@ export default function LandingPage() {
               <Link href="/login">Entrar</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link href="/login">Começar agora <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+              <Link href="/login">Solicitar demonstração <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
             </Button>
           </div>
         </div>
@@ -400,42 +409,63 @@ export default function LandingPage() {
         {/* grid bg */}
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'linear-gradient(#334155 1px,transparent 1px),linear-gradient(90deg,#334155 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
-        <div className="relative max-w-6xl mx-auto px-6 py-24 flex flex-col lg:flex-row items-center gap-16">
-          {/* text */}
-          <div className="lg:w-1/2 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-400 rounded-full px-4 py-1.5 text-sm font-medium mb-6 border border-blue-500/20">
-              <Zap className="h-3.5 w-3.5" />
-              Motor de matching inteligente
-            </div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-6">
-              O cliente informa o que quer.{' '}
-              <span className="text-blue-400">Você avisa quando aparecer.</span>
-            </h1>
-            <p className="text-slate-400 text-lg mb-10 leading-relaxed">
-              Conecte imóveis a compradores automaticamente. Chega de busca manual — nossa plataforma gera matches em tempo real e notifica o cliente na hora.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white w-full sm:w-auto" asChild>
-                <Link href="/login">Criar conta gratuita <ArrowRight className="h-4 w-4 ml-2" /></Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800 w-full sm:w-auto" asChild>
-                <a href="#como-funciona">Ver como funciona</a>
-              </Button>
-            </div>
-            {/* mini stats */}
-            <div className="flex items-center gap-8 mt-12 pt-8 border-t border-white/10">
-              {[['7 critérios','de matching'], ['100%','automático'], ['Tempo real','de notificação']].map(([v,l]) => (
-                <div key={v}>
-                  <p className="text-2xl font-bold text-white">{v}</p>
-                  <p className="text-xs text-slate-500">{l}</p>
-                </div>
-              ))}
-            </div>
+        {/* texto centralizado */}
+        <div className="relative max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
+          {/* 1 badge */}
+          <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-400 rounded-full px-4 py-1.5 text-sm font-medium border border-blue-500/20 mb-6">
+            <Bot className="h-3.5 w-3.5" />
+            Agente IA · Matching automático · Integra com seu ERP
           </div>
-          {/* dashboard mockup */}
-          <div className="lg:w-1/2 w-full scale-90 lg:scale-100">
-            <MockDashboard />
+
+          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
+            O Agente IA atende o cliente.{' '}
+            <span className="text-blue-400">Você fecha o negócio.</span>
+          </h1>
+
+          <p className="text-slate-400 text-xl mb-8 max-w-2xl mx-auto leading-relaxed">
+            Pré-atendimento com IA, matching automático e notificação instantânea —
+            sem trocar o ERP que você já usa.
+          </p>
+
+          {/* 3 pills de destaque */}
+          <div className="flex flex-wrap justify-center gap-3 mb-10">
+            {[
+              { icon: Bot,       label: 'Agente IA 24h/dia',           color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
+              { icon: Zap,       label: 'Match automático',             color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
+              { icon: Shield,    label: 'Integra com seu ERP',          color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
+              { icon: Handshake, label: 'Corretor foca em fechar',      color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
+            ].map(({ icon: Icon, label, color }) => (
+              <div key={label} className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm border ${color}`}>
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                {label}
+              </div>
+            ))}
           </div>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white" asChild>
+              <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
+            </Button>
+            <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800" asChild>
+              <a href="#como-funciona">Ver como funciona</a>
+            </Button>
+          </div>
+
+          {/* stats */}
+          <div className="flex items-center justify-center gap-12 pb-16 border-b border-white/10">
+            {[['24/7','pré-atendimento IA'], ['Match','por critérios'], ['100%','automático']].map(([v,l]) => (
+              <div key={v}>
+                <p className="text-3xl font-bold text-white">{v}</p>
+                <p className="text-xs text-slate-500 mt-1">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* mockup centralizado na largura total */}
+        <div className="relative max-w-5xl mx-auto px-6 pb-20">
+          <MockDashboard />
         </div>
       </section>
 
@@ -445,22 +475,181 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">Processo simples</p>
             <h2 className="text-4xl font-bold text-slate-900 mb-4">Como funciona</h2>
-            <p className="text-slate-500 text-lg max-w-2xl mx-auto">4 passos do cadastro à notificação do cliente. Tudo automático.</p>
+            <p className="text-slate-500 text-lg max-w-2xl mx-auto">Do primeiro contato do cliente ao fechamento — tudo automático.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {steps.map((s, i) => (
-              <div key={s.step} className="relative bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+              <div key={s.step} className="relative bg-[#0F172A] border border-blue-500/20 rounded-2xl p-6 shadow-sm">
                 {i < steps.length - 1 && (
                   <div className="hidden lg:block absolute top-10 -right-3 w-6 z-10">
-                    <ArrowRight className="h-5 w-5 text-blue-300" />
+                    <ArrowRight className="h-5 w-5 text-blue-400" />
                   </div>
                 )}
-                <div className="text-5xl font-black text-slate-100 mb-4 leading-none">{s.step}</div>
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4">
-                  <s.icon className="h-5 w-5 text-blue-600" />
+                <div className="text-5xl font-black mb-4 leading-none text-blue-900">{s.step}</div>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-blue-500/20">
+                  <s.icon className="h-5 w-5 text-blue-400" />
                 </div>
-                <h3 className="font-bold text-slate-800 mb-2">{s.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{s.desc}</p>
+                <h3 className="font-bold mb-2 text-white">{s.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-400">{s.desc}</p>
+                {/* canais — só no passo 01 */}
+                {i === 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-4">
+                    {['WhatsApp','Instagram','Messenger','Site'].map((canal) => (
+                      <span key={canal} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/20">
+                        {canal}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── AGENTE IA ───────────────────────────────────────────── */}
+      <section id="agente-ia" className="py-24 bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] text-white relative overflow-hidden">
+        {/* grid bg */}
+        <div className="absolute inset-0 opacity-5"
+          style={{ backgroundImage: 'linear-gradient(#334155 1px,transparent 1px),linear-gradient(90deg,#334155 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
+
+        <div className="relative max-w-6xl mx-auto px-6">
+          {/* header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-400 rounded-full px-4 py-1.5 text-sm font-medium mb-4 border border-blue-500/20">
+              <Bot className="h-3.5 w-3.5" />
+              Inteligência Artificial
+            </div>
+            <h2 className="text-4xl font-extrabold mb-4">
+              Agente IA de Pré-atendimento
+            </h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+              Um assistente inteligente que conversa com o cliente, qualifica o perfil de busca
+              e registra tudo no sistema — para o corretor focar no que realmente importa: <span className="text-white font-semibold">fechar negócios.</span>
+            </p>
+          </div>
+
+          {/* IA + Corretor visual */}
+          <div className="flex flex-col lg:flex-row items-center gap-6 mb-16">
+            {/* Agente IA card */}
+            <div className="flex-1 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Bot className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-bold text-white">Agente ImovIA</p>
+                  <p className="text-xs text-blue-400">Pré-atendimento inteligente</p>
+                </div>
+              </div>
+              <ul className="space-y-3">
+                {[
+                  'Recebe o cliente via chat ou WhatsApp',
+                  'Faz perguntas para entender o que ele busca',
+                  'Qualifica: tipo, faixa de preço, localização, área',
+                  'Registra automaticamente o perfil de busca no sistema',
+                  'Disponível 24h por dia, 7 dias por semana',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-300">
+                    <CheckCircle className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* seta + conector */}
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <div className="hidden lg:flex flex-col items-center gap-1">
+                <div className="w-px h-8 bg-white/10" />
+                <ArrowRight className="h-6 w-6 text-blue-400" />
+                <div className="w-px h-8 bg-white/10" />
+              </div>
+              <div className="bg-blue-600 rounded-full px-3 py-1.5 text-xs font-bold text-white whitespace-nowrap">
+                Perfil registrado
+              </div>
+            </div>
+
+            {/* Corretor card */}
+            <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                  <Handshake className="h-5 w-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="font-bold text-white">Corretor de Imóveis</p>
+                  <p className="text-xs text-green-400">Foco total em fechar negócios</p>
+                </div>
+              </div>
+              <ul className="space-y-3">
+                {[
+                  'Recebe o perfil já qualificado e registrado',
+                  'Visualiza os matches gerados automaticamente',
+                  'Contata o cliente com a proposta certa',
+                  'Acompanha o funil de negociação no dashboard',
+                  'Mais tempo para visitas, negociações e fechamentos',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-300">
+                    <CheckCircle className="h-4 w-4 text-green-400 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* mensagem central */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center max-w-3xl mx-auto">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Bot className="h-6 w-6 text-blue-400" />
+              <span className="text-2xl text-white/30">+</span>
+              <Handshake className="h-6 w-6 text-green-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">
+              IA e Corretor trabalhando juntos
+            </h3>
+            <p className="text-slate-400 leading-relaxed">
+              O objetivo não é substituir o corretor — é eliminar o trabalho repetitivo de triagem e qualificação.
+              O Agente IA cuida do pré-atendimento e do registro; o corretor entra em cena na hora certa,
+              com todas as informações na mão e o cliente já qualificado.
+            </p>
+          </div>
+
+          {/* 3 passos do fluxo */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+            {[
+              {
+                icon: MessageSquare,
+                step: '01',
+                title: 'Cliente inicia conversa',
+                desc: 'Via chat no site, WhatsApp ou link compartilhado pelo corretor. O Agente IA responde na hora, a qualquer horário.',
+                color: 'text-blue-400',
+                bg: 'bg-blue-500/10 border-blue-500/20',
+              },
+              {
+                icon: ClipboardList,
+                step: '02',
+                title: 'Agente qualifica e registra',
+                desc: 'O Agente faz as perguntas certas, entende o que o cliente busca e cadastra automaticamente o perfil de busca no ImovIA.',
+                color: 'text-purple-400',
+                bg: 'bg-purple-500/10 border-purple-500/20',
+              },
+              {
+                icon: Handshake,
+                step: '03',
+                title: 'Corretor entra em ação',
+                desc: 'Com o perfil registrado, o motor de matching já gerou as oportunidades. O corretor aborda o cliente com a proposta ideal.',
+                color: 'text-green-400',
+                bg: 'bg-green-500/10 border-green-500/20',
+              },
+            ].map((item) => (
+              <div key={item.step} className={`rounded-2xl p-6 border ${item.bg}`}>
+                <div className="text-4xl font-black text-white/10 mb-3">{item.step}</div>
+                <div className={`w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center mb-4`}>
+                  <item.icon className={`h-5 w-5 ${item.color}`} />
+                </div>
+                <h3 className="font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -621,11 +810,11 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-4xl font-extrabold mb-4">Pronto para automatizar seus matches?</h2>
           <p className="text-blue-100 text-lg mb-10">
-            Crie sua conta agora e comece a captar clientes com inteligência. Sem cartão de crédito.
+            Fale com nosso time comercial e veja o ImovIA funcionando na prática.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="lg" className="bg-white text-blue-700 hover:bg-blue-50 font-bold shadow-lg" asChild>
-              <Link href="/login">Criar conta gratuita <ArrowRight className="h-4 w-4 ml-2" /></Link>
+              <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
             </Button>
           </div>
         </div>
