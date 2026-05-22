@@ -304,7 +304,7 @@ export default function PerfisPage() {
                 <TableHead>Finalidade</TableHead>
                 <TableHead>Tipos</TableHead>
                 <TableHead>Faixa de preço</TableHead>
-                <TableHead className="text-right">Ãrea mín.</TableHead>
+                <TableHead className="text-right">Área mín.</TableHead>
                 <TableHead className="text-center">Quartos mín.</TableHead>
                 <TableHead>Cidades / Bairros</TableHead>
                 <TableHead className="w-20 text-center">Ações</TableHead>
@@ -344,10 +344,10 @@ export default function PerfisPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm whitespace-nowrap">
-                      {formatCurrency(p.precoMin)} â€“ {formatCurrency(p.precoMax)}
+                      {formatCurrency(p.precoMin)} – {formatCurrency(p.precoMax)}
                     </TableCell>
                     <TableCell className="text-right">{Number(p.areaMin)} m²</TableCell>
-                    <TableCell className="text-center">{p.quartosMin ?? 'â€”'}</TableCell>
+                    <TableCell className="text-center">{p.quartosMin ?? '—'}</TableCell>
                     <TableCell className="text-sm">
                       <p>{p.cidades.join(', ')}</p>
                       {p.bairros?.length > 0 && (
@@ -432,7 +432,7 @@ export default function PerfisPage() {
               <Input type="number" min="0" placeholder="1000000" {...field('precoMax')} />
             </div>
             <div className="space-y-1">
-              <Label>Ãrea mínima (m²) *</Label>
+              <Label>Área mínima (m²) *</Label>
               <Input type="number" min="1" placeholder="60" {...field('areaMin')} />
             </div>
             <div className="space-y-1">

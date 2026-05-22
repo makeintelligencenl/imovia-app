@@ -119,12 +119,12 @@ export default function DashboardPage() {
     color: s.color,
   }))
 
-  // Donut â€” tipos de imóvel
+  // Donut — tipos de imóvel
   const tiposMap: Record<string, number> = {}
   imoveis.forEach((i) => { tiposMap[i.tipo?.nome ?? 'Outros'] = (tiposMap[i.tipo?.nome ?? 'Outros'] ?? 0) + 1 })
   const tiposData = Object.entries(tiposMap).map(([name, value]) => ({ name, value }))
 
-  // Donut â€” finalidade
+  // Donut — finalidade
   const finalidadeData = [
     { name: 'Venda',   value: imoveis.filter((i) => i.finalidade === 'VENDA').length   },
     { name: 'Aluguel', value: imoveis.filter((i) => i.finalidade === 'ALUGUEL').length },
@@ -136,7 +136,7 @@ export default function DashboardPage() {
     .filter((i) => i.status === 'DISPONIVEL' && !idsComMatch.has(i.id))
     .slice(0, 6)
 
-  const Skeleton = () => <span className="text-muted-foreground/30">â€”</span>
+  const Skeleton = () => <span className="text-muted-foreground/30">—</span>
 
   return (
     <div className="space-y-6">

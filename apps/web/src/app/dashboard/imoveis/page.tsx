@@ -363,7 +363,7 @@ export default function ImoveisPage() {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Finalidade</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
-                <TableHead className="text-right">Ãrea</TableHead>
+                <TableHead className="text-right">Área</TableHead>
                 <TableHead className="text-center">Quartos</TableHead>
                 <TableHead>Localização</TableHead>
                 <TableHead>Status</TableHead>
@@ -387,7 +387,7 @@ export default function ImoveisPage() {
                     <TableCell className="font-medium max-w-[200px] truncate" title={imovel.titulo}>
                       {imovel.titulo}
                     </TableCell>
-                    <TableCell>{imovel.tipo?.nome ?? 'â€”'}</TableCell>
+                    <TableCell>{imovel.tipo?.nome ?? '—'}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${imovel.finalidade === 'VENDA' ? 'bg-violet-50 text-violet-700 ring-1 ring-violet-200' : 'bg-orange-50 text-orange-700 ring-1 ring-orange-200'}`}>
                         {imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
@@ -395,7 +395,7 @@ export default function ImoveisPage() {
                     </TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(imovel.preco)}</TableCell>
                     <TableCell className="text-right">{formatArea(imovel.areaM2)}</TableCell>
-                    <TableCell className="text-center">{imovel.quartos ?? 'â€”'}</TableCell>
+                    <TableCell className="text-center">{imovel.quartos ?? '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {imovel.bairro}, {imovel.cidade}
                     </TableCell>
@@ -495,7 +495,7 @@ export default function ImoveisPage() {
               <Input type="number" min="0" placeholder="350000" {...field('preco')} />
             </div>
             <div className="space-y-1">
-              <Label>Ãrea (m²) *</Label>
+              <Label>Área (m²) *</Label>
               <Input type="number" min="1" placeholder="85" {...field('areaM2')} />
             </div>
             <div className="space-y-1">
@@ -528,7 +528,7 @@ export default function ImoveisPage() {
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   {estados.map((e) => (
-                    <SelectItem key={e.id} value={e.sigla}>{e.sigla} â€” {e.nome}</SelectItem>
+                    <SelectItem key={e.id} value={e.sigla}>{e.sigla} — {e.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

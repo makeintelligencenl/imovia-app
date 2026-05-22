@@ -256,7 +256,7 @@ function MatchesContent() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <span className="text-xs text-muted-foreground">
-                            {match.imovel.tipo?.nome ?? 'â€”'}
+                            {match.imovel.tipo?.nome ?? '—'}
                           </span>
                           <span className={`inline-flex w-fit items-center text-xs font-semibold px-2 py-0.5 rounded-full ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
                             {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
