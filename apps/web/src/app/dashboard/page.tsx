@@ -119,12 +119,12 @@ export default function DashboardPage() {
     color: s.color,
   }))
 
-  // Donut — tipos de imóvel
+  // Donut â€” tipos de imóvel
   const tiposMap: Record<string, number> = {}
   imoveis.forEach((i) => { tiposMap[i.tipo?.nome ?? 'Outros'] = (tiposMap[i.tipo?.nome ?? 'Outros'] ?? 0) + 1 })
   const tiposData = Object.entries(tiposMap).map(([name, value]) => ({ name, value }))
 
-  // Donut — finalidade
+  // Donut â€” finalidade
   const finalidadeData = [
     { name: 'Venda',   value: imoveis.filter((i) => i.finalidade === 'VENDA').length   },
     { name: 'Aluguel', value: imoveis.filter((i) => i.finalidade === 'ALUGUEL').length },
@@ -136,11 +136,11 @@ export default function DashboardPage() {
     .filter((i) => i.status === 'DISPONIVEL' && !idsComMatch.has(i.id))
     .slice(0, 6)
 
-  const Skeleton = () => <span className=”text-muted-foreground/30”>—</span>
+  const Skeleton = () => <span className="text-muted-foreground/30">â€”</span>
 
   return (
     <div className="space-y-6">
-      {/* ── Cabeçalho ── */}
+      {/* â”€â”€ Cabeçalho â”€â”€ */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Visão geral da sua imobiliária</p>
@@ -278,7 +278,7 @@ export default function DashboardPage() {
         <DonutChart data={finalidadeData} title="Imóveis por finalidade" />
       </div>
 
-      {/* ── Linha inferior: Últimos matches + Imóveis sem match ── */}
+      {/* â”€â”€ Linha inferior: Últimos matches + Imóveis sem match â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Últimos matches */}
         <Card className="rounded-xl shadow-sm">
@@ -338,7 +338,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   {imoveis.filter((i) => i.status === 'DISPONIVEL').length === 0
                     ? 'Nenhum imóvel disponível cadastrado.'
-                    : 'âœ… Todos os imóveis disponíveis têm match!'}
+                    : '✅ Todos os imóveis disponíveis têm match!'}
                 </p>
               </div>
             ) : (
