@@ -11,6 +11,7 @@ import { PerfisModule } from './perfis/perfis.module'
 import { MatchingModule } from './matching/matching.module'
 import { NotificacoesModule } from './notificacoes/notificacoes.module'
 import { LocalidadesModule } from './localidades/localidades.module'
+import { BotModule } from './bot/bot.module'
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { LocalidadesModule } from './localidades/localidades.module'
     MatchingModule,
     NotificacoesModule,
     LocalidadesModule,
+    BotModule,
   ],
   providers: [
     // ThrottlerGuard global: protege todos os endpoints da API
