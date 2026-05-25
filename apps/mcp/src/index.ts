@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import express, { Request, Response } from 'express'
 import { z } from 'zod'
 
@@ -252,39 +253,48 @@ function authMiddleware(req: Request, res: Response, next: () => void) {
   next()
 }
 
-// Endpoint SSE — o GPT Maker conecta aqui
+// ── SSE clássico (GET /sse + POST /messages) ──────────
 app.get('/sse', authMiddleware, async (_req: Request, res: Response) => {
   const transport = new SSEServerTransport('/messages', res)
   transports.set(transport.sessionId, transport)
-
-  res.on('close', () => {
-    transports.delete(transport.sessionId)
-  })
-
+  res.on('close', () => transports.delete(transport.sessionId))
   await server.connect(transport)
 })
 
-// Endpoint de mensagens — recebe as chamadas do GPT Maker
 app.post('/messages', authMiddleware, async (req: Request, res: Response) => {
   const sessionId = req.query.sessionId as string
   const transport = transports.get(sessionId)
-
   if (!transport) {
     res.status(404).json({ error: 'Sessão não encontrada' })
     return
   }
-
   await transport.handlePostMessage(req, res)
 })
 
-// Health check
+// ── Streamable HTTP moderno (POST /mcp) ───────────────
+app.post('/mcp', authMiddleware, async (req: Request, res: Response) => {
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+  await server.connect(transport)
+  await transport.handleRequest(req, res, req.body)
+  res.on('close', () => transport.close())
+})
+
+app.get('/mcp', authMiddleware, async (req: Request, res: Response) => {
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+  await server.connect(transport)
+  await transport.handleRequest(req, res)
+  res.on('close', () => transport.close())
+})
+
+// ── Health check ──────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', server: 'imovia-mcp', version: '1.0.0' })
 })
 
 app.listen(PORT, () => {
   console.log(`🤖 ImovIA MCP Server rodando em http://localhost:${PORT}`)
-  console.log(`   SSE endpoint:  http://localhost:${PORT}/sse`)
-  console.log(`   API alvo:      ${API_URL}`)
-  console.log(`   Tenant:        ${TENANT_ID || '(não configurado)'}`)
+  console.log(`   SSE:            http://localhost:${PORT}/sse`)
+  console.log(`   Streamable HTTP: http://localhost:${PORT}/mcp`)
+  console.log(`   API alvo:       ${API_URL}`)
+  console.log(`   Tenant:         ${TENANT_ID || '(não configurado)'}`)
 })
