@@ -273,6 +273,8 @@ app.post('/messages', authMiddleware, async (req: Request, res: Response) => {
 
 // ── Streamable HTTP moderno (POST /mcp) ───────────────
 app.post('/mcp', authMiddleware, async (req: Request, res: Response) => {
+  // Garante o Accept header exigido pelo protocolo MCP
+  req.headers['accept'] = 'application/json, text/event-stream'
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
   await server.connect(transport)
   await transport.handleRequest(req, res, req.body)
@@ -280,6 +282,7 @@ app.post('/mcp', authMiddleware, async (req: Request, res: Response) => {
 })
 
 app.get('/mcp', authMiddleware, async (req: Request, res: Response) => {
+  req.headers['accept'] = 'application/json, text/event-stream'
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
   await server.connect(transport)
   await transport.handleRequest(req, res)
