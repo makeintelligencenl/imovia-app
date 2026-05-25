@@ -223,6 +223,14 @@ server.tool(
 const app = express()
 app.use(express.json())
 
+// CORS — permite conexões de qualquer origem (necessário para GPT Maker)
+app.use((_req: Request, res: Response, next: () => void) => {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key')
+  next()
+})
+
 const transports: Map<string, SSEServerTransport> = new Map()
 
 // Middleware de autenticação por header
