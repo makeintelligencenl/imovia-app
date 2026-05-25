@@ -225,8 +225,27 @@ app.use(express.json())
 
 const transports: Map<string, SSEServerTransport> = new Map()
 
+// Middleware de autenticação por header
+const MCP_ACCESS_KEY = process.env.MCP_ACCESS_KEY ?? ''
+
+function authMiddleware(req: Request, res: Response, next: () => void) {
+  // Se não houver chave configurada, permite tudo (modo dev)
+  if (!MCP_ACCESS_KEY) return next()
+
+  const key =
+    req.headers['x-api-key'] ??
+    req.headers['authorization']?.replace('Bearer ', '')
+
+  if (key !== MCP_ACCESS_KEY) {
+    res.status(401).json({ error: 'Não autorizado' })
+    return
+  }
+
+  next()
+}
+
 // Endpoint SSE — o GPT Maker conecta aqui
-app.get('/sse', async (_req: Request, res: Response) => {
+app.get('/sse', authMiddleware, async (_req: Request, res: Response) => {
   const transport = new SSEServerTransport('/messages', res)
   transports.set(transport.sessionId, transport)
 
@@ -238,7 +257,7 @@ app.get('/sse', async (_req: Request, res: Response) => {
 })
 
 // Endpoint de mensagens — recebe as chamadas do GPT Maker
-app.post('/messages', async (req: Request, res: Response) => {
+app.post('/messages', authMiddleware, async (req: Request, res: Response) => {
   const sessionId = req.query.sessionId as string
   const transport = transports.get(sessionId)
 
