@@ -38,6 +38,7 @@ interface Imovel {
   cep?: string
   codigoOrigem?: string
   descricao?: string
+  urlImovel?: string
   status: string
   createdAt: string
 }
@@ -61,7 +62,7 @@ const STATUS_LABELS: Record<string, string> = {
 const BLANK_FORM = {
   titulo: '', tipoId: '', finalidade: '', preco: '', areaM2: '',
   quartos: '', banheiros: '', vagas: '', bairro: '', cidade: '',
-  estado: '', cep: '', codigoOrigem: '', descricao: '',
+  estado: '', cep: '', codigoOrigem: '', descricao: '', urlImovel: '',
 }
 
 export default function ImoveisPage() {
@@ -174,6 +175,7 @@ export default function ImoveisPage() {
       cep:           imovel.cep ?? '',
       codigoOrigem:  imovel.codigoOrigem ?? '',
       descricao:     imovel.descricao ?? '',
+      urlImovel:     imovel.urlImovel ?? '',
     })
     setEditId(imovel.id)
     setFormMode('editar')
@@ -208,6 +210,7 @@ export default function ImoveisPage() {
       cep:           formData.cep || undefined,
       codigoOrigem:  formData.codigoOrigem || undefined,
       descricao:     formData.descricao || undefined,
+      urlImovel:     formData.urlImovel || undefined,
     }
     try {
       if (formMode === 'criar') {
@@ -575,6 +578,10 @@ export default function ImoveisPage() {
             <div className="sm:col-span-2 space-y-1">
               <Label>Descrição</Label>
               <Input placeholder="Detalhes do imóvel..." {...field('descricao')} />
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <Label>URL do imóvel no site</Label>
+              <Input placeholder="https://suaimobiliaria.com.br/imoveis/123" {...field('urlImovel')} />
             </div>
           </div>
           <DialogFooter className="mt-2">

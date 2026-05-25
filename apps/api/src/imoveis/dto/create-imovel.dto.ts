@@ -75,4 +75,9 @@ export class CreateImovelDto {
   @IsString()
   @IsOptional()
   descricao?: string
+
+  @ApiPropertyOptional({ example: 'https://imobiliaria.com.br/imoveis/apto-jardins-123', description: 'URL do imóvel no site da imobiliária' })
+  @IsString()
+  @IsOptional()
+  urlImovel?: string
 }

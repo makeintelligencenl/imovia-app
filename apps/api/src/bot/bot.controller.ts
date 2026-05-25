@@ -91,6 +91,7 @@ export class BotController {
           cidade: m.imovel.cidade,
           estado: m.imovel.estado,
           descricao: m.imovel.descricao,
+          urlImovel: (m.imovel as any).urlImovel ?? null,
         },
       })),
     }

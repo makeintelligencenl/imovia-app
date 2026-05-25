@@ -111,6 +111,7 @@ model Imovel {
   descricao      String?      @db.Text
   cep            String?      @db.VarChar(9)   // formato 00000-000
   codigoOrigem   String?      @db.VarChar(255) // código no sistema de origem da imobiliária
+  urlImovel      String?      @db.VarChar(500) // URL do imóvel no site da imobiliária
   status         StatusImovel @default(DISPONIVEL)
   origem         String?      // 'manual' | 'api' | 'mcp'
   externalId     String?      // ID no sistema de origem (para integrações via API/MCP)
