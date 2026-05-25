@@ -34,8 +34,9 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Corretor Inteligente API')
     .setDescription('API para matching de imóveis e clientes')
-    .setVersion('1.0')
+    .setVersion('1.1')
     .addBearerAuth()
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'x-bot-api-key' }, 'x-bot-api-key')
     .build()
 
   const document = SwaggerModule.createDocument(app, config)
