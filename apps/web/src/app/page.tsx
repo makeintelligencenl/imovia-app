@@ -429,8 +429,8 @@ export default function LandingPage() {
           <div>
 
             <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-5">
-              O Agente IA atende<br className="hidden lg:block" /> o cliente.{' '}
-              <span className="text-blue-400">Você fecha<br className="hidden lg:block" /> o negócio.</span>
+              O Agente IA atende e qualifica o cliente.<br />
+              <span className="text-blue-400">O consultor fecha o negócio.</span>
             </h1>
 
             <p className="text-slate-400 text-lg mb-8 leading-relaxed">
