@@ -413,15 +413,15 @@ export default function LandingPage() {
           {/* ── Esquerda: texto ── */}
           <div>
             {/* pills no topo */}
-            <div className="flex flex-wrap gap-2 mb-7">
+            <div className="flex flex-nowrap gap-2 mb-7 overflow-x-auto scrollbar-hide">
               {[
                 { icon: Bot,       label: 'Agente IA 24h/dia',      color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
                 { icon: Zap,       label: 'Match automático',        color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
                 { icon: Shield,    label: 'Integra com seu ERP',     color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
                 { icon: Handshake, label: 'Corretor foca em fechar', color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
               ].map(({ icon: Icon, label, color }) => (
-                <div key={label} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border ${color}`}>
-                  <Icon className="h-3 w-3 shrink-0" />
+                <div key={label} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border whitespace-nowrap ${color}`}>
+                  <Icon className="h-4 w-4 shrink-0" />
                   {label}
                 </div>
               ))}
@@ -442,9 +442,10 @@ export default function LandingPage() {
               <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white" asChild>
                 <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 hover:border-white/60" asChild>
-                <a href="#como-funciona">Ver como funciona</a>
-              </Button>
+              <a href="#como-funciona"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-md text-base font-medium border border-white/40 text-white hover:bg-white/10 hover:border-white/70 transition-colors">
+                Ver como funciona
+              </a>
             </div>
 
           </div>
@@ -773,7 +774,7 @@ export default function LandingPage() {
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             {/* header */}
-            <div className="grid grid-cols-[1fr_120px_120px] border-b border-slate-100">
+            <div className="grid grid-cols-[1fr_120px] border-b border-slate-100">
               <div className="p-4" />
               <div className="p-4 text-center border-l border-slate-100">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -781,22 +782,13 @@ export default function LandingPage() {
                   <span className="font-bold text-slate-800 text-sm">Imov<span className="text-blue-600">IA</span></span>
                 </div>
               </div>
-              <div className="p-4 text-center border-l border-slate-100">
-                <p className="font-semibold text-slate-500 text-sm">Portais<br/>Tradicionais</p>
-              </div>
             </div>
             {comparisons.map((c) => (
-              <div key={c.feature} className="grid grid-cols-[1fr_120px_120px] border-b border-slate-50 last:border-0">
+              <div key={c.feature} className="grid grid-cols-[1fr_120px] border-b border-slate-50 last:border-0">
                 <div className="p-4 text-sm text-slate-700">{c.feature}</div>
                 <div className="p-4 flex justify-center items-center border-l border-slate-100">
                   {c.nos
                     ? <CheckCircle className="h-5 w-5 text-green-500" />
-                    : <span className="h-5 w-5 flex items-center justify-center text-slate-200 text-lg">—</span>
-                  }
-                </div>
-                <div className="p-4 flex justify-center items-center border-l border-slate-100">
-                  {c.zap
-                    ? <CheckCircle className="h-5 w-5 text-slate-400" />
                     : <span className="h-5 w-5 flex items-center justify-center text-slate-200 text-lg">—</span>
                   }
                 </div>
@@ -848,10 +840,9 @@ export default function LandingPage() {
           </div>
 
           <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-10 shadow-xl shadow-blue-900/40" asChild>
-            <Link href="/login">Quero ver o ImovIA na prática <ArrowRight className="h-4 w-4 ml-2" /></Link>
+            <Link href="/login">Solicitar uma demonstração do ImovIA <ArrowRight className="h-4 w-4 ml-2" /></Link>
           </Button>
 
-          <p className="text-slate-600 text-xs mt-4">Demonstração gratuita · Sem compromisso</p>
         </div>
       </section>
 
