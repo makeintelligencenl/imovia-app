@@ -426,7 +426,7 @@ export default function LandingPage() {
         <div className="relative max-w-6xl mx-auto px-6 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
           {/* ── Esquerda: texto ── */}
-          <div className="text-center lg:text-left">
+          <div className="text-center">
 
             <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-5">
               O Agente IA atende e qualifica o cliente.<br />
@@ -439,7 +439,7 @@ export default function LandingPage() {
             </p>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-10 justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row gap-3 mb-10 justify-center">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white" asChild>
                 <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
