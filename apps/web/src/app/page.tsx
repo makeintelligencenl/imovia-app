@@ -407,25 +407,26 @@ export default function LandingPage() {
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'linear-gradient(#334155 1px,transparent 1px),linear-gradient(90deg,#334155 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
 
+        {/* pills — largura total, acima do grid */}
+        <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-6 flex flex-nowrap gap-3 overflow-x-auto scrollbar-hide">
+          {[
+            { icon: Bot,       label: 'Agente IA 24h/dia',      color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
+            { icon: Zap,       label: 'Match automático',        color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
+            { icon: Shield,    label: 'Integra com seu ERP',     color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
+            { icon: Handshake, label: 'Corretor foca em fechar', color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
+          ].map(({ icon: Icon, label, color }) => (
+            <div key={label} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border whitespace-nowrap ${color}`}>
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </div>
+          ))}
+        </div>
+
         {/* 2 colunas: texto + chat */}
-        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-6xl mx-auto px-6 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
           {/* ── Esquerda: texto ── */}
           <div>
-            {/* pills no topo */}
-            <div className="flex flex-nowrap gap-2 mb-7 overflow-x-auto scrollbar-hide">
-              {[
-                { icon: Bot,       label: 'Agente IA 24h/dia',      color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
-                { icon: Zap,       label: 'Match automático',        color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
-                { icon: Shield,    label: 'Integra com seu ERP',     color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
-                { icon: Handshake, label: 'Corretor foca em fechar', color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
-              ].map(({ icon: Icon, label, color }) => (
-                <div key={label} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border whitespace-nowrap ${color}`}>
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {label}
-                </div>
-              ))}
-            </div>
 
             <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-5">
               O Agente IA atende<br className="hidden lg:block" /> o cliente.{' '}
@@ -443,7 +444,7 @@ export default function LandingPage() {
                 <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
               <a href="#como-funciona"
-                className="inline-flex items-center justify-center px-6 py-3 rounded-md text-base font-medium border border-white/40 text-white hover:bg-white/10 hover:border-white/70 transition-colors">
+                className="inline-flex items-center justify-center px-6 py-3 rounded-md text-base font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors">
                 Ver como funciona
               </a>
             </div>
