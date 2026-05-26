@@ -410,62 +410,78 @@ export default function LandingPage() {
         {/* grid bg */}
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'linear-gradient(#334155 1px,transparent 1px),linear-gradient(90deg,#334155 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
-        {/* texto centralizado */}
-        <div className="relative max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
-          {/* 1 badge */}
-          <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-400 rounded-full px-4 py-1.5 text-sm font-medium border border-blue-500/20 mb-6">
-            <Bot className="h-3.5 w-3.5" />
-            Agente IA · Matching automático · Integra com seu ERP
+
+        {/* 2 colunas: texto + chat */}
+        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+          {/* ── Esquerda: texto ── */}
+          <div>
+            {/* badge pulsante */}
+            <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-400 rounded-full px-4 py-1.5 text-sm font-medium border border-blue-500/20 mb-6">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
+              Agente IA para Imobiliárias
+            </div>
+
+            <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-5">
+              O Agente IA atende<br className="hidden lg:block" /> o cliente.{' '}
+              <span className="text-blue-400">Você fecha<br className="hidden lg:block" /> o negócio.</span>
+            </h1>
+
+            <p className="text-slate-400 text-lg mb-8 leading-relaxed">
+              Pré-atendimento com IA, matching automático e notificação instantânea —
+              sem trocar o ERP que você já usa.
+            </p>
+
+            {/* pills */}
+            <div className="flex flex-wrap gap-2 mb-8">
+              {[
+                { icon: Bot,       label: 'Agente IA 24h/dia',      color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
+                { icon: Zap,       label: 'Match automático',        color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
+                { icon: Shield,    label: 'Integra com seu ERP',     color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
+                { icon: Handshake, label: 'Corretor foca em fechar', color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
+              ].map(({ icon: Icon, label, color }) => (
+                <div key={label} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border ${color}`}>
+                  <Icon className="h-3 w-3 shrink-0" />
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-10">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white" asChild>
+                <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
+              </Button>
+              <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800" asChild>
+                <a href="#como-funciona">Ver como funciona</a>
+              </Button>
+            </div>
+
+            {/* stats */}
+            <div className="flex items-center gap-8 pt-8 border-t border-white/10">
+              {[['24/7','atendimento IA'], ['100%','automático'], ['0','intervenção manual']].map(([v,l]) => (
+                <div key={v}>
+                  <p className="text-2xl font-bold text-white">{v}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{l}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
-            O Agente IA atende o cliente.{' '}
-            <span className="text-blue-400">Você fecha o negócio.</span>
-          </h1>
-
-          <p className="text-slate-400 text-xl mb-8 max-w-2xl mx-auto leading-relaxed">
-            Pré-atendimento com IA, matching automático e notificação instantânea —
-            sem trocar o ERP que você já usa.
-          </p>
-
-          {/* 3 pills de destaque */}
-          <div className="flex flex-wrap justify-center gap-3 mb-10">
-            {[
-              { icon: Bot,       label: 'Agente IA 24h/dia',           color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
-              { icon: Zap,       label: 'Match automático',             color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
-              { icon: Shield,    label: 'Integra com seu ERP',          color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
-              { icon: Handshake, label: 'Corretor foca em fechar',      color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
-            ].map(({ icon: Icon, label, color }) => (
-              <div key={label} className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm border ${color}`}>
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                {label}
-              </div>
-            ))}
+          {/* ── Direita: chat animado ── */}
+          <div className="flex justify-center lg:justify-end">
+            <ChatAnimado />
           </div>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white" asChild>
-              <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
-            </Button>
-            <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800" asChild>
-              <a href="#como-funciona">Ver como funciona</a>
-            </Button>
-          </div>
-
-          {/* stats */}
-          <div className="flex items-center justify-center gap-12 pb-16 border-b border-white/10">
-            {[['24/7','pré-atendimento IA'], ['Match','por critérios'], ['100%','automático']].map(([v,l]) => (
-              <div key={v}>
-                <p className="text-3xl font-bold text-white">{v}</p>
-                <p className="text-xs text-slate-500 mt-1">{l}</p>
-              </div>
-            ))}
-          </div>
         </div>
+      </section>
 
-        {/* mockup centralizado na largura total */}
-        <div className="relative max-w-5xl mx-auto px-6 pb-20">
+      {/* ── DASHBOARD MOCKUP ────────────────────────────────────── */}
+      <section className="bg-gradient-to-b from-[#0F172A] to-slate-900 pb-20 pt-4">
+        <div className="max-w-5xl mx-auto px-6">
+          <p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-600 mb-6">
+            Painel da imobiliária
+          </p>
           <MockDashboard />
         </div>
       </section>
@@ -557,11 +573,6 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-            </div>
-
-            {/* chat animado */}
-            <div className="shrink-0 w-full lg:w-auto">
-              <ChatAnimado />
             </div>
 
             {/* seta + conector */}
