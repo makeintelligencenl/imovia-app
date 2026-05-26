@@ -408,7 +408,7 @@ export default function LandingPage() {
           style={{ backgroundImage: 'linear-gradient(#334155 1px,transparent 1px),linear-gradient(90deg,#334155 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
 
         {/* pills — largura total, acima do grid */}
-        <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-6 flex flex-nowrap gap-3 overflow-x-auto scrollbar-hide">
+        <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-6 flex flex-nowrap gap-3 overflow-x-auto scrollbar-hide justify-center">
           {[
             { icon: Bot,       label: 'Agente IA 24h/dia',      color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
             { icon: Zap,       label: 'Match automático',        color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
@@ -444,7 +444,7 @@ export default function LandingPage() {
                 <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
               <a href="#como-funciona"
-                className="inline-flex items-center justify-center px-6 py-3 rounded-md text-base font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors">
+                className="inline-flex items-center justify-center h-10 px-8 rounded-md text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors whitespace-nowrap">
                 Ver como funciona
               </a>
             </div>
