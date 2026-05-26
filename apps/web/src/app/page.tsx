@@ -6,6 +6,7 @@ import {
   Bot, MessageSquare, ClipboardList, Handshake,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ChatAnimado } from '@/components/chat-animado'
 
 /* ─── tiny helpers ─────────────────────────────────────────────── */
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
@@ -530,7 +531,7 @@ export default function LandingPage() {
           </div>
 
           {/* IA + Corretor visual */}
-          <div className="flex flex-col lg:flex-row items-center gap-6 mb-16">
+          <div className="flex flex-col lg:flex-row items-center gap-10 mb-16">
             {/* Agente IA card */}
             <div className="flex-1 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -556,6 +557,11 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+
+            {/* chat animado */}
+            <div className="shrink-0 w-full lg:w-auto">
+              <ChatAnimado />
             </div>
 
             {/* seta + conector */}
