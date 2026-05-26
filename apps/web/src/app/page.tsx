@@ -365,13 +365,9 @@ export default function LandingPage() {
     { feature: 'Agente IA de pré-atendimento 24/7',       nos: true,  zap: false },
     { feature: 'Qualificação automática de perfil',       nos: true,  zap: false },
     { feature: 'Matching automático ao cadastrar imóvel', nos: true,  zap: false },
-    { feature: 'Notificação imediata ao cliente',         nos: true,  zap: false },
     { feature: 'Funil de negociação integrado',           nos: true,  zap: false },
     { feature: 'Dashboard analítico por imobiliária',     nos: true,  zap: false },
     { feature: 'Perfis de busca detalhados',              nos: true,  zap: true  },
-    { feature: 'Multi-imobiliária (SaaS)',                nos: true,  zap: false },
-    { feature: 'Gestão de status por match',              nos: true,  zap: false },
-    { feature: 'API aberta para integração',              nos: true,  zap: false },
   ]
 
   return (
@@ -416,24 +412,8 @@ export default function LandingPage() {
 
           {/* ── Esquerda: texto ── */}
           <div>
-            {/* badge pulsante */}
-            <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-400 rounded-full px-4 py-1.5 text-sm font-medium border border-blue-500/20 mb-6">
-              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
-              Agente IA para Imobiliárias
-            </div>
-
-            <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-5">
-              O Agente IA atende<br className="hidden lg:block" /> o cliente.{' '}
-              <span className="text-blue-400">Você fecha<br className="hidden lg:block" /> o negócio.</span>
-            </h1>
-
-            <p className="text-slate-400 text-lg mb-8 leading-relaxed">
-              Pré-atendimento com IA, matching automático e notificação instantânea —
-              sem trocar o ERP que você já usa.
-            </p>
-
-            {/* pills */}
-            <div className="flex flex-wrap gap-2 mb-8">
+            {/* pills no topo */}
+            <div className="flex flex-wrap gap-2 mb-7">
               {[
                 { icon: Bot,       label: 'Agente IA 24h/dia',      color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
                 { icon: Zap,       label: 'Match automático',        color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
@@ -447,25 +427,26 @@ export default function LandingPage() {
               ))}
             </div>
 
+            <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight mb-5">
+              O Agente IA atende<br className="hidden lg:block" /> o cliente.{' '}
+              <span className="text-blue-400">Você fecha<br className="hidden lg:block" /> o negócio.</span>
+            </h1>
+
+            <p className="text-slate-400 text-lg mb-8 leading-relaxed">
+              Pré-atendimento com IA, matching automático e notificação instantânea —
+              sem trocar o ERP que você já usa.
+            </p>
+
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 mb-10">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white" asChild>
                 <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800" asChild>
+              <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 hover:border-white/60" asChild>
                 <a href="#como-funciona">Ver como funciona</a>
               </Button>
             </div>
 
-            {/* stats */}
-            <div className="flex items-center gap-8 pt-8 border-t border-white/10">
-              {[['24/7','atendimento IA'], ['100%','automático'], ['0','intervenção manual']].map(([v,l]) => (
-                <div key={v}>
-                  <p className="text-2xl font-bold text-white">{v}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{l}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* ── Direita: chat animado ── */}
@@ -476,15 +457,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── DASHBOARD MOCKUP ────────────────────────────────────── */}
-      <section className="bg-gradient-to-b from-[#0F172A] to-slate-900 pb-20 pt-4">
-        <div className="max-w-5xl mx-auto px-6">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-600 mb-6">
-            Painel da imobiliária
-          </p>
-          <MockDashboard />
-        </div>
-      </section>
 
       {/* ── COMO FUNCIONA ───────────────────────────────────────── */}
       <section id="como-funciona" className="py-24 bg-slate-50">
@@ -537,9 +509,13 @@ export default function LandingPage() {
               <Bot className="h-3.5 w-3.5" />
               Inteligência Artificial
             </div>
-            <h2 className="text-4xl font-extrabold mb-4">
+            <h2 className="text-4xl font-extrabold mb-3">
               Agente IA de Pré-atendimento
             </h2>
+            <div className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              24h por dia · 7 dias por semana
+            </div>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
               Um assistente inteligente que conversa com o cliente, qualifica o perfil de busca
               e registra tudo no sistema — para o corretor focar no que realmente importa: <span className="text-white font-semibold">fechar negócios.</span>
@@ -696,6 +672,14 @@ export default function LandingPage() {
               <MockImoveis />
             </div>
           </div>
+
+          {/* Dashboard mockup abaixo */}
+          <div className="mt-12">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4 text-center">
+              Painel da imobiliária
+            </p>
+            <MockDashboard />
+          </div>
         </div>
       </section>
 
@@ -823,17 +807,51 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA ─────────────────────────────────────────────────── */}
-      <section className="py-24 bg-gradient-to-br from-blue-600 to-blue-700 text-white text-center">
-        <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-4xl font-extrabold mb-4">Pronto para automatizar seus matches?</h2>
-          <p className="text-blue-100 text-lg mb-10">
-            Fale com nosso time comercial e veja o ImovIA funcionando na prática.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="bg-white text-blue-700 hover:bg-blue-50 font-bold shadow-lg" asChild>
-              <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
-            </Button>
+      <section className="relative overflow-hidden py-24 bg-gradient-to-br from-[#0F172A] via-[#1a2f5e] to-[#0F172A] text-white text-center">
+        {/* grid bg */}
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: 'linear-gradient(#334155 1px,transparent 1px),linear-gradient(90deg,#334155 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
+
+        {/* glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-3xl mx-auto px-6">
+
+          {/* badge */}
+          <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-300 border border-blue-500/25 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+            <Bot className="h-3.5 w-3.5" />
+            Enquanto você lê isso, leads estão sendo atendidos por IA
           </div>
+
+          <h2 className="text-4xl lg:text-5xl font-extrabold mb-5 leading-tight">
+            Sua imobiliária pode atender{' '}
+            <span className="text-blue-400">mais leads hoje</span>,<br />
+            sem contratar ninguém.
+          </h2>
+
+          <p className="text-slate-400 text-lg mb-10 max-w-xl mx-auto leading-relaxed">
+            O ImovIA qualifica, registra e apresenta imóveis compatíveis — enquanto seu corretor foca em fechar negócios.
+          </p>
+
+          {/* benefícios rápidos */}
+          <div className="flex flex-wrap justify-center gap-3 mb-10">
+            {[
+              '✓ Sem trocar seu ERP',
+              '✓ Atendimento 24h/dia',
+              '✓ Setup em dias, não meses',
+              '✓ Corretor só entra no momento certo',
+            ].map(item => (
+              <span key={item} className="text-sm text-slate-300 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full">
+                {item}
+              </span>
+            ))}
+          </div>
+
+          <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-10 shadow-xl shadow-blue-900/40" asChild>
+            <Link href="/login">Quero ver o ImovIA na prática <ArrowRight className="h-4 w-4 ml-2" /></Link>
+          </Button>
+
+          <p className="text-slate-600 text-xs mt-4">Demonstração gratuita · Sem compromisso</p>
         </div>
       </section>
 
