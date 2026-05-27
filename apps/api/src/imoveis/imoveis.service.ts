@@ -25,7 +25,7 @@ export class ImoveisService {
         banheiros: dto.banheiros,
         vagas: dto.vagas,
         bairro: dto.bairro,
-        cidade: dto.cidade,
+        cidadeId: dto.cidadeId,
         estado: dto.estado,
         cep: dto.cep,
         codigoOrigem: dto.codigoOrigem,
@@ -34,7 +34,7 @@ export class ImoveisService {
         descricao: dto.descricao,
         tenantId,
       },
-      include: { tipo: true },
+      include: { tipo: true, cidade: { include: { estado: true } } },
     })
 
     // Fire-and-forget: dispara matching sem bloquear a resposta
@@ -53,7 +53,7 @@ export class ImoveisService {
         ...(filters?.finalidade && { finalidade: filters.finalidade as Finalidade }),
         ...(filters?.status && { status: filters.status as StatusImovel }),
       },
-      include: { tipo: true },
+      include: { tipo: true, cidade: { include: { estado: true } } },
       orderBy: { createdAt: 'desc' },
     })
   }
@@ -61,7 +61,7 @@ export class ImoveisService {
   async findById(tenantId: string, id: string) {
     const imovel = await this.prisma.imovel.findFirst({
       where: { id, tenantId },
-      include: { tipo: true },
+      include: { tipo: true, cidade: { include: { estado: true } } },
     })
     if (!imovel) throw new NotFoundException('Imóvel não encontrado')
     return imovel
@@ -77,7 +77,7 @@ export class ImoveisService {
         ...(tipoId && { tipoId }),
         ...(finalidade && { finalidade: finalidade as Finalidade }),
       },
-      include: { tipo: true },
+      include: { tipo: true, cidade: { include: { estado: true } } },
     })
   }
 
@@ -93,7 +93,7 @@ export class ImoveisService {
     return this.prisma.imovel.update({
       where: { id },
       data: { status: status as StatusImovel },
-      include: { tipo: true },
+      include: { tipo: true, cidade: { include: { estado: true } } },
     })
   }
 }

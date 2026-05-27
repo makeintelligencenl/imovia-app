@@ -65,10 +65,11 @@ model Estado {
 }
 
 model Cidade {
-  id        Int     @id                 // código IBGE
+  id        Int      @id                // código IBGE
   nome      String
   estadoId  Int
-  estado    Estado  @relation(fields: [estadoId], references: [id])
+  estado    Estado   @relation(fields: [estadoId], references: [id])
+  imoveis   Imovel[]
 
   @@index([estadoId])
   @@map("cidades")
@@ -104,7 +105,8 @@ model Imovel {
   banheiros  Int?
   vagas      Int?
   bairro     String
-  cidade     String
+  cidadeId   Int
+  cidade     Cidade       @relation(fields: [cidadeId], references: [id])
   estado     String       @db.Char(2)
   latitude   Decimal?     @db.Decimal(10, 7)
   longitude  Decimal?     @db.Decimal(10, 7)
@@ -124,7 +126,7 @@ model Imovel {
 
   @@index([tenantId, status])
   @@index([tenantId, finalidade, tipoId])
-  @@index([tenantId, cidade])
+  @@index([tenantId, cidadeId])
   @@map("imoveis")
 }
 

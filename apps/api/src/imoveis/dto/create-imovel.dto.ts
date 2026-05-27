@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, Min } from 'class-validator'
+import { IsString, IsNumber, IsOptional, IsInt, Min } from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class CreateImovelDto {
@@ -43,9 +43,9 @@ export class CreateImovelDto {
   @IsString()
   bairro: string
 
-  @ApiProperty({ example: 'São Paulo' })
-  @IsString()
-  cidade: string
+  @ApiProperty({ example: 3550308, description: 'ID IBGE do município (veja GET /api/v1/localidades/cidades)' })
+  @IsInt()
+  cidadeId: number
 
   @ApiProperty({ example: 'SP' })
   @IsString()

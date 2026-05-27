@@ -58,7 +58,7 @@ export class PerfisService {
   }
 
   async findCompatíveisComImovel(tenantId: string, imovelId: string) {
-    const imovel = await this.prisma.imovel.findFirst({ where: { id: imovelId, tenantId } })
+    const imovel = await this.prisma.imovel.findFirst({ where: { id: imovelId, tenantId }, include: { cidade: true } })
     if (!imovel) throw new NotFoundException('Imóvel não encontrado')
 
     return this.prisma.perfilBusca.findMany({
@@ -70,7 +70,7 @@ export class PerfisService {
         precoMin: { lte: imovel.preco },
         precoMax: { gte: imovel.preco },
         areaMin: { lte: imovel.areaM2 },
-        cidades: { hasSome: [imovel.cidade] },
+        cidades: { hasSome: [imovel.cidade.nome] },
       },
       include: { tipos: true },
     })

@@ -3,160 +3,214 @@ import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+// Busca ID IBGE de uma cidade pelo nome exato e sigla do estado
+async function cidadeId(prisma: PrismaClient, nome: string, uf: string): Promise<number> {
+  const c = await prisma.cidade.findFirst({
+    where: { nome, estado: { sigla: uf } },
+    select: { id: true },
+  })
+  if (!c) throw new Error(`Cidade não encontrada: ${nome} (${uf}) — rode seed-cidades primeiro`)
+  return c.id
+}
+
 async function main() {
-  console.log('🧹 Limpando tabelas...')
-  await prisma.match.deleteMany()
-  await prisma.perfilBusca.deleteMany()
-  await prisma.imovel.deleteMany()
-  console.log('✅ Tabelas limpas: matches, perfis_busca, imoveis')
+  console.log('🌱 Iniciando seed multi-cidade...\n')
 
   // ─────────────────────────────────────────
-  // TIPOS DE IMÓVEL (tabela mestre)
+  // TIPOS DE IMÓVEL
   // ─────────────────────────────────────────
   const tiposData = ['Apartamento', 'Casa', 'Comercial', 'Terreno', 'Rural']
   const tipos: Record<string, string> = {}
-
   for (const nome of tiposData) {
-    const tipo = await prisma.tipoImovel.upsert({
-      where: { nome },
-      update: {},
-      create: { nome },
-    })
-    tipos[nome] = tipo.id
+    const t = await prisma.tipoImovel.upsert({ where: { nome }, update: {}, create: { nome } })
+    tipos[nome] = t.id
   }
-  console.log('✅ Tipos de imóvel prontos:', Object.keys(tipos).join(', '))
+  console.log('✅ Tipos de imóvel:', tiposData.join(', '))
 
   // ─────────────────────────────────────────
-  // TENANTS — imobiliárias do Vale do Aço
+  // TENANTS
   // ─────────────────────────────────────────
-  const [tenantValeAco, tenantIpatinga, tenantAco] = await Promise.all([
+  const [tenantSP, tenantBH, tenantIPA] = await Promise.all([
+    prisma.tenant.upsert({
+      where: { slug: 'paulista-imoveis' },
+      update: {},
+      create: { name: 'Paulista Imóveis', slug: 'paulista-imoveis', email: 'contato@paulistaimoveis.com.br', telefone: '(11) 3456-7890' },
+    }),
+    prisma.tenant.upsert({
+      where: { slug: 'bh-premium-imoveis' },
+      update: {},
+      create: { name: 'BH Premium Imóveis', slug: 'bh-premium-imoveis', email: 'contato@bhpremium.com.br', telefone: '(31) 3322-5566' },
+    }),
     prisma.tenant.upsert({
       where: { slug: 'vale-aco-imoveis' },
       update: {},
       create: { name: 'Vale do Aço Imóveis', slug: 'vale-aco-imoveis', email: 'contato@valeacoimoveis.com.br', telefone: '(31) 3822-1234' },
     }),
-    prisma.tenant.upsert({
-      where: { slug: 'ipatinga-negocios' },
-      update: {},
-      create: { name: 'Ipatinga Negócios Imobiliários', slug: 'ipatinga-negocios', email: 'atendimento@ipatinganegocios.com.br', telefone: '(31) 3823-5678' },
-    }),
-    prisma.tenant.upsert({
-      where: { slug: 'aco-imoveis' },
-      update: {},
-      create: { name: 'Aço Imóveis', slug: 'aco-imoveis', email: 'vendas@acoimoveis.com.br', telefone: '(31) 3841-9012' },
-    }),
   ])
-  console.log('✅ Tenants prontos')
+  console.log('✅ Imobiliárias: Paulista Imóveis (SP) | BH Premium (BH) | Vale do Aço (Ipatinga)')
 
   // ─────────────────────────────────────────
-  // USERS
+  // USUÁRIOS  — senha: Imov@2025
   // ─────────────────────────────────────────
-  const senhaHash = await bcrypt.hash('senha123', 12)
+  const hash = await bcrypt.hash('Imov@2025', 12)
   await Promise.all([
-    prisma.user.upsert({ where: { email: 'admin@valeacoimoveis.com.br' }, update: {}, create: { name: 'José Carlos Admin', email: 'admin@valeacoimoveis.com.br', passwordHash: senhaHash, role: Role.ADMIN, tenantId: tenantValeAco.id } }),
-    prisma.user.upsert({ where: { email: 'corretor1@valeacoimoveis.com.br' }, update: {}, create: { name: 'Cláudia Mendes', email: 'corretor1@valeacoimoveis.com.br', passwordHash: senhaHash, role: Role.CORRETOR, tenantId: tenantValeAco.id } }),
-    prisma.user.upsert({ where: { email: 'admin@ipatinganegocios.com.br' }, update: {}, create: { name: 'Rogério Fonseca', email: 'admin@ipatinganegocios.com.br', passwordHash: senhaHash, role: Role.ADMIN, tenantId: tenantIpatinga.id } }),
-    prisma.user.upsert({ where: { email: 'admin@acoimoveis.com.br' }, update: {}, create: { name: 'Adriana Costa', email: 'admin@acoimoveis.com.br', passwordHash: senhaHash, role: Role.ADMIN, tenantId: tenantAco.id } }),
+    prisma.user.upsert({ where: { email: 'admin@paulistaimoveis.com.br' }, update: {}, create: { name: 'Rafael Monteiro',  email: 'admin@paulistaimoveis.com.br', passwordHash: hash, role: Role.ADMIN,    tenantId: tenantSP.id } }),
+    prisma.user.upsert({ where: { email: 'admin@bhpremium.com.br'       }, update: {}, create: { name: 'Cristiane Lopes',  email: 'admin@bhpremium.com.br',       passwordHash: hash, role: Role.ADMIN,    tenantId: tenantBH.id } }),
+    prisma.user.upsert({ where: { email: 'admin@valeacoimoveis.com.br'  }, update: {}, create: { name: 'José Carlos Silva', email: 'admin@valeacoimoveis.com.br',  passwordHash: hash, role: Role.ADMIN,    tenantId: tenantIPA.id } }),
   ])
-  console.log('✅ Usuários prontos')
-  console.log('\n🌱 Inserindo imóveis da região de Ipatinga/MG...')
+  console.log('✅ Usuários criados (senha: Imov@2025)\n')
 
-  // ─────────────────────────────────────────
-  // IMÓVEIS — Vale do Aço Imóveis
-  // ─────────────────────────────────────────
-  const imoveisValeAco = await Promise.all([
-    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos no Cidade Nobre', tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA, preco: 420000, areaM2: 98, quartos: 3, banheiros: 2, vagas: 2, bairro: 'Cidade Nobre', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4678, longitude: -42.5280, descricao: 'Apartamento bem acabado, varanda, condomínio com piscina e salão de festas.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Casa alto padrão no Cidade Nobre', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 980000, areaM2: 320, quartos: 4, banheiros: 4, vagas: 4, bairro: 'Cidade Nobre', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4701, longitude: -42.5265, descricao: 'Casa em condomínio fechado, piscina, área gourmet, jardim.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Bom Retiro', tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 1400, areaM2: 65, quartos: 2, banheiros: 1, vagas: 1, bairro: 'Bom Retiro', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4750, longitude: -42.5320, descricao: 'Apartamento espaçoso, perto de escolas e comércio. Aceita animais.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos no Bom Retiro', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 310000, areaM2: 140, quartos: 3, banheiros: 2, vagas: 2, bairro: 'Bom Retiro', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4762, longitude: -42.5335, descricao: 'Casa com quintal, área de serviço, boa localização.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Apartamento 1 quarto no Horto', tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 900, areaM2: 42, quartos: 1, banheiros: 1, vagas: 1, bairro: 'Horto', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4820, longitude: -42.5290, descricao: 'Kitnet mobiliada próxima à Usiminas.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Casa 4 quartos no Veneza', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 550000, areaM2: 220, quartos: 4, banheiros: 3, vagas: 3, bairro: 'Veneza', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4640, longitude: -42.5150, descricao: 'Casa ampla com piscina, churrasqueira e área de lazer.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos no Iguaçu', tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA, preco: 285000, areaM2: 82, quartos: 3, banheiros: 1, vagas: 1, bairro: 'Iguaçu', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4890, longitude: -42.5410, descricao: 'Ótimo custo-benefício, próximo ao centro.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Sala comercial no Cariru', tipoId: tipos['Comercial'], finalidade: Finalidade.ALUGUEL, preco: 2800, areaM2: 55, banheiros: 1, bairro: 'Cariru', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4730, longitude: -42.5380, descricao: 'Sala em galeria comercial de alto fluxo.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos no Palmeiras', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 240000, areaM2: 120, quartos: 3, banheiros: 2, vagas: 1, bairro: 'Palmeiras', cidade: 'Coronel Fabriciano', estado: 'MG', latitude: -19.5183, longitude: -42.6289, descricao: 'Casa bem localizada, 5 minutos do centro.', tenantId: tenantValeAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Centro de Timóteo', tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 1100, areaM2: 60, quartos: 2, banheiros: 1, vagas: 1, bairro: 'Centro', cidade: 'Timóteo', estado: 'MG', latitude: -19.5815, longitude: -42.6451, descricao: 'Apartamento próximo à Usiminas Timóteo.', tenantId: tenantValeAco.id } }),
+  // ═══════════════════════════════════════════
+  // SÃO PAULO — 10 imóveis
+  // ═══════════════════════════════════════════
+  console.log('🏙️  Inserindo imóveis de São Paulo...')
+  const cidSP = await cidadeId(prisma, 'São Paulo', 'SP')
+  const iSP = await Promise.all([
+    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos em Pinheiros',         tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 4500,      areaM2: 65,  quartos: 2, banheiros: 1, vagas: 1, bairro: 'Pinheiros',         cidadeId: cidSP, estado: 'SP', descricao: 'Apto reformado, varanda, condomínio com academia. Próximo ao metrô.',           tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos em Moema',              tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 890000,    areaM2: 95,  quartos: 3, banheiros: 2, vagas: 2, bairro: 'Moema',              cidadeId: cidSP, estado: 'SP', descricao: 'Planta moderna, lazer completo, portaria 24h. Próximo ao Ibirapuera.',          tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 4 quartos em Alto de Pinheiros',         tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 2100000,   areaM2: 280, quartos: 4, banheiros: 4, vagas: 4, bairro: 'Alto de Pinheiros',   cidadeId: cidSP, estado: 'SP', descricao: 'Casa de alto padrão, piscina aquecida, jardim, home theater.',                 tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Sala Comercial em Itaim Bibi',                tipoId: tipos['Comercial'],   finalidade: Finalidade.ALUGUEL, preco: 8000,      areaM2: 80,  banheiros: 2, vagas: 2, bairro: 'Itaim Bibi',             cidadeId: cidSP, estado: 'SP', descricao: 'Sala em andar alto, vista panorâmica, prédio triple A.',                     tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 1 quarto na Vila Madalena',       tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 2800,      areaM2: 45,  quartos: 1, banheiros: 1, vagas: 1, bairro: 'Vila Madalena',       cidadeId: cidSP, estado: 'SP', descricao: 'Studio moderno, decorado, próximo a bares e restaurantes.',                  tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Brooklin',           tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 580000,    areaM2: 72,  quartos: 2, banheiros: 2, vagas: 1, bairro: 'Brooklin',            cidadeId: cidSP, estado: 'SP', descricao: 'Prédio novo, área de lazer completa, próximo à Av. João Dias.',              tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos no Morumbi para aluguel',      tipoId: tipos['Casa'],        finalidade: Finalidade.ALUGUEL, preco: 6500,      areaM2: 160, quartos: 3, banheiros: 3, vagas: 2, bairro: 'Morumbi',             cidadeId: cidSP, estado: 'SP', descricao: 'Casa em condomínio fechado, piscina, quadra, segurança 24h.',                tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos na Vila Olímpia',       tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 1200000,   areaM2: 110, quartos: 3, banheiros: 3, vagas: 2, bairro: 'Vila Olímpia',        cidadeId: cidSP, estado: 'SP', descricao: 'Cobertura duplex, terraço privativo, acabamento premium.',                   tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Loja no Jardins',                             tipoId: tipos['Comercial'],   finalidade: Finalidade.ALUGUEL, preco: 15000,     areaM2: 120, bairro: 'Jardins',                cidadeId: cidSP, estado: 'SP', descricao: 'Loja em ponto nobre dos Jardins, alto fluxo de pedestres.',                   tenantId: tenantSP.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Tatuapé',            tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 420000,    areaM2: 70,  quartos: 2, banheiros: 1, vagas: 1, bairro: 'Tatuapé',             cidadeId: cidSP, estado: 'SP', descricao: 'Próximo ao metrô Tatuapé, comércio local, ótimo custo-benefício.',          tenantId: tenantSP.id } }),
+  ])
+  console.log(`   ✅ ${iSP.length} imóveis de São Paulo`)
+
+  // ═══════════════════════════════════════════
+  // BELO HORIZONTE — 10 imóveis
+  // ═══════════════════════════════════════════
+  console.log('🏛️  Inserindo imóveis de Belo Horizonte...')
+  const cidBH = await cidadeId(prisma, 'Belo Horizonte', 'MG')
+  const iBH = await Promise.all([
+    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos na Savassi',            tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 650000,    areaM2: 98,  quartos: 3, banheiros: 2, vagas: 2, bairro: 'Savassi',             cidadeId: cidBH, estado: 'MG', descricao: 'Apto amplo, armários planejados, lazer completo.',                          tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Funcionários',       tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 2800,      areaM2: 70,  quartos: 2, banheiros: 1, vagas: 1, bairro: 'Funcionários',         cidadeId: cidBH, estado: 'MG', descricao: 'Localização privilegiada, próximo à Praça da Liberdade.',                  tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 4 quartos nas Mangabeiras',               tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 1800000,   areaM2: 320, quartos: 4, banheiros: 4, vagas: 4, bairro: 'Mangabeiras',          cidadeId: cidBH, estado: 'MG', descricao: 'Mansão com piscina, área gourmet, vista panorâmica da cidade.',             tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Sala Comercial no Centro de BH',               tipoId: tipos['Comercial'],   finalidade: Finalidade.ALUGUEL, preco: 3500,      areaM2: 60,  banheiros: 1, vagas: 1, bairro: 'Centro',                 cidadeId: cidBH, estado: 'MG', descricao: 'Sala no centro comercial, fácil acesso, prédio com elevador.',              tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 1 quarto no Lourdes',              tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 2200,      areaM2: 42,  quartos: 1, banheiros: 1, vagas: 1, bairro: 'Lourdes',              cidadeId: cidBH, estado: 'MG', descricao: 'Studio moderno, mobiliado, próximo à Av. do Contorno.',                    tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos no Buritis',                    tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 580000,    areaM2: 180, quartos: 3, banheiros: 3, vagas: 3, bairro: 'Buritis',              cidadeId: cidBH, estado: 'MG', descricao: 'Casa em condomínio, piscina, área de lazer, rua tranquila.',                tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Belvedere',           tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 480000,    areaM2: 78,  quartos: 2, banheiros: 2, vagas: 1, bairro: 'Belvedere',            cidadeId: cidBH, estado: 'MG', descricao: 'Prédio moderno, varanda gourmet, portaria 24h.',                            tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Galpão Comercial no Barreiro',                 tipoId: tipos['Comercial'],   finalidade: Finalidade.ALUGUEL, preco: 5000,      areaM2: 300, bairro: 'Barreiro',               cidadeId: cidBH, estado: 'MG', descricao: 'Galpão com piso industrial, 5m de pé-direito, acesso para caminhões.',       tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 4 quartos no Belvedere',           tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 1100000,   areaM2: 140, quartos: 4, banheiros: 3, vagas: 3, bairro: 'Belvedere',            cidadeId: cidBH, estado: 'MG', descricao: 'Cobertura com terraço e piscina privativa.',                                tenantId: tenantBH.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos no Caiçara',                    tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 320000,    areaM2: 140, quartos: 3, banheiros: 2, vagas: 2, bairro: 'Caiçara',              cidadeId: cidBH, estado: 'MG', descricao: 'Casa espaçosa, quintal, área de serviço, próxima ao comércio local.',       tenantId: tenantBH.id } }),
+  ])
+  console.log(`   ✅ ${iBH.length} imóveis de Belo Horizonte`)
+
+  // ═══════════════════════════════════════════
+  // IPATINGA — 10 imóveis
+  // ═══════════════════════════════════════════
+  console.log('🏗️  Inserindo imóveis de Ipatinga...')
+  const cidIPA = await cidadeId(prisma, 'Ipatinga', 'MG')
+  const cidCorFab = await cidadeId(prisma, 'Coronel Fabriciano', 'MG')
+  const cidTimoteo = await cidadeId(prisma, 'Timóteo', 'MG')
+  const iIPA = await Promise.all([
+    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos no Cidade Nobre',       tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 420000,    areaM2: 98,  quartos: 3, banheiros: 2, vagas: 2, bairro: 'Cidade Nobre',          cidadeId: cidIPA,    estado: 'MG', descricao: 'Apartamento bem acabado, varanda, piscina e salão de festas.',               tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa alto padrão no Cidade Nobre',             tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 980000,    areaM2: 320, quartos: 4, banheiros: 4, vagas: 4, bairro: 'Cidade Nobre',          cidadeId: cidIPA,    estado: 'MG', descricao: 'Casa em condomínio fechado, piscina, área gourmet, jardim.',                tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Bom Retiro',          tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 1400,      areaM2: 65,  quartos: 2, banheiros: 1, vagas: 1, bairro: 'Bom Retiro',             cidadeId: cidIPA,    estado: 'MG', descricao: 'Apartamento espaçoso, perto de escolas e comércio. Aceita animais.',         tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos no Bom Retiro',                 tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 310000,    areaM2: 140, quartos: 3, banheiros: 2, vagas: 2, bairro: 'Bom Retiro',             cidadeId: cidIPA,    estado: 'MG', descricao: 'Casa com quintal, área de serviço, boa localização.',                       tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 1 quarto no Horto',                tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 900,       areaM2: 42,  quartos: 1, banheiros: 1, vagas: 1, bairro: 'Horto',                  cidadeId: cidIPA,    estado: 'MG', descricao: 'Kitnet mobiliada próxima à Usiminas.',                                      tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 4 quartos no Veneza',                     tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 550000,    areaM2: 220, quartos: 4, banheiros: 3, vagas: 3, bairro: 'Veneza',                 cidadeId: cidIPA,    estado: 'MG', descricao: 'Casa ampla com piscina, churrasqueira e área de lazer.',                    tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos no Iguaçu',              tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA,   preco: 285000,    areaM2: 82,  quartos: 3, banheiros: 1, vagas: 1, bairro: 'Iguaçu',                 cidadeId: cidIPA,    estado: 'MG', descricao: 'Ótimo custo-benefício, próximo ao centro.',                                 tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Sala comercial no Cariru',                     tipoId: tipos['Comercial'],   finalidade: Finalidade.ALUGUEL, preco: 2800,      areaM2: 55,  banheiros: 1, bairro: 'Cariru',                  cidadeId: cidIPA,    estado: 'MG', descricao: 'Sala em galeria comercial de alto fluxo.',                                  tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos em Coronel Fabriciano',         tipoId: tipos['Casa'],        finalidade: Finalidade.VENDA,   preco: 240000,    areaM2: 120, quartos: 3, banheiros: 2, vagas: 1, bairro: 'Palmeiras',              cidadeId: cidCorFab, estado: 'MG', descricao: 'Casa bem localizada, 5 minutos do centro.',                    tenantId: tenantIPA.id } }),
+    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Centro de Timóteo',   tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 1100,      areaM2: 60,  quartos: 2, banheiros: 1, vagas: 1, bairro: 'Centro',                 cidadeId: cidTimoteo,estado: 'MG', descricao: 'Apartamento próximo à Usiminas Timóteo.',                                   tenantId: tenantIPA.id } }),
+  ])
+  console.log(`   ✅ ${iIPA.length} imóveis de Ipatinga/Vale do Aço`)
+
+  // ═══════════════════════════════════════════
+  // PERFIS DE BUSCA — São Paulo (5)
+  // ═══════════════════════════════════════════
+  console.log('\n🔍 Criando perfis de busca...')
+  const pSP = await Promise.all([
+    prisma.perfilBusca.create({ data: { clienteNome: 'Carlos Ferreira',   clienteEmail: 'carlos.ferreira@gmail.com',    clienteWhatsapp: '+5511991110001', finalidade: Finalidade.VENDA,   precoMin: 400000,  precoMax: 650000,   areaMin: 60,  quartosMin: 2, cidades: ['São Paulo'], bairros: ['Brooklin', 'Vila Olímpia', 'Moema'],           tenantId: tenantSP.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Mariana Santos',    clienteEmail: 'mariana.santos@hotmail.com',   clienteWhatsapp: '+5511991110002', finalidade: Finalidade.ALUGUEL, precoMin: 2500,    precoMax: 4500,     areaMin: 40,  quartosMin: 1, cidades: ['São Paulo'], bairros: ['Vila Madalena', 'Pinheiros', 'Brooklin'],       tenantId: tenantSP.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'TechCorp Ltda',     clienteEmail: 'expansao@techcorp.com.br',                                        finalidade: Finalidade.ALUGUEL, precoMin: 6000,    precoMax: 18000,    areaMin: 70,               cidades: ['São Paulo'], bairros: ['Itaim Bibi', 'Jardins', 'Vila Olímpia'],       tenantId: tenantSP.id, tipos: { connect: [{ id: tipos['Comercial'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Roberto Almeida',   clienteEmail: 'roberto.almeida@outlook.com',  clienteWhatsapp: '+5511991110004', finalidade: Finalidade.VENDA,   precoMin: 1500000, precoMax: 2500000,  areaMin: 250, quartosMin: 4, cidades: ['São Paulo'], bairros: ['Alto de Pinheiros', 'Morumbi', 'Jardins'],      tenantId: tenantSP.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Letícia Costa',     clienteEmail: 'leticia.costa@gmail.com',      clienteWhatsapp: '+5511991110005', finalidade: Finalidade.VENDA,   precoMin: 800000,  precoMax: 1300000,  areaMin: 90,  quartosMin: 3, cidades: ['São Paulo'], bairros: ['Moema', 'Vila Olímpia', 'Itaim Bibi'],          tenantId: tenantSP.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
   ])
 
-  // ─────────────────────────────────────────
-  // IMÓVEIS — Ipatinga Negócios
-  // ─────────────────────────────────────────
-  const imoveisIpatinga = await Promise.all([
-    prisma.imovel.create({ data: { titulo: 'Casa térrea no Bethânia', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 380000, areaM2: 160, quartos: 3, banheiros: 2, vagas: 2, bairro: 'Bethânia', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4600, longitude: -42.5450, descricao: 'Casa bem conservada, cozinha planejada, quintal gramado.', tenantId: tenantIpatinga.id } }),
-    prisma.imovel.create({ data: { titulo: 'Apartamento 3 quartos no Bethânia', tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 1800, areaM2: 88, quartos: 3, banheiros: 2, vagas: 1, bairro: 'Bethânia', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4610, longitude: -42.5460, descricao: 'Apartamento reformado, piso porcelanato, armários planejados.', tenantId: tenantIpatinga.id } }),
-    prisma.imovel.create({ data: { titulo: 'Casa 4 quartos no Grão Pará', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 650000, areaM2: 250, quartos: 4, banheiros: 3, vagas: 3, bairro: 'Grão Pará', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4550, longitude: -42.5200, descricao: 'Residência de alto padrão, piscina aquecida, churrasqueira gourmet.', tenantId: tenantIpatinga.id } }),
-    prisma.imovel.create({ data: { titulo: 'Terreno no Canaã', tipoId: tipos['Terreno'], finalidade: Finalidade.VENDA, preco: 180000, areaM2: 360, bairro: 'Canaã', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4920, longitude: -42.5180, descricao: 'Terreno plano, escriturado, pronto para construir.', tenantId: tenantIpatinga.id } }),
-    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Planalto', tipoId: tipos['Apartamento'], finalidade: Finalidade.VENDA, preco: 195000, areaM2: 68, quartos: 2, banheiros: 1, vagas: 1, bairro: 'Planalto', cidade: 'Ipatinga', estado: 'MG', latitude: -19.4855, longitude: -42.5490, descricao: 'Apartamento em ótimo estado, condomínio baixo.', tenantId: tenantIpatinga.id } }),
-    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos em Santana do Paraíso', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 290000, areaM2: 130, quartos: 3, banheiros: 2, vagas: 2, bairro: 'Centro', cidade: 'Santana do Paraíso', estado: 'MG', latitude: -19.3680, longitude: -42.5310, descricao: 'Casa nova, nunca habitada, acabamento moderno.', tenantId: tenantIpatinga.id } }),
+  // ═══════════════════════════════════════════
+  // PERFIS DE BUSCA — Belo Horizonte (5)
+  // ═══════════════════════════════════════════
+  const pBH = await Promise.all([
+    prisma.perfilBusca.create({ data: { clienteNome: 'Ana Luiza Martins', clienteEmail: 'analuiza.m@gmail.com',         clienteWhatsapp: '+5531991110001', finalidade: Finalidade.VENDA,   precoMin: 400000,  precoMax: 700000,   areaMin: 70,  quartosMin: 2, cidades: ['Belo Horizonte'], bairros: ['Savassi', 'Funcionários', 'Lourdes'],           tenantId: tenantBH.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Pedro Henrique',    clienteEmail: 'pedrohenrique@hotmail.com',    clienteWhatsapp: '+5531991110002', finalidade: Finalidade.ALUGUEL, precoMin: 1800,    precoMax: 3000,     areaMin: 40,  quartosMin: 1, cidades: ['Belo Horizonte'], bairros: ['Lourdes', 'Funcionários', 'Savassi'],           tenantId: tenantBH.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Família Rocha',     clienteEmail: 'rocha.familia@yahoo.com.br',   clienteWhatsapp: '+5531991110003', finalidade: Finalidade.VENDA,   precoMin: 1500000, precoMax: 2500000,  areaMin: 280, quartosMin: 4, cidades: ['Belo Horizonte'], bairros: ['Mangabeiras', 'Belvedere'],                     tenantId: tenantBH.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Comércio Rápido',   clienteEmail: 'imoveis@comerciorapido.com.br',                                   finalidade: Finalidade.ALUGUEL, precoMin: 3000,    precoMax: 6000,     areaMin: 50,               cidades: ['Belo Horizonte'], bairros: ['Centro', 'Barreiro', 'Buritis'],                tenantId: tenantBH.id, tipos: { connect: [{ id: tipos['Comercial'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Camila Borges',     clienteEmail: 'camila.borges@gmail.com',      clienteWhatsapp: '+5531991110005', finalidade: Finalidade.VENDA,   precoMin: 400000,  precoMax: 600000,   areaMin: 65,  quartosMin: 2, cidades: ['Belo Horizonte'], bairros: ['Buritis', 'Belvedere', 'Savassi'],              tenantId: tenantBH.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
   ])
 
-  // ─────────────────────────────────────────
-  // IMÓVEIS — Aço Imóveis
-  // ─────────────────────────────────────────
-  const imoveisAco = await Promise.all([
-    prisma.imovel.create({ data: { titulo: 'Casa 3 quartos no Limoeiro — Timóteo', tipoId: tipos['Casa'], finalidade: Finalidade.VENDA, preco: 270000, areaM2: 150, quartos: 3, banheiros: 2, vagas: 2, bairro: 'Limoeiro', cidade: 'Timóteo', estado: 'MG', latitude: -19.5740, longitude: -42.6480, descricao: 'Casa com quintal, área de serviço coberta e garagem para 2 carros.', tenantId: tenantAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Apartamento 2 quartos no Laranjeiras — Timóteo', tipoId: tipos['Apartamento'], finalidade: Finalidade.ALUGUEL, preco: 950, areaM2: 58, quartos: 2, banheiros: 1, vagas: 1, bairro: 'Laranjeiras', cidade: 'Timóteo', estado: 'MG', latitude: -19.5800, longitude: -42.6430, descricao: 'Apartamento amplo, próximo ao comércio e transporte público.', tenantId: tenantAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Sala comercial no Centro — Coronel Fabriciano', tipoId: tipos['Comercial'], finalidade: Finalidade.ALUGUEL, preco: 1800, areaM2: 40, bairro: 'Centro', cidade: 'Coronel Fabriciano', estado: 'MG', latitude: -19.5220, longitude: -42.6280, descricao: 'Sala no centro comercial de Coronel Fabriciano.', tenantId: tenantAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Terreno industrial em Coronel Fabriciano', tipoId: tipos['Terreno'], finalidade: Finalidade.VENDA, preco: 420000, areaM2: 1200, bairro: 'Distrito Industrial', cidade: 'Coronel Fabriciano', estado: 'MG', descricao: 'Terreno em distrito industrial, acesso facilitado para caminhões.', tenantId: tenantAco.id } }),
-    prisma.imovel.create({ data: { titulo: 'Casa 2 quartos no Caravaggio — Coronel Fabriciano', tipoId: tipos['Casa'], finalidade: Finalidade.ALUGUEL, preco: 1200, areaM2: 90, quartos: 2, banheiros: 1, vagas: 1, bairro: 'Caravaggio', cidade: 'Coronel Fabriciano', estado: 'MG', descricao: 'Casa simples e bem conservada, aceita animais.', tenantId: tenantAco.id } }),
+  // ═══════════════════════════════════════════
+  // PERFIS DE BUSCA — Ipatinga (5)
+  // ═══════════════════════════════════════════
+  const pIPA = await Promise.all([
+    prisma.perfilBusca.create({ data: { clienteNome: 'Anderson Rodrigues',clienteEmail: 'anderson.r@gmail.com',         clienteWhatsapp: '+553138221001',  finalidade: Finalidade.VENDA,   precoMin: 250000,  precoMax: 450000,   areaMin: 70,  quartosMin: 2, cidades: ['Ipatinga'], bairros: ['Cidade Nobre', 'Bom Retiro', 'Iguaçu'],         tenantId: tenantIPA.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Patrícia Oliveira', clienteEmail: 'patricia.oliveira@hotmail.com',clienteWhatsapp: '+553138221002',  finalidade: Finalidade.ALUGUEL, precoMin: 800,     precoMax: 1600,     areaMin: 50,  quartosMin: 2, cidades: ['Ipatinga'], bairros: ['Horto', 'Bom Retiro', 'Iguaçu'],                tenantId: tenantIPA.id, tipos: { connect: [{ id: tipos['Apartamento'] }, { id: tipos['Casa'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Família Gonçalves', clienteEmail: 'jose.goncalves@yahoo.com.br',  clienteWhatsapp: '+553138221003',  finalidade: Finalidade.VENDA,   precoMin: 450000,  precoMax: 700000,   areaMin: 200, quartosMin: 4, cidades: ['Ipatinga'], bairros: ['Veneza', 'Cidade Nobre'],                        tenantId: tenantIPA.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Marcos Vieira',     clienteEmail: 'marcos.vieira@empresa.com',                                       finalidade: Finalidade.ALUGUEL, precoMin: 1500,    precoMax: 3500,     areaMin: 40,               cidades: ['Ipatinga', 'Coronel Fabriciano'],                                           tenantId: tenantIPA.id, tipos: { connect: [{ id: tipos['Comercial'] }] } } }),
+    prisma.perfilBusca.create({ data: { clienteNome: 'Fernanda Duarte',   clienteEmail: 'fe.duarte@gmail.com',          clienteWhatsapp: '+553138221005',  finalidade: Finalidade.VENDA,   precoMin: 200000,  precoMax: 320000,   areaMin: 100, quartosMin: 3, cidades: ['Coronel Fabriciano', 'Timóteo'],                                            tenantId: tenantIPA.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
   ])
+  console.log(`   ✅ ${pSP.length + pBH.length + pIPA.length} perfis de busca criados`)
 
-  const totalImoveis = imoveisValeAco.length + imoveisIpatinga.length + imoveisAco.length
-  console.log(`✅ Imóveis criados: ${totalImoveis}`)
-
-  // ─────────────────────────────────────────
-  // PERFIS DE BUSCA — usam connect por ID de tipo
-  // ─────────────────────────────────────────
-  const perfis = await Promise.all([
-    prisma.perfilBusca.create({ data: { clienteNome: 'Anderson Rodrigues', clienteEmail: 'anderson.r@gmail.com', clienteWhatsapp: '+553138221001', finalidade: Finalidade.VENDA, precoMin: 250000, precoMax: 450000, areaMin: 70, quartosMin: 2, cidades: ['Ipatinga'], bairros: ['Cidade Nobre', 'Bom Retiro', 'Bethânia', 'Iguaçu'], tenantId: tenantValeAco.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Patrícia Oliveira', clienteEmail: 'patricia.oliveira@hotmail.com', clienteWhatsapp: '+553138221002', finalidade: Finalidade.ALUGUEL, precoMin: 800, precoMax: 1600, areaMin: 50, quartosMin: 2, cidades: ['Ipatinga'], bairros: ['Horto', 'Bom Retiro', 'Iguaçu'], tenantId: tenantValeAco.id, tipos: { connect: [{ id: tipos['Apartamento'] }, { id: tipos['Casa'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Família Gonçalves', clienteEmail: 'jose.goncalves@yahoo.com.br', clienteWhatsapp: '+553138221003', finalidade: Finalidade.VENDA, precoMin: 450000, precoMax: 700000, areaMin: 200, quartosMin: 4, cidades: ['Ipatinga'], bairros: ['Veneza', 'Cidade Nobre', 'Grão Pará'], tenantId: tenantValeAco.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Marcos Vieira', clienteEmail: 'marcos.vieira@empresa.com', finalidade: Finalidade.ALUGUEL, precoMin: 1500, precoMax: 3500, areaMin: 40, cidades: ['Ipatinga', 'Coronel Fabriciano'], tenantId: tenantValeAco.id, tipos: { connect: [{ id: tipos['Comercial'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Fernanda Duarte', clienteEmail: 'fe.duarte@gmail.com', clienteWhatsapp: '+553138221005', finalidade: Finalidade.VENDA, precoMin: 200000, precoMax: 320000, areaMin: 100, quartosMin: 3, cidades: ['Coronel Fabriciano', 'Timóteo'], tenantId: tenantValeAco.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Bruno Lacerda', clienteEmail: 'bruno.lacerda@gmail.com', clienteWhatsapp: '+553138231001', finalidade: Finalidade.VENDA, precoMin: 550000, precoMax: 800000, areaMin: 220, quartosMin: 4, cidades: ['Ipatinga'], bairros: ['Grão Pará', 'Veneza', 'Cidade Nobre'], tenantId: tenantIpatinga.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Simone Batista', clienteEmail: 'simone.b@hotmail.com', clienteWhatsapp: '+553138231002', finalidade: Finalidade.ALUGUEL, precoMin: 1400, precoMax: 2000, areaMin: 70, quartosMin: 2, cidades: ['Ipatinga'], bairros: ['Bethânia', 'Cidade Nobre', 'Bom Retiro'], tenantId: tenantIpatinga.id, tipos: { connect: [{ id: tipos['Apartamento'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Construtora Vale Ltda', clienteEmail: 'compras@construtoravale.com.br', finalidade: Finalidade.VENDA, precoMin: 120000, precoMax: 250000, areaMin: 300, cidades: ['Ipatinga', 'Santana do Paraíso'], tenantId: tenantIpatinga.id, tipos: { connect: [{ id: tipos['Terreno'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Rafael Teixeira', clienteEmail: 'rafael.t@gmail.com', clienteWhatsapp: '+553138411001', finalidade: Finalidade.VENDA, precoMin: 220000, precoMax: 320000, areaMin: 100, quartosMin: 3, cidades: ['Timóteo', 'Coronel Fabriciano'], tenantId: tenantAco.id, tipos: { connect: [{ id: tipos['Casa'] }] } } }),
-    prisma.perfilBusca.create({ data: { clienteNome: 'Juliana Prado', clienteEmail: 'ju.prado@outlook.com', clienteWhatsapp: '+553138411002', finalidade: Finalidade.ALUGUEL, precoMin: 800, precoMax: 1300, areaMin: 50, quartosMin: 2, cidades: ['Timóteo'], tenantId: tenantAco.id, tipos: { connect: [{ id: tipos['Apartamento'] }, { id: tipos['Casa'] }] } } }),
-  ])
-  console.log(`✅ Perfis de busca criados: ${perfis.length}`)
-
-  // ─────────────────────────────────────────
+  // ═══════════════════════════════════════════
   // MATCHES
-  // ─────────────────────────────────────────
+  // ═══════════════════════════════════════════
+  console.log('\n💡 Gerando matches...')
   const matches = await Promise.all([
-    prisma.match.create({ data: { perfilId: perfis[0].id, imovelId: imoveisValeAco[6].id, tenantId: tenantValeAco.id, status: StatusMatch.INTERESSADO } }),
-    prisma.match.create({ data: { perfilId: perfis[0].id, imovelId: imoveisValeAco[0].id, tenantId: tenantValeAco.id, status: StatusMatch.VISUALIZADO } }),
-    prisma.match.create({ data: { perfilId: perfis[1].id, imovelId: imoveisValeAco[2].id, tenantId: tenantValeAco.id, status: StatusMatch.INTERESSADO } }),
-    prisma.match.create({ data: { perfilId: perfis[1].id, imovelId: imoveisValeAco[4].id, tenantId: tenantValeAco.id, status: StatusMatch.NOTIFICADO } }),
-    prisma.match.create({ data: { perfilId: perfis[2].id, imovelId: imoveisValeAco[5].id, tenantId: tenantValeAco.id, status: StatusMatch.EM_NEGOCIACAO } }),
-    prisma.match.create({ data: { perfilId: perfis[3].id, imovelId: imoveisValeAco[7].id, tenantId: tenantValeAco.id, status: StatusMatch.INTERESSADO } }),
-    prisma.match.create({ data: { perfilId: perfis[3].id, imovelId: imoveisAco[2].id, tenantId: tenantValeAco.id, status: StatusMatch.NOTIFICADO } }),
-    prisma.match.create({ data: { perfilId: perfis[4].id, imovelId: imoveisValeAco[8].id, tenantId: tenantValeAco.id, status: StatusMatch.VISUALIZADO } }),
-    prisma.match.create({ data: { perfilId: perfis[5].id, imovelId: imoveisIpatinga[2].id, tenantId: tenantIpatinga.id, status: StatusMatch.EM_NEGOCIACAO } }),
-    prisma.match.create({ data: { perfilId: perfis[6].id, imovelId: imoveisIpatinga[1].id, tenantId: tenantIpatinga.id, status: StatusMatch.INTERESSADO } }),
-    prisma.match.create({ data: { perfilId: perfis[7].id, imovelId: imoveisIpatinga[3].id, tenantId: tenantIpatinga.id, status: StatusMatch.FECHADO } }),
-    prisma.match.create({ data: { perfilId: perfis[8].id, imovelId: imoveisAco[0].id, tenantId: tenantAco.id, status: StatusMatch.INTERESSADO } }),
-    prisma.match.create({ data: { perfilId: perfis[9].id, imovelId: imoveisAco[1].id, tenantId: tenantAco.id, status: StatusMatch.VISUALIZADO } }),
-    prisma.match.create({ data: { perfilId: perfis[9].id, imovelId: imoveisAco[4].id, tenantId: tenantAco.id, status: StatusMatch.NOTIFICADO } }),
+    // São Paulo
+    prisma.match.create({ data: { perfilId: pSP[0].id, imovelId: iSP[5].id,  tenantId: tenantSP.id,  status: StatusMatch.INTERESSADO } }),   // Carlos → Brooklin
+    prisma.match.create({ data: { perfilId: pSP[0].id, imovelId: iSP[9].id,  tenantId: tenantSP.id,  status: StatusMatch.VISUALIZADO } }),   // Carlos → Tatuapé
+    prisma.match.create({ data: { perfilId: pSP[1].id, imovelId: iSP[0].id,  tenantId: tenantSP.id,  status: StatusMatch.INTERESSADO } }),   // Mariana → Pinheiros
+    prisma.match.create({ data: { perfilId: pSP[1].id, imovelId: iSP[4].id,  tenantId: tenantSP.id,  status: StatusMatch.NOTIFICADO } }),    // Mariana → Vila Madalena
+    prisma.match.create({ data: { perfilId: pSP[2].id, imovelId: iSP[3].id,  tenantId: tenantSP.id,  status: StatusMatch.EM_NEGOCIACAO } }), // TechCorp → Itaim
+    prisma.match.create({ data: { perfilId: pSP[2].id, imovelId: iSP[8].id,  tenantId: tenantSP.id,  status: StatusMatch.NOTIFICADO } }),    // TechCorp → Jardins
+    prisma.match.create({ data: { perfilId: pSP[3].id, imovelId: iSP[2].id,  tenantId: tenantSP.id,  status: StatusMatch.INTERESSADO } }),   // Roberto → Alto Pinheiros
+    prisma.match.create({ data: { perfilId: pSP[4].id, imovelId: iSP[7].id,  tenantId: tenantSP.id,  status: StatusMatch.FECHADO } }),       // Letícia → Vila Olímpia
+    prisma.match.create({ data: { perfilId: pSP[4].id, imovelId: iSP[1].id,  tenantId: tenantSP.id,  status: StatusMatch.VISUALIZADO } }),   // Letícia → Moema
+
+    // Belo Horizonte
+    prisma.match.create({ data: { perfilId: pBH[0].id, imovelId: iBH[0].id,  tenantId: tenantBH.id,  status: StatusMatch.INTERESSADO } }),   // Ana Luiza → Savassi
+    prisma.match.create({ data: { perfilId: pBH[0].id, imovelId: iBH[6].id,  tenantId: tenantBH.id,  status: StatusMatch.NOTIFICADO } }),    // Ana Luiza → Belvedere 2Q
+    prisma.match.create({ data: { perfilId: pBH[1].id, imovelId: iBH[1].id,  tenantId: tenantBH.id,  status: StatusMatch.VISUALIZADO } }),   // Pedro → Funcionários
+    prisma.match.create({ data: { perfilId: pBH[1].id, imovelId: iBH[4].id,  tenantId: tenantBH.id,  status: StatusMatch.NOTIFICADO } }),    // Pedro → Lourdes
+    prisma.match.create({ data: { perfilId: pBH[2].id, imovelId: iBH[2].id,  tenantId: tenantBH.id,  status: StatusMatch.EM_NEGOCIACAO } }), // Família Rocha → Mangabeiras
+    prisma.match.create({ data: { perfilId: pBH[3].id, imovelId: iBH[3].id,  tenantId: tenantBH.id,  status: StatusMatch.INTERESSADO } }),   // Comércio → Centro
+    prisma.match.create({ data: { perfilId: pBH[4].id, imovelId: iBH[6].id,  tenantId: tenantBH.id,  status: StatusMatch.INTERESSADO } }),   // Camila → Belvedere 2Q
+
+    // Ipatinga
+    prisma.match.create({ data: { perfilId: pIPA[0].id, imovelId: iIPA[6].id, tenantId: tenantIPA.id, status: StatusMatch.INTERESSADO } }),  // Anderson → Iguaçu
+    prisma.match.create({ data: { perfilId: pIPA[0].id, imovelId: iIPA[0].id, tenantId: tenantIPA.id, status: StatusMatch.VISUALIZADO } }),  // Anderson → Cidade Nobre
+    prisma.match.create({ data: { perfilId: pIPA[1].id, imovelId: iIPA[2].id, tenantId: tenantIPA.id, status: StatusMatch.INTERESSADO } }),  // Patrícia → Bom Retiro
+    prisma.match.create({ data: { perfilId: pIPA[1].id, imovelId: iIPA[4].id, tenantId: tenantIPA.id, status: StatusMatch.NOTIFICADO } }),   // Patrícia → Horto
+    prisma.match.create({ data: { perfilId: pIPA[2].id, imovelId: iIPA[5].id, tenantId: tenantIPA.id, status: StatusMatch.EM_NEGOCIACAO } }), // Família Gonçalves → Veneza
+    prisma.match.create({ data: { perfilId: pIPA[3].id, imovelId: iIPA[7].id, tenantId: tenantIPA.id, status: StatusMatch.INTERESSADO } }),  // Marcos → Cariru
+    prisma.match.create({ data: { perfilId: pIPA[4].id, imovelId: iIPA[8].id, tenantId: tenantIPA.id, status: StatusMatch.FECHADO } }),      // Fernanda → Coronel Fab.
   ])
+  console.log(`   ✅ ${matches.length} matches gerados`)
 
-  await prisma.imovel.update({ where: { id: imoveisIpatinga[3].id }, data: { status: StatusImovel.VENDIDO } })
-  console.log(`✅ Matches criados: ${matches.length}`)
+  // Marcar imóvel da Letícia como VENDIDO
+  await prisma.imovel.update({ where: { id: iSP[7].id }, data: { status: StatusImovel.VENDIDO } })
 
-  console.log('\n🎉 Seed da região de Ipatinga/MG concluído!')
-  console.log('─────────────────────────────────────────────')
-  console.log('📊 Resumo:')
-  console.log(`   🏢 3 imobiliárias`)
-  console.log(`   🏷️  ${tiposData.length} tipos de imóvel (tabela no banco)`)
-  console.log(`   🏠 ${totalImoveis} imóveis`)
-  console.log(`   🔍 ${perfis.length} perfis de busca`)
-  console.log(`   💡 ${matches.length} matches`)
-  console.log('\n📋 Logins (senha: senha123):')
-  console.log('   Vale do Aço Imóveis  → admin@valeacoimoveis.com.br')
-  console.log('   Ipatinga Negócios    → admin@ipatinganegocios.com.br')
-  console.log('   Aço Imóveis         → admin@acoimoveis.com.br')
+  console.log('\n🎉 Seed concluído!\n')
+  console.log('═══════════════════════════════════════════════════════')
+  console.log('  ACESSOS DAS IMOBILIÁRIAS')
+  console.log('═══════════════════════════════════════════════════════')
+  console.log('\n🏙️  PAULISTA IMÓVEIS — São Paulo/SP')
+  console.log('   E-mail : admin@paulistaimoveis.com.br')
+  console.log('   Senha  : Imov@2025')
+  console.log('\n🏛️  BH PREMIUM IMÓVEIS — Belo Horizonte/MG')
+  console.log('   E-mail : admin@bhpremium.com.br')
+  console.log('   Senha  : Imov@2025')
+  console.log('\n🏗️  VALE DO AÇO IMÓVEIS — Ipatinga/MG')
+  console.log('   E-mail : admin@valeacoimoveis.com.br')
+  console.log('   Senha  : Imov@2025')
+  console.log('\n═══════════════════════════════════════════════════════')
+  console.log(`  30 imóveis · 15 perfis · ${matches.length} matches`)
+  console.log('═══════════════════════════════════════════════════════\n')
 }
 
 main()
-  .catch((e) => { console.error('❌ Erro:', e); process.exit(1) })
+  .catch((e) => { console.error('❌ Erro no seed:', e); process.exit(1) })
   .finally(() => prisma.$disconnect())

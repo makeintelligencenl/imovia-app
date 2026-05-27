@@ -19,6 +19,7 @@ export class MatchingService {
   async executarMatching(tenantId: string, imovelId: string) {
     const imovel = await this.prisma.imovel.findFirst({
       where: { id: imovelId, tenantId, status: 'DISPONIVEL' },
+      include: { cidade: true },
     })
     if (!imovel) return { matchesEncontrados: 0 }
 
@@ -32,7 +33,7 @@ export class MatchingService {
         precoMin: { lte: imovel.preco },
         precoMax: { gte: imovel.preco },
         areaMin: { lte: imovel.areaM2 },
-        cidades: { hasSome: [imovel.cidade] },
+        cidades: { hasSome: [imovel.cidade.nome] },
         AND: [
           // quartosMin null = sem preferência de quartos
           ...(imovel.quartos
@@ -87,7 +88,7 @@ export class MatchingService {
         },
         areaM2: { gte: perfil.areaMin },
         ...(perfil.quartosMin ? { quartos: { gte: perfil.quartosMin } } : {}),
-        cidade: { in: perfil.cidades },
+        cidade: { nome: { in: perfil.cidades } },
         ...((perfil.bairros as string[]).length > 0
           ? { bairro: { in: perfil.bairros as string[] } }
           : {}),
