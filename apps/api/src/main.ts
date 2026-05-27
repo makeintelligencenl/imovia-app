@@ -22,25 +22,30 @@ async function bootstrap() {
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',')
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.some(o => origin.startsWith(o.trim()))) {
-        callback(null, true)
-      } else {
-        callback(new Error('Not allowed by CORS'))
-      }
+      // Sem origin = requests server-side ou ferramentas (curl, Postman) → permitir
+      if (!origin) return callback(null, true)
+      const allowed = allowedOrigins.some((o) => {
+        const base = o.trim()
+        return origin === base || origin.startsWith(base + '/')
+      })
+      allowed ? callback(null, true) : callback(new Error('Not allowed by CORS'))
     },
     credentials: true,
   })
 
-  const config = new DocumentBuilder()
-    .setTitle('Corretor Inteligente API')
-    .setDescription('API para matching de imóveis e clientes')
-    .setVersion('1.1')
-    .addBearerAuth()
-    .addApiKey({ type: 'apiKey', in: 'header', name: 'x-bot-api-key' }, 'x-bot-api-key')
-    .build()
+  // Swagger disponível apenas fora de produção
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Corretor Inteligente API')
+      .setDescription('API para matching de imóveis e clientes')
+      .setVersion('1.1')
+      .addBearerAuth()
+      .addApiKey({ type: 'apiKey', in: 'header', name: 'x-bot-api-key' }, 'x-bot-api-key')
+      .build()
 
-  const document = SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup('docs', app, document)
+    const document = SwaggerModule.createDocument(app, config)
+    SwaggerModule.setup('docs', app, document)
+  }
 
   const port = process.env.PORT || 3001
   await app.listen(port)

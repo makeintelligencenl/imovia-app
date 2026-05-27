@@ -52,11 +52,10 @@ export class MatchingService {
       include: { tipos: true },
     })
 
-    let matchesEncontrados = 0
-    for (const perfil of perfisCompativeis) {
-      const gerado = await this.gerarMatch(perfil, imovel, tenantId)
-      if (gerado) matchesEncontrados++
-    }
+    const resultados = await Promise.all(
+      perfisCompativeis.map((perfil) => this.gerarMatch(perfil, imovel, tenantId)),
+    )
+    const matchesEncontrados = resultados.filter(Boolean).length
 
     this.logger.log(`[Imóvel ${imovelId}] ${matchesEncontrados} matches gerados`)
     return { matchesEncontrados }
@@ -80,12 +79,8 @@ export class MatchingService {
         tenantId,
         status: 'DISPONIVEL',
         finalidade: perfil.finalidade,
-        // Compara por ID — sem risco de case mismatch
         tipoId: { in: tipoIds },
-        preco: {
-          gte: perfil.precoMin,
-          lte: perfil.precoMax,
-        },
+        preco: { gte: perfil.precoMin, lte: perfil.precoMax },
         areaM2: { gte: perfil.areaMin },
         ...(perfil.quartosMin ? { quartos: { gte: perfil.quartosMin } } : {}),
         cidade: { nome: { in: perfil.cidades } },
@@ -95,11 +90,10 @@ export class MatchingService {
       },
     })
 
-    let matchesEncontrados = 0
-    for (const imovel of imoveisCompativeis) {
-      const gerado = await this.gerarMatch(perfil, imovel, tenantId)
-      if (gerado) matchesEncontrados++
-    }
+    const resultados = await Promise.all(
+      imoveisCompativeis.map((imovel) => this.gerarMatch(perfil, imovel, tenantId)),
+    )
+    const matchesEncontrados = resultados.filter(Boolean).length
 
     this.logger.log(`[Perfil ${perfilId}] ${matchesEncontrados} matches gerados`)
     return { matchesEncontrados }
