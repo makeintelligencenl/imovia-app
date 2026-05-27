@@ -6,21 +6,21 @@ type Msg =
   | { tipo: 'imovel'; titulo: string; detalhes: string }
 
 const SCRIPT: Array<Msg & { delay: number }> = [
-  { tipo: 'agente',  texto: 'Olá! 👋 Sou o assistente virtual da Vale do Aço Imóveis. Como posso te chamar?', delay: 700 },
-  { tipo: 'cliente', texto: 'Oi, pode chamar de Carlos', delay: 2000 },
-  { tipo: 'agente',  texto: 'Prazer, Carlos! Você busca um imóvel para comprar ou alugar?', delay: 1600 },
+  { tipo: 'agente',  texto: 'Olá! 👋 Sou o assistente virtual da BH Premium Imóveis. Como posso te chamar?', delay: 700 },
+  { tipo: 'cliente', texto: 'Oi, pode chamar de Fernanda', delay: 2000 },
+  { tipo: 'agente',  texto: 'Prazer, Fernanda! Você busca um imóvel para comprar ou alugar?', delay: 1600 },
   { tipo: 'cliente', texto: 'Comprar', delay: 1800 },
   { tipo: 'agente',  texto: 'Que tipo de imóvel? Casa, apartamento ou sala comercial?', delay: 1400 },
   { tipo: 'cliente', texto: 'Apartamento', delay: 1700 },
   { tipo: 'agente',  texto: 'Quantos quartos você precisa?', delay: 1300 },
-  { tipo: 'cliente', texto: '3 quartos, com suíte', delay: 2000 },
+  { tipo: 'cliente', texto: '2 quartos, com suíte', delay: 2000 },
   { tipo: 'agente',  texto: 'Qual é o seu orçamento máximo?', delay: 1400 },
-  { tipo: 'cliente', texto: 'Até R$ 450 mil', delay: 1900 },
-  { tipo: 'agente',  texto: 'Em qual cidade ou bairro você prefere?', delay: 1300 },
-  { tipo: 'cliente', texto: 'Ipatinga — Horto ou Bom Retiro', delay: 2400 },
+  { tipo: 'cliente', texto: 'Até R$ 600 mil', delay: 1900 },
+  { tipo: 'agente',  texto: 'Em qual bairro de BH você prefere?', delay: 1300 },
+  { tipo: 'cliente', texto: 'Savassi ou Belvedere', delay: 2400 },
   { tipo: 'agente',  texto: 'Perfil cadastrado com sucesso ✅ Já encontrei 2 imóveis compatíveis:', delay: 1800 },
-  { tipo: 'imovel',  titulo: 'Apto 3/4 · Horto — Ipatinga', detalhes: 'R$ 420.000 · 85 m² · 2 vagas', delay: 1200 },
-  { tipo: 'imovel',  titulo: 'Apto 3/4 · Bom Retiro — Ipatinga', detalhes: 'R$ 398.000 · 78 m² · 1 vaga', delay: 1000 },
+  { tipo: 'imovel',  titulo: 'Apto 3/4 · Savassi — BH', detalhes: 'R$ 580.000 · 98 m² · 2 vagas', delay: 1200 },
+  { tipo: 'imovel',  titulo: 'Apto 2/4 · Belvedere — BH', detalhes: 'R$ 480.000 · 78 m² · 1 vaga', delay: 1000 },
   { tipo: 'agente',  texto: 'Nosso corretor vai entrar em contato para agendar as visitas 😊', delay: 1600 },
 ]
 
