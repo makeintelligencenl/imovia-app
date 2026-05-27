@@ -21,7 +21,7 @@ interface Match {
     id: string
     titulo: string
     preco: number
-    cidade: string
+    cidade: { nome: string }
     bairro: string
     finalidade: string
     tipo: { nome: string }
@@ -99,7 +99,7 @@ function MatchesContent() {
     if (texto &&
       !m.imovel.titulo.toLowerCase().includes(texto) &&
       !m.perfil.clienteNome.toLowerCase().includes(texto) &&
-      !m.imovel.cidade.toLowerCase().includes(texto) &&
+      !m.imovel.cidade.nome.toLowerCase().includes(texto) &&
       !m.perfil.clienteEmail.toLowerCase().includes(texto)) return false
     if (filtroStatus     !== '__todos__' && m.status           !== filtroStatus)     return false
     if (filtroFinalidade !== '__todas__' && m.imovel.finalidade !== filtroFinalidade) return false
@@ -249,7 +249,7 @@ function MatchesContent() {
                           {match.imovel.titulo}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {match.imovel.bairro}, {match.imovel.cidade}
+                          {match.imovel.bairro}, {match.imovel.cidade.nome}
                         </p>
                       </TableCell>
 

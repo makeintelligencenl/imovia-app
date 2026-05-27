@@ -33,7 +33,8 @@ interface Imovel {
   banheiros?: number
   vagas?: number
   bairro: string
-  cidade: string
+  cidadeId: number
+  cidade: { id: number; nome: string; estado: { id: number; sigla: string; nome: string } }
   estado: string
   cep?: string
   codigoOrigem?: string
@@ -121,7 +122,7 @@ export default function ImoveisPage() {
     const texto = filtroTexto.toLowerCase()
     if (texto && !i.titulo.toLowerCase().includes(texto) &&
         !i.bairro.toLowerCase().includes(texto) &&
-        !i.cidade.toLowerCase().includes(texto)) return false
+        !i.cidade.nome.toLowerCase().includes(texto)) return false
     if (filtroTipo !== '__todos__' && i.tipoId !== filtroTipo) return false
     if (filtroFinalidade !== '__todas__' && i.finalidade !== filtroFinalidade) return false
     if (filtroStatus !== '__todos__' && i.status !== filtroStatus) return false
@@ -170,7 +171,7 @@ export default function ImoveisPage() {
       banheiros:     imovel.banheiros != null ? String(imovel.banheiros) : '',
       vagas:         imovel.vagas != null ? String(imovel.vagas) : '',
       bairro:        imovel.bairro,
-      cidade:        imovel.cidade,
+      cidade:        String(imovel.cidadeId),
       estado:        imovel.estado,
       cep:           imovel.cep ?? '',
       codigoOrigem:  imovel.codigoOrigem ?? '',
@@ -190,7 +191,7 @@ export default function ImoveisPage() {
   }
 
   async function handleSalvar() {
-    if (!formData.titulo || !formData.tipoId || !formData.finalidade || !formData.preco || !formData.areaM2 || !formData.bairro || !formData.cidade || !formData.estado) {
+    if (!formData.titulo || !formData.tipoId || !formData.finalidade || !formData.preco || !formData.areaM2 || !formData.bairro || !formData.cidade || !formData.estado || !Number(formData.cidade)) {
       toast.error('Preencha os campos obrigatórios')
       return
     }
@@ -205,7 +206,7 @@ export default function ImoveisPage() {
       banheiros:  formData.banheiros ? Number(formData.banheiros) : undefined,
       vagas:      formData.vagas     ? Number(formData.vagas)     : undefined,
       bairro:        formData.bairro,
-      cidade:        formData.cidade,
+      cidadeId:      Number(formData.cidade),
       estado:        formData.estado,
       cep:           formData.cep || undefined,
       codigoOrigem:  formData.codigoOrigem || undefined,
@@ -400,7 +401,7 @@ export default function ImoveisPage() {
                     <TableCell className="text-right">{formatArea(imovel.areaM2)}</TableCell>
                     <TableCell className="text-center">{imovel.quartos ?? '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {imovel.bairro}, {imovel.cidade}
+                      {imovel.bairro}, {imovel.cidade.nome}
                     </TableCell>
                     <TableCell>
                       <Select
@@ -546,7 +547,7 @@ export default function ImoveisPage() {
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="max-h-60">
                     {cidades.map((c) => (
-                      <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                      <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

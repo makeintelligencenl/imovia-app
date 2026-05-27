@@ -13,14 +13,15 @@ import {
 
 // â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Imovel {
-  id: string; titulo: string; preco: number; cidade: string; bairro: string
+  id: string; titulo: string; preco: number; bairro: string
   finalidade: string; status: string
   tipo: { nome: string }
+  cidade: { nome: string }
 }
 interface Perfil { id: string; clienteNome: string }
 interface Match {
   id: string; status: string; createdAt: string
-  imovel: { id: string; titulo: string; preco: number; cidade: string }
+  imovel: { id: string; titulo: string; preco: number; cidade: { nome: string } }
   perfil: { clienteNome: string }
 }
 
@@ -304,7 +305,7 @@ export default function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{m.imovel.titulo}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {m.perfil.clienteNome} · {m.imovel.cidade} · {formatDate(m.createdAt)}
+                        {m.perfil.clienteNome} · {m.imovel.cidade.nome} · {formatDate(m.createdAt)}
                       </p>
                     </div>
                     <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[m.status] ?? ''}`}>
@@ -348,7 +349,7 @@ export default function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{i.titulo}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {i.tipo?.nome} · {i.bairro}, {i.cidade} · {formatCurrency(i.preco)}
+                        {i.tipo?.nome} · {i.bairro}, {i.cidade.nome} · {formatCurrency(i.preco)}
                       </p>
                     </div>
                     <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
