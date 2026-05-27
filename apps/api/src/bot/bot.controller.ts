@@ -88,7 +88,7 @@ export class BotController {
           banheiros: m.imovel.banheiros,
           vagas: m.imovel.vagas,
           bairro: m.imovel.bairro,
-          cidade: m.imovel.cidade,
+          cidade: (m.imovel as any).cidade?.nome ?? '',
           estado: m.imovel.estado,
           descricao: m.imovel.descricao,
           urlImovel: (m.imovel as any).urlImovel ?? null,

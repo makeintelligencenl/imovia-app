@@ -132,7 +132,7 @@ export class MatchingService {
     return this.prisma.match.findMany({
       where: { tenantId, ...filters },
       include: {
-        imovel: { include: { tipo: true } },
+        imovel: { include: { tipo: true, cidade: true } },
         perfil: { include: { tipos: true } },
       },
       orderBy: { createdAt: 'desc' },
