@@ -164,15 +164,7 @@ function DraggableCard({ match }: { match: Match }) {
 }
 
 // ─── Coluna Droppable ─────────────────────────────────────────────────────────
-function DroppableColumn({
-  etapa,
-  matches,
-  dragColor,
-}: {
-  etapa: PipelineEtapa
-  matches: Match[]
-  dragColor: string
-}) {
+function DroppableColumn({ etapa, matches }: { etapa: PipelineEtapa; matches: Match[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: etapa.id })
   const textColor = textColorForBg(etapa.cor)
 
@@ -202,8 +194,8 @@ function DroppableColumn({
         style={
           isOver
             ? {
-                backgroundColor: dragColor + '18',
-                boxShadow: `inset 0 0 0 2px ${dragColor}`,
+                backgroundColor: etapa.cor + '18',
+                boxShadow: `inset 0 0 0 2px ${etapa.cor}`,
               }
             : undefined
         }
@@ -251,8 +243,6 @@ function KanbanView({
     }
   }
 
-  const dragColor = activeMatch?.etapa?.cor ?? '#6B7280'
-
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-2 w-full" style={{ minHeight: '60vh' }}>
@@ -261,7 +251,6 @@ function KanbanView({
             key={etapa.id}
             etapa={etapa}
             matches={matches.filter((m) => m.etapaId === etapa.id)}
-            dragColor={dragColor}
           />
         ))}
       </div>
