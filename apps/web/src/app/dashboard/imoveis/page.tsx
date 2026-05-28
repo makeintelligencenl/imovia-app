@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, X, AlertCircle } from 'lucide-react'
@@ -298,30 +298,30 @@ function ImoveisContent() {
       )}
 
       {/* Cabeçalho */}
-      <div className=”flex items-center justify-between”>
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className=”text-2xl font-bold tracking-tight”>Imóveis</h1>
-          <p className=”text-sm text-muted-foreground mt-0.5”>
+          <h1 className="text-2xl font-bold tracking-tight">Imóveis</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {loading ? 'Carregando...' : `${imovelFiltrado.length} de ${imoveis.length} imóvel(is)`}
           </p>
         </div>
-        <Button onClick={abrirCriar} className=”gap-2 shadow-sm”>
-          <Plus className=”h-4 w-4” /> Novo imóvel
+        <Button onClick={abrirCriar} className="gap-2 shadow-sm">
+          <Plus className="h-4 w-4" /> Novo imóvel
         </Button>
       </div>
 
       {/* Banner: filtro vindo do Dashboard */}
       {semMatchParam && (
-        <div className=”flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm”>
-          <AlertCircle className=”h-4 w-4 shrink-0 text-amber-500” />
-          <span className=”flex-1”>
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+          <span className="flex-1">
             Mostrando apenas <strong>imóveis disponíveis sem match</strong> — estes precisam de atenção.
           </span>
           <button
             onClick={() => router.replace('/dashboard/imoveis')}
-            className=”flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 shrink-0”
+            className="flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 shrink-0"
           >
-            <X className=”h-3.5 w-3.5” /> Limpar filtro
+            <X className="h-3.5 w-3.5" /> Limpar filtro
           </button>
         </div>
       )}
