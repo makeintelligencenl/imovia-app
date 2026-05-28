@@ -170,12 +170,13 @@ export default function DashboardPage() {
   const vendidos    = imoveis.filter((i) => ['VENDIDO', 'ALUGADO'].includes(i.status)).length
   const matchesHoje = matches.filter((m) => new Date(m.createdAt).toDateString() === hoje).length
 
-  const ultimaEtapa  = etapas.length ? etapas[etapas.length - 1] : null
-  const convertidos  = ultimaEtapa ? matches.filter((m) => m.etapaId === ultimaEtapa.id).length : 0
-  const taxaConv     = matches.length ? Math.round(convertidos / matches.length * 100) : 0
+  // Ultima etapa = Encerrado (cancelado/perdido) — penultima = Fechado (conversao real)
+  const etapaEncerrada = etapas.length >= 1 ? etapas[etapas.length - 1] : null
+  const etapaFechado   = etapas.length >= 2 ? etapas[etapas.length - 2] : null
+  const convertidos    = etapaFechado ? matches.filter((m) => m.etapaId === etapaFechado.id).length : 0
+  const taxaConv       = matches.length ? Math.round(convertidos / matches.length * 100) : 0
 
-  // VGV em Carteira: soma única dos preços dos imóveis com match ativo (excluindo última etapa = Encerrado)
-  const etapaEncerrada = etapas.length ? etapas[etapas.length - 1] : null
+  // VGV em Carteira: soma única dos preços dos imóveis com match ativo (excluindo Encerrado)
   const vgvAtivo = (() => {
     const seen = new Set<string>()
     let total = 0

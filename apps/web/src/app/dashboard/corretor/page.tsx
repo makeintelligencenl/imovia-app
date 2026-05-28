@@ -73,10 +73,14 @@ export default function CorretorDashboardPage() {
   }, [router])
 
   // Derivacoes
-  const ultimaEtapa  = etapas.length ? etapas[etapas.length - 1] : null
-  const convertidos  = ultimaEtapa ? matches.filter((m) => m.etapaId === ultimaEtapa.id).length : 0
-  const emNegociacao = matches.filter((m) => m.etapaId !== ultimaEtapa?.id).length
-  const taxaConv     = matches.length ? Math.round(convertidos / matches.length * 100) : 0
+  // Ultima etapa = Encerrado (cancelado/perdido) — penultima = Fechado (conversao real)
+  const etapaEncerrada = etapas.length >= 1 ? etapas[etapas.length - 1] : null
+  const etapaFechado   = etapas.length >= 2 ? etapas[etapas.length - 2] : null
+  const convertidos    = etapaFechado ? matches.filter((m) => m.etapaId === etapaFechado.id).length : 0
+  const emNegociacao   = matches.filter(
+    (m) => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id,
+  ).length
+  const taxaConv = matches.length ? Math.round(convertidos / matches.length * 100) : 0
 
   // Funil (apenas meus matches)
   const funilData = etapas.map((e) => ({
@@ -85,9 +89,9 @@ export default function CorretorDashboardPage() {
     color: e.cor,
   }))
 
-  // Matches sem movimentacao: nao convertidos e criados ha mais de 7 dias
+  // Matches sem movimentacao: em negociacao (nem Fechado, nem Encerrado) e criados ha mais de 7 dias
   const semMovimentacao = matches
-    .filter((m) => m.etapaId !== ultimaEtapa?.id && daysSince(m.createdAt) > 7)
+    .filter((m) => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id && daysSince(m.createdAt) > 7)
     .sort((a, b) => daysSince(b.createdAt) - daysSince(a.createdAt))
     .slice(0, 6)
 
