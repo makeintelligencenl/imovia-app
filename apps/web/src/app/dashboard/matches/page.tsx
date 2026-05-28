@@ -103,10 +103,15 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
         {match.perfil.clienteNome}
       </p>
 
-      {/* 2. Tipo (Venda / Aluguel) */}
-      <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
-        {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
-      </span>
+      {/* 2. Tipo (Venda/Aluguel) + Tipo do imóvel — mesma linha */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
+          {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
+        </span>
+        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+          {match.imovel.tipo?.nome ?? '—'}
+        </span>
+      </div>
 
       {/* 3. Descrição do imóvel */}
       <p className="text-[11px] text-slate-600 leading-tight line-clamp-2">
@@ -119,12 +124,7 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
       </p>
 
       <div className="border-t border-slate-100 pt-1.5 space-y-1">
-        {/* 5. Tipo do imóvel */}
-        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded inline-block">
-          {match.imovel.tipo?.nome ?? '—'}
-        </span>
-
-        {/* 6. Valor */}
+        {/* 5. Valor */}
         <p className="text-[12px] font-bold text-slate-700 tabular-nums">
           {formatCurrency(match.imovel.preco)}
         </p>
