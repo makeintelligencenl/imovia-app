@@ -129,7 +129,7 @@ function ImoveisContent() {
 
   useEffect(() => { load() }, [semMatchParam]) // re-load se o filtro mudar
 
-  // ── Filtro client-side ──
+  // -- Filtro client-side --
   const imovelFiltrado = imoveis.filter((i) => {
     // Filtro especial: apenas disponíveis sem match (vindo do dashboard)
     if (semMatchParam && (i.status !== 'DISPONIVEL' || idsComMatch.has(i.id))) return false
@@ -297,7 +297,7 @@ function ImoveisContent() {
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
 
-      {/* ── Cabeçalho ── */}
+      {/* Cabeçalho */}
       <div className=”flex items-center justify-between”>
         <div>
           <h1 className=”text-2xl font-bold tracking-tight”>Imóveis</h1>
@@ -310,7 +310,7 @@ function ImoveisContent() {
         </Button>
       </div>
 
-      {/* ── Banner: filtro vindo do Dashboard ── */}
+      {/* Banner: filtro vindo do Dashboard */}
       {semMatchParam && (
         <div className=”flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm”>
           <AlertCircle className=”h-4 w-4 shrink-0 text-amber-500” />
