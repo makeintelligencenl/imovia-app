@@ -164,7 +164,15 @@ function DraggableCard({ match }: { match: Match }) {
 }
 
 // ─── Coluna Droppable ─────────────────────────────────────────────────────────
-function DroppableColumn({ etapa, matches }: { etapa: PipelineEtapa; matches: Match[] }) {
+function DroppableColumn({
+  etapa,
+  matches,
+  dragColor,
+}: {
+  etapa: PipelineEtapa
+  matches: Match[]
+  dragColor: string
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: etapa.id })
   const textColor = textColorForBg(etapa.cor)
 
@@ -190,9 +198,15 @@ function DroppableColumn({ etapa, matches }: { etapa: PipelineEtapa; matches: Ma
 
       <div
         ref={setNodeRef}
-        className={`flex flex-col gap-1.5 p-1.5 overflow-y-auto flex-1 min-h-[120px] rounded-b-xl transition-colors ${
-          isOver ? 'bg-blue-50 ring-2 ring-blue-300 ring-inset' : ''
-        }`}
+        className="flex flex-col gap-1.5 p-1.5 overflow-y-auto flex-1 min-h-[120px] rounded-b-xl transition-colors"
+        style={
+          isOver
+            ? {
+                backgroundColor: dragColor + '18',
+                boxShadow: `inset 0 0 0 2px ${dragColor}`,
+              }
+            : undefined
+        }
       >
         {matches.length === 0 && !isOver && (
           <p className="text-[11px] text-muted-foreground text-center py-6 opacity-50">Solte aqui</p>
@@ -237,6 +251,8 @@ function KanbanView({
     }
   }
 
+  const dragColor = activeMatch?.etapa?.cor ?? '#6B7280'
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-2 w-full" style={{ minHeight: '60vh' }}>
@@ -245,6 +261,7 @@ function KanbanView({
             key={etapa.id}
             etapa={etapa}
             matches={matches.filter((m) => m.etapaId === etapa.id)}
+            dragColor={dragColor}
           />
         ))}
       </div>
