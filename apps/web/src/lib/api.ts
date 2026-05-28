@@ -2,12 +2,42 @@ import { isSessionExpired, clearSession } from './session'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'
 
+// ── Cache em memória para GET requests ────────────────────────────────────────
+// Evita re-fetch ao navegar entre páginas. TTL de 2 min.
+// Qualquer mutação (POST/PATCH/DELETE) limpa o cache automaticamente.
+const _cache = new Map<string, { data: unknown; ts: number }>()
+const CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutos
+
+function getCached<T>(path: string): T | null {
+  const entry = _cache.get(path)
+  if (!entry) return null
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { _cache.delete(path); return null }
+  return entry.data as T
+}
+
+function setCached(path: string, data: unknown) {
+  _cache.set(path, { data, ts: Date.now() })
+}
+
+/**
+ * Invalida entradas do cache.
+ * - Sem argumento → limpa tudo (chamado automaticamente em mutações)
+ * - Com prefixo → remove apenas as entradas que começam com ele
+ */
+export function invalidateCache(prefix?: string) {
+  if (!prefix) { _cache.clear(); return }
+  for (const key of _cache.keys()) {
+    if (key.startsWith(prefix)) _cache.delete(key)
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getToken() {
   if (typeof window === 'undefined') return ''
   return sessionStorage.getItem('token') || ''
 }
 
-/** Redireciona para login sinalizando sessão expirada */
 function redirectToLogin(reason: 'expired' | 'unauthorized' = 'expired') {
   clearSession()
   if (typeof window !== 'undefined') {
@@ -22,6 +52,17 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     throw new Error('Sessão expirada')
   }
 
+  // ── Serve do cache em GETs frescos (evita round-trip desnecessário) ──
+  if (method === 'GET') {
+    const cached = getCached<T>(path)
+    if (cached !== null) return cached
+  }
+
+  // ── Mutações invalidam todo o cache para garantir dados frescos ──
+  if (method !== 'GET') {
+    invalidateCache()
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
@@ -31,7 +72,6 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     body: body ? JSON.stringify(body) : undefined,
   })
 
-  // Token inválido / revogado pelo servidor
   if (res.status === 401) {
     redirectToLogin('unauthorized')
     throw new Error('Não autorizado')
@@ -42,7 +82,14 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     throw new Error(err || `HTTP ${res.status}`)
   }
 
-  return res.json()
+  const data = (await res.json()) as T
+
+  // Armazena no cache apenas GETs bem-sucedidos
+  if (method === 'GET') {
+    setCached(path, data)
+  }
+
+  return data
 }
 
 export const api = {

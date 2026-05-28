@@ -8,6 +8,7 @@ import {
   clearSession,
   getTimeoutMs,
 } from '@/lib/session'
+import { api } from '@/lib/api'
 
 /** Eventos de usuário que reiniciam o contador de inatividade */
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'] as const
@@ -31,6 +32,17 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     toast.error('Sessão expirada por inatividade. Faça login novamente.', { duration: 5000 })
     router.replace('/login?expired=1')
   }, [router])
+
+  // ── Warmup: pré-busca dados comuns para popular o cache e acordar a API ──
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null
+    if (!token) return
+    // Fire-and-forget — erros são ignorados; apenas aquece o servidor e popula o cache
+    Promise.allSettled([
+      api.get('/pipeline/etapas'),
+      api.get('/tipos'),
+    ])
+  }, []) // apenas uma vez no mount do dashboard
 
   useEffect(() => {
     // Registra atividade no momento do mount (login / reload)
