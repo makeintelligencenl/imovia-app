@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectTriggerBadge, S
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
+import { getCurrentUser } from '@/lib/auth'
 
 interface PipelineEtapa {
   id: string
@@ -33,10 +34,18 @@ interface PipelineEtapa {
   ativo: boolean
 }
 
+interface Corretor {
+  id: string
+  name: string
+  email: string
+}
+
 interface Match {
   id: string
   etapaId: string
   etapa: PipelineEtapa
+  corretorId: string | null
+  corretor: Corretor | null
   createdAt: string
   imovel: {
     id: string
@@ -113,6 +122,13 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
         </span>
         <span className="text-[9px] text-muted-foreground shrink-0">{timeAgo(match.createdAt)}</span>
       </div>
+      {match.corretor && (
+        <div className="pt-0.5 border-t border-slate-100">
+          <span className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full truncate max-w-full inline-block">
+            {match.corretor.name}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -239,15 +255,18 @@ function KanbanView({
 function MatchesContent() {
   const searchParams = useSearchParams()
   const router       = useRouter()
+  const currentUser  = getCurrentUser()
+  const userIsAdmin  = currentUser?.role === 'ADMIN'
 
   const urlImovelId = searchParams.get('imovelId') ?? ''
   const urlPerfilId = searchParams.get('perfilId') ?? ''
   const urlLabel    = searchParams.get('label') ?? ''
 
-  const [matches,  setMatches]  = useState<Match[]>([])
-  const [etapas,   setEtapas]   = useState<PipelineEtapa[]>([])
-  const [loading,  setLoading]  = useState(true)
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table')
+  const [matches,    setMatches]    = useState<Match[]>([])
+  const [etapas,     setEtapas]     = useState<PipelineEtapa[]>([])
+  const [corretores, setCorretores] = useState<Corretor[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [viewMode,   setViewMode]   = useState<'table' | 'kanban'>('table')
 
   const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
@@ -256,31 +275,56 @@ function MatchesContent() {
   const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
-    Promise.all([
+    const requests: Promise<any>[] = [
       api.get<Match[]>('/matches'),
       api.get<PipelineEtapa[]>('/pipeline/etapas'),
-    ])
-      .then(([m, e]) => { setMatches(m); setEtapas(e) })
-      .finally(() => setLoading(false))
-  }, [])
+    ]
+    // Admin carrega lista de corretores para o seletor de atribuição
+    if (userIsAdmin) {
+      requests.push(
+        api.get<{ id: string; name: string; email: string; role: string }[]>('/users').then(
+          (users) => users.filter((u) => u.role === 'CORRETOR'),
+        ),
+      )
+    }
+    Promise.allSettled(requests).then(([mr, er, cr]) => {
+      if (mr.status === 'fulfilled') setMatches(mr.value)
+      if (er.status === 'fulfilled') setEtapas(er.value)
+      if (cr && cr.status === 'fulfilled') setCorretores(cr.value)
+    }).finally(() => setLoading(false))
+  }, [userIsAdmin])
 
   async function handleEtapaChange(matchId: string, etapaId: string) {
     const oldMatch = matches.find((m) => m.id === matchId)
     if (!oldMatch) return
     const etapa = etapas.find((e) => e.id === etapaId)
     if (!etapa) return
-
-    // Optimistic update
     setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, etapaId, etapa } : m))
     try {
       await api.patch(`/matches/${matchId}/etapa`, { etapaId })
       toast.success('Etapa atualizada')
     } catch {
-      // Reverte com valores originais
       setMatches((prev) =>
         prev.map((m) => m.id === matchId ? { ...m, etapaId: oldMatch.etapaId, etapa: oldMatch.etapa } : m),
       )
       toast.error('Erro ao atualizar etapa')
+    }
+  }
+
+  async function handleCorretorChange(matchId: string, corretorId: string) {
+    const oldMatch = matches.find((m) => m.id === matchId)
+    if (!oldMatch) return
+    const value      = corretorId === '__nenhum__' ? null : corretorId
+    const corretor   = value ? (corretores.find((c) => c.id === value) ?? null) : null
+    setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, corretorId: value, corretor } : m))
+    try {
+      await api.patch(`/matches/${matchId}/corretor`, { corretorId: value })
+      toast.success(value ? 'Corretor atribuído' : 'Corretor removido')
+    } catch {
+      setMatches((prev) =>
+        prev.map((m) => m.id === matchId ? { ...m, corretorId: oldMatch.corretorId, corretor: oldMatch.corretor } : m),
+      )
+      toast.error('Erro ao atribuir corretor')
     }
   }
 
@@ -425,18 +469,19 @@ function MatchesContent() {
                   <TableHead>Contato</TableHead>
                   <TableHead className="text-center">Data</TableHead>
                   <TableHead>Etapa</TableHead>
+                  <TableHead>Corretor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : matchesFiltrados.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-16 text-center">
+                    <TableCell colSpan={8} className="py-16 text-center">
                       <GitMerge className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
                       <p className="text-sm text-muted-foreground">
                         {filtrosAtivos
@@ -514,6 +559,28 @@ function MatchesContent() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        {userIsAdmin ? (
+                          <Select
+                            value={match.corretorId ?? '__nenhum__'}
+                            onValueChange={(v) => handleCorretorChange(match.id, v)}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-[130px]">
+                              <SelectValue placeholder="Sem corretor" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__nenhum__" className="text-xs">— Sem corretor</SelectItem>
+                              {corretores.map((c) => (
+                                <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {match.corretor?.name ?? '—'}
+                          </span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

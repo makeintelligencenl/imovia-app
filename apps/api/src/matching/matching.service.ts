@@ -1,7 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { NotificacoesService } from '../notificacoes/notificacoes.service'
 import { PipelineService } from '../pipeline/pipeline.service'
+
+const CORRETOR_SELECT = { id: true, name: true, email: true } as const
 
 @Injectable()
 export class MatchingService {
@@ -102,7 +104,6 @@ export class MatchingService {
     })
     if (jaExiste) return false
 
-    // Usa sempre a primeira etapa do pipeline do tenant
     const primeiraEtapa = await this.pipelineService.primeiraEtapa(tenantId)
 
     await this.prisma.match.create({
@@ -120,22 +121,35 @@ export class MatchingService {
   }
 
   // ─────────────────────────────────────────
-  // Listagem de matches com etapa incluída
+  // Listagem com filtro de role
+  // CORRETOR só vê matches atribuídos a ele
   // ─────────────────────────────────────────
-  async listarMatches(tenantId: string, filters?: { imovelId?: string; perfilId?: string }) {
+  async listarMatches(
+    tenantId: string,
+    userId: string,
+    userRole: string,
+    filters?: { imovelId?: string; perfilId?: string },
+  ) {
+    const where: any = { tenantId, ...filters }
+
+    if (userRole === 'CORRETOR') {
+      where.corretorId = userId
+    }
+
     return this.prisma.match.findMany({
-      where: { tenantId, ...filters },
+      where,
       include: {
-        imovel: { include: { tipo: true, cidade: true } },
-        perfil: { include: { tipos: true } },
-        etapa:  true,
+        imovel:   { include: { tipo: true, cidade: true } },
+        perfil:   { include: { tipos: true } },
+        etapa:    true,
+        corretor: { select: CORRETOR_SELECT },
       },
       orderBy: { createdAt: 'desc' },
     })
   }
 
   // ─────────────────────────────────────────
-  // Mover match para outra etapa do pipeline
+  // Mover match para outra etapa
   // ─────────────────────────────────────────
   async moverEtapa(tenantId: string, matchId: string, etapaId: string) {
     const match = await this.prisma.match.findFirst({ where: { id: matchId, tenantId } })
@@ -146,8 +160,35 @@ export class MatchingService {
 
     return this.prisma.match.update({
       where: { id: matchId },
-      data: { etapaId },
-      include: { etapa: true },
+      data:  { etapaId },
+      include: {
+        etapa:    true,
+        corretor: { select: CORRETOR_SELECT },
+      },
+    })
+  }
+
+  // ─────────────────────────────────────────
+  // Associar / desassociar corretor ao match
+  // ─────────────────────────────────────────
+  async associarCorretor(tenantId: string, matchId: string, corretorId: string | null) {
+    const match = await this.prisma.match.findFirst({ where: { id: matchId, tenantId } })
+    if (!match) throw new NotFoundException('Match não encontrado')
+
+    if (corretorId) {
+      const corretor = await this.prisma.user.findFirst({
+        where: { id: corretorId, tenantId, role: 'CORRETOR' },
+      })
+      if (!corretor) throw new BadRequestException('Corretor não encontrado neste tenant')
+    }
+
+    return this.prisma.match.update({
+      where: { id: matchId },
+      data:  { corretorId },
+      include: {
+        etapa:    true,
+        corretor: { select: CORRETOR_SELECT },
+      },
     })
   }
 }

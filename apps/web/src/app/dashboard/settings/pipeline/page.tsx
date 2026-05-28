@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import {
-  Settings2,
   Plus,
   Trash2,
   ChevronUp,
@@ -126,16 +125,6 @@ export default function PipelinePage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* ── Cabeçalho ── */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Settings2 className="h-6 w-6 text-slate-500" />
-          Pipeline de Vendas
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Personalize as etapas do funil. Use as setas para reordenar.
-        </p>
-      </div>
 
       {/* ── Lista de etapas ── */}
       <Card className="shadow-sm rounded-xl">

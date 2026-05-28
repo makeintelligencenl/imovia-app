@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Param, Query, Body, UseGuards, Request } from '
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { MatchingService } from './matching.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { RolesGuard, Roles } from '../auth/guards/roles.guard'
 
 @ApiTags('matching')
 @ApiBearerAuth()
@@ -11,13 +12,18 @@ export class MatchingController {
   constructor(private readonly matchingService: MatchingService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os matches do tenant com etapa do pipeline' })
+  @ApiOperation({ summary: 'Lista matches. CORRETOR vê apenas os seus' })
   findAll(
     @Request() req: any,
     @Query('imovelId') imovelId?: string,
     @Query('perfilId') perfilId?: string,
   ) {
-    return this.matchingService.listarMatches(req.user.tenantId, { imovelId, perfilId })
+    return this.matchingService.listarMatches(
+      req.user.tenantId,
+      req.user.id,
+      req.user.role,
+      { imovelId, perfilId },
+    )
   }
 
   @Patch(':id/etapa')
@@ -28,5 +34,17 @@ export class MatchingController {
     @Body('etapaId') etapaId: string,
   ) {
     return this.matchingService.moverEtapa(req.user.tenantId, id, etapaId)
+  }
+
+  @Patch(':id/corretor')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Associa ou remove corretor de um match (ADMIN only)' })
+  associarCorretor(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body('corretorId') corretorId: string | null,
+  ) {
+    return this.matchingService.associarCorretor(req.user.tenantId, id, corretorId ?? null)
   }
 }

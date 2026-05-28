@@ -13,6 +13,7 @@ import { NotificacoesModule } from './notificacoes/notificacoes.module'
 import { LocalidadesModule } from './localidades/localidades.module'
 import { BotModule } from './bot/bot.module'
 import { PipelineModule } from './pipeline/pipeline.module'
+import { UsersModule } from './users/users.module'
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PipelineModule } from './pipeline/pipeline.module'
     LocalidadesModule,
     BotModule,
     PipelineModule,
+    UsersModule,
   ],
   providers: [
     // ThrottlerGuard global: protege todos os endpoints da API

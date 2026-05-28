@@ -7,12 +7,12 @@ import { cn } from '@/lib/utils'
 
 interface UserInfo { name: string; email: string; role: string }
 
-const navItems = [
-  { href: '/dashboard',                   label: 'Dashboard',       icon: LayoutDashboard },
-  { href: '/dashboard/imoveis',           label: 'Imóveis',         icon: Home },
-  { href: '/dashboard/perfis',            label: 'Perfis de Busca', icon: Users },
-  { href: '/dashboard/matches',           label: 'Matches',         icon: GitMerge },
-  { href: '/dashboard/settings/pipeline', label: 'Configurações',   icon: Settings2 },
+const NAV_ITEMS = [
+  { href: '/dashboard',                   label: 'Dashboard',       icon: LayoutDashboard, adminOnly: false },
+  { href: '/dashboard/imoveis',           label: 'Imóveis',         icon: Home,            adminOnly: false },
+  { href: '/dashboard/perfis',            label: 'Perfis de Busca', icon: Users,           adminOnly: false },
+  { href: '/dashboard/matches',           label: 'Matches',         icon: GitMerge,        adminOnly: false },
+  { href: '/dashboard/settings/pipeline', label: 'Configurações',   icon: Settings2,       adminOnly: true  },
 ]
 
 export function Sidebar() {
@@ -115,7 +115,7 @@ export function Sidebar() {
             Menu
           </p>
         )}
-        {navItems.map((item) => {
+        {NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === 'ADMIN').map((item) => {
           const isActive = item.href === '/dashboard'
             ? pathname === item.href
             : pathname.startsWith(item.href)

@@ -42,8 +42,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  tenantId          String
+  tenant            Tenant  @relation(fields: [tenantId], references: [id])
+  matchesAssociados Match[] @relation("MatchCorretor")
 
   @@map("users")
 }
@@ -211,11 +212,15 @@ model Match {
   etapaId String
   etapa   PipelineEtapa @relation(fields: [etapaId], references: [id])
 
+  corretorId String?
+  corretor   User?   @relation("MatchCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
+
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([perfilId, imovelId])
   @@index([tenantId])
   @@index([tenantId, etapaId])
+  @@index([tenantId, corretorId])
   @@map("matches")
 }
