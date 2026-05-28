@@ -62,7 +62,7 @@ export class BotController {
     @Query('perfilId') perfilId: string,
     @Query('tenantId') tenantId: string,
   ) {
-    const matches = await this.matchingService.listarMatches(tenantId, { perfilId })
+    const matches = await this.matchingService.listarMatches(tenantId, '', 'ADMIN', { perfilId })
 
     if (matches.length === 0) {
       return {
