@@ -1,16 +1,30 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Building2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { updateLastActivity } from '@/lib/session'
 
-export default function LoginPage() {
+function LoginForm() {
   const router  = useRouter()
+  const params  = useSearchParams()
   const [loading, setLoading] = useState(false)
+
+  // Mostra aviso se redirecionado por sessão expirada
+  useEffect(() => {
+    if (params.get('expired') === '1') {
+      const reason = params.get('reason')
+      if (reason === 'unauthorized') {
+        toast.error('Acesso não autorizado. Faça login novamente.')
+      } else {
+        toast.warning('Sua sessão expirou por inatividade. Faça login novamente.', { duration: 6000 })
+      }
+    }
+  }, [params])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -26,6 +40,8 @@ export default function LoginPage() {
       const data = await res.json()
       sessionStorage.setItem('token', data.token)
       sessionStorage.setItem('user', JSON.stringify(data.user))
+      // Registra atividade ao fazer login (inicia o contador)
+      updateLastActivity()
       if (data.user.role === 'ADMIN' && data.user.tenantId === 'super-admin') {
         router.push('/admin')
       } else {
@@ -109,5 +125,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Suspense necessário porque LoginForm usa useSearchParams (App Router)
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }
