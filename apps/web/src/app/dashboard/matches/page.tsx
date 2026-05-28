@@ -95,40 +95,49 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
   const cor = match.etapa?.cor ?? '#6B7280'
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border-l-[3px] p-2 space-y-1.5 ${isDragging ? 'opacity-50' : ''}`}
+      className={`bg-white rounded-lg shadow-sm border-l-[3px] p-2.5 space-y-1.5 ${isDragging ? 'opacity-50' : ''}`}
       style={{ borderLeftColor: cor }}
     >
-      <p className="text-[11px] font-semibold text-slate-800 leading-tight line-clamp-2">
+      {/* 1. Nome do cliente */}
+      <p className="text-[13px] font-bold text-slate-800 leading-tight truncate">
+        {match.perfil.clienteNome}
+      </p>
+
+      {/* 2. Tipo (Venda / Aluguel) */}
+      <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
+        {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
+      </span>
+
+      {/* 3. Descrição do imóvel */}
+      <p className="text-[11px] text-slate-600 leading-tight line-clamp-2">
         {match.imovel.titulo}
       </p>
-      <p className="text-[10px] text-muted-foreground leading-tight">
+
+      {/* 4. Localização */}
+      <p className="text-[11px] text-muted-foreground leading-tight">
         {match.imovel.bairro}, {match.imovel.cidade.nome}
       </p>
-      <div className="flex items-center gap-1">
-        <Users className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
-        <p className="text-[10px] text-slate-600 truncate">{match.perfil.clienteNome}</p>
-      </div>
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[10px] font-bold text-slate-700 tabular-nums truncate">
-          {formatCurrency(match.imovel.preco)}
-        </span>
-        <span className={`text-[9px] font-semibold px-1 py-0.5 rounded-full shrink-0 ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
-          {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Alug.'}
-        </span>
-      </div>
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded truncate">
+
+      <div className="border-t border-slate-100 pt-1.5 space-y-1">
+        {/* 5. Tipo do imóvel */}
+        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded inline-block">
           {match.imovel.tipo?.nome ?? '—'}
         </span>
-        <span className="text-[9px] text-muted-foreground shrink-0">{timeAgo(match.createdAt)}</span>
-      </div>
-      {match.corretor && (
-        <div className="pt-0.5 border-t border-slate-100">
-          <span className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full truncate max-w-full inline-block">
+
+        {/* 6. Valor */}
+        <p className="text-[12px] font-bold text-slate-700 tabular-nums">
+          {formatCurrency(match.imovel.preco)}
+        </p>
+
+        {/* 7. Corretor */}
+        {match.corretor ? (
+          <p className="text-[10px] text-blue-600 font-medium truncate">
             {match.corretor.name}
-          </span>
-        </div>
-      )}
+          </p>
+        ) : (
+          <p className="text-[10px] text-slate-300 italic">Sem corretor</p>
+        )}
+      </div>
     </div>
   )
 }
