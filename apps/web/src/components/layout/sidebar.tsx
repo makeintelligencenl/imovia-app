@@ -2,16 +2,17 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, LayoutDashboard, Home, Users, GitMerge, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Building2, LayoutDashboard, Home, Users, GitMerge, LogOut, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface UserInfo { name: string; email: string; role: string }
 
 const navItems = [
-  { href: '/dashboard',         label: 'Dashboard',       icon: LayoutDashboard },
-  { href: '/dashboard/imoveis', label: 'Imóveis',         icon: Home },
-  { href: '/dashboard/perfis',  label: 'Perfis de Busca', icon: Users },
-  { href: '/dashboard/matches', label: 'Matches',         icon: GitMerge },
+  { href: '/dashboard',                   label: 'Dashboard',       icon: LayoutDashboard },
+  { href: '/dashboard/imoveis',           label: 'Imóveis',         icon: Home },
+  { href: '/dashboard/perfis',            label: 'Perfis de Busca', icon: Users },
+  { href: '/dashboard/matches',           label: 'Matches',         icon: GitMerge },
+  { href: '/dashboard/settings/pipeline', label: 'Configurações',   icon: Settings2 },
 ]
 
 export function Sidebar() {
@@ -115,7 +116,9 @@ export function Sidebar() {
           </p>
         )}
         {navItems.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = item.href === '/dashboard'
+            ? pathname === item.href
+            : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
