@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ImovIA — Calculadora de Precificação</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0F172A;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      padding: 14px 24px;
+    }
+    .header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      background: rgba(59,130,246,.20);
+      border-radius: 8px;
+      padding: 6px;
+      display: flex;
+    }
+    .logo-icon svg { width: 18px; height: 18px; color: #60a5fa; }
+    .logo-text { font-size: 13px; font-weight: 600; }
+    .logo-text span { color: #60a5fa; font-weight: 700; }
+    .logo-sub { font-size: 13px; color: #94a3b8; margin-left: 6px; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(160deg, #0f1f3d 0%, #0F172A 60%);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      padding: 52px 24px 48px;
+    }
+    .hero-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    @media(max-width:680px){ .hero-inner{ grid-template-columns:1fr; } }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #60a5fa;
+      background: rgba(59,130,246,.12);
+      border: 1px solid rgba(59,130,246,.25);
+      border-radius: 20px;
+      padding: 4px 12px;
+      margin-bottom: 18px;
+    }
+    .hero-tag::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: #60a5fa;
+      border-radius: 50%;
+      animation: pulse-dot 1.5s infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100%{ opacity:1; transform:scale(1); }
+      50%{ opacity:.4; transform:scale(.7); }
+    }
+    .hero-headline {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+    }
+    .hero-headline span { color: #60a5fa; }
+    .hero-desc { font-size: 14px; color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+    .hero-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .hero-pill {
+      font-size: 12px;
+      color: #cbd5e1;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 8px;
+      padding: 5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hero-pill-dot { width:6px; height:6px; border-radius:50%; background:#34d399; flex-shrink:0; }
+
+    /* ── Chat window ── */
+    .chat-window {
+      background: #1a2744;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 24px 60px rgba(0,0,0,.5);
+      max-width: 340px;
+      margin-left: auto;
+    }
+    .chat-header {
+      background: #1e3a6e;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .chat-avatar {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg,#3b82f6,#1d4ed8);
+      border-radius: 50%;
+      display: flex; align-items:center; justify-content:center;
+      font-size: 11px; font-weight: 700; color: #fff; flex-shrink:0;
+    }
+    .chat-name { font-size: 13px; font-weight: 600; }
+    .chat-online { font-size: 10px; color: #34d399; display:flex; align-items:center; gap:4px; margin-top:1px; }
+    .chat-online::before { content:''; width:5px;height:5px;background:#34d399;border-radius:50%; }
+    .chat-body {
+      padding: 14px 12px;
+      min-height: 320px;
+      max-height: 380px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scrollbar-width: none;
+    }
+    .chat-body::-webkit-scrollbar { display:none; }
+
+    .msg {
+      max-width: 82%;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 8px 11px;
+      border-radius: 12px;
+      animation: msgIn .25s ease-out;
+      word-break: break-word;
+    }
+    @keyframes msgIn {
+      from{ opacity:0; transform:translateY(6px); }
+      to  { opacity:1; transform:translateY(0); }
+    }
+    .msg-agente {
+      background: #1e3a6e;
+      color: #e2e8f0;
+      align-self: flex-start;
+      border-bottom-left-radius: 3px;
+    }
+    .msg-cliente {
+      background: #1d4ed8;
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 3px;
+    }
+    .msg-imovel {
+      background: rgba(52,211,153,.10);
+      border: 1px solid rgba(52,211,153,.25);
+      color: #e2e8f0;
+      align-self: flex-start;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .msg-imovel-titulo { font-weight: 700; font-size: 11px; color: #6ee7b7; margin-bottom:2px; }
+    .msg-imovel-det   { font-size: 11px; color: #94a3b8; }
+
+    .typing {
+      align-self: flex-start;
+      background: #1e3a6e;
+      border-radius: 12px;
+      border-bottom-left-radius: 3px;
+      padding: 10px 14px;
+      display: flex; gap: 4px; align-items:center;
+    }
+    .typing span {
+      width:6px; height:6px;
+      background: #60a5fa;
+      border-radius: 50%;
+      animation: bounce .9s infinite;
+    }
+    .typing span:nth-child(2){ animation-delay:.15s; }
+    .typing span:nth-child(3){ animation-delay:.30s; }
+    @keyframes bounce {
+      0%,60%,100%{ transform:translateY(0); }
+      30%         { transform:translateY(-5px); }
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+    .calc-title { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+    .calc-sub { color: #94a3b8; font-size: 13px; margin-bottom: 4px; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+    }
+    @media (max-width: 680px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ── Cards ── */
+    .card {
+      background: rgba(255,255,255,.05);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .card + .card { margin-top: 16px; }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 16px;
+    }
+    .card-title svg { width: 15px; height: 15px; color: #60a5fa; flex-shrink: 0; }
+
+    /* ── Slider row ── */
+    .slider-row { margin-bottom: 14px; }
+    .slider-row:last-child { margin-bottom: 0; }
+    .slider-label-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .slider-label { font-size: 11px; color: #94a3b8; }
+    .slider-value { font-size: 11px; font-weight: 700; color: #fff; }
+    input[type=range] {
+      width: 100%;
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+    .slider-minmax {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #475569;
+      margin-top: 2px;
+    }
+
+    /* ── Badges calculados ── */
+    .badge-row { display: flex; gap: 8px; margin-top: 10px; }
+    .badge {
+      flex: 1;
+      background: rgba(59,130,246,.10);
+      border: 1px solid rgba(59,130,246,.22);
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .badge-label { font-size: 10px; color: #93c5fd; }
+    .badge-value { font-size: 12px; font-weight: 700; color: #bfdbfe; }
+
+    /* ── Plan buttons ── */
+    .plan-group-label { font-size: 11px; color: #94a3b8; margin-bottom: 8px; }
+    .plan-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+    .plan-btn {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: left;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      color: #fff;
+    }
+    .plan-btn:hover { background: rgba(255,255,255,.09); }
+    .plan-btn.active-blue { border-color: #3b82f6; background: rgba(59,130,246,.12); }
+    .plan-btn p { margin: 0; }
+    .plan-name  { font-size: 12px; font-weight: 600; }
+    .plan-price { font-size: 11px; color: #94a3b8; }
+    .plan-cred  { font-size: 10px; color: #64748b; }
+
+    /* ── Resultados hero ── */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(59,130,246,.22), rgba(59,130,246,.05));
+      border: 1px solid rgba(59,130,246,.30);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+    }
+    .hero-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      font-weight: 600;
+      color: #93c5fd;
+      margin-bottom: 4px;
+    }
+    .hero-price { font-size: 44px; font-weight: 700; color: #fff; }
+    .hero-sub   { font-size: 13px; color: #94a3b8; margin-top: 6px; }
+    .hero-sub span { color: #93c5fd; font-weight: 600; }
+    .hero-mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+      text-align: left;
+    }
+    .hero-mini {
+      background: rgba(255,255,255,.06);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .hero-mini-label { font-size: 10px; color: #64748b; }
+    .hero-mini-value { font-size: 13px; font-weight: 700; }
+    .c-green { color: #34d399; }
+    .c-red   { color: #f87171; }
+    .c-white { color: #fff; }
+    .c-amber { color: #fbbf24; }
+    .c-blue  { color: #60a5fa; }
+
+    /* ── Métricas grid 2×2 ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .metric-card {
+      background: rgba(255,255,255,.05);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .metric-label { font-size: 11px; color: #94a3b8; }
+    .metric-value { font-size: 17px; font-weight: 700; margin-top: 1px; }
+    .metric-sub   { font-size: 10px; color: #64748b; margin-top: 1px; }
+
+    /* ── Capacity alert ── */
+    .alert {
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .alert.ok  { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.28); }
+    .alert.err { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.28); }
+    .alert svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+    .alert.ok  svg { color: #34d399; }
+    .alert.err svg { color: #f87171; }
+    .alert-title { font-size: 12px; font-weight: 600; }
+    .alert.ok  .alert-title { color: #34d399; }
+    .alert.err .alert-title { color: #f87171; }
+    .alert-desc { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    .alert-desc strong { color: #e2e8f0; }
+
+    /* ── Detalhamento ── */
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 3px 0;
+    }
+    .detail-row span:first-child { color: #94a3b8; }
+    .detail-row span:last-child  { font-weight: 600; }
+    .detail-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .detail-title svg { width: 13px; height: 13px; color: #60a5fa; }
+
+    /* ── Section headers ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      margin-top: 28px;
+    }
+    .section-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .section-badge.entrada {
+      background: rgba(59,130,246,.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59,130,246,.25);
+    }
+    .section-badge.calculo {
+      background: rgba(52,211,153,.10);
+      color: #6ee7b7;
+      border: 1px solid rgba(52,211,153,.20);
+    }
+    .section-badge.setup {
+      background: rgba(251,191,36,.10);
+      color: #fcd34d;
+      border: 1px solid rgba(251,191,36,.20);
+    }
+
+    /* ── Setup ── */
+    .setup-activity { margin-bottom: 4px; }
+    .setup-activity-label { font-size: 11px; font-weight: 600; color: #cbd5e1; margin-bottom: 8px; }
+    .setup-activity-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+    .setup-input-wrap {}
+    .setup-input-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+    .setup-subtotal { text-align: right; padding-bottom: 4px; }
+    .setup-subtotal-label { display: block; font-size: 10px; color: #64748b; }
+    .setup-subtotal-value { font-size: 13px; font-weight: 700; color: #fcd34d; }
+    .section-desc { font-size: 12px; color: #475569; }
+
+    /* ── Footer ── */
+    .footer { text-align: center; font-size: 11px; color: #334155; margin-top: 32px; }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,.07); margin: 12px 0; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-inner">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <span class="logo-text">Imov<span>IA</span></span>
+    <span class="logo-sub">— Calculadora de Precificação</span>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="container">
+  <div class="calc-title">Calculadora de Precificação</div>
+  <div class="calc-sub">Configure volume, custos e margem — descubra o preço ideal por imobiliária</div>
+
+  <!-- ══ SEÇÃO 1: DADOS DE ENTRADA ══ -->
+  <div class="section-header">
+    <div class="section-badge entrada">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      Dados de Entrada
+    </div>
+    <span class="section-desc">Preencha estes campos para começar</span>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Volume do agente -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+        </svg>
+        Volume do Agente <span style="color:#64748b;font-weight:400">(por imobiliária)</span>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label-row">
+          <span class="slider-label">Atendimentos por dia</span>
+          <span class="slider-value" id="val-atendimentosPorDia">5</span>
+        </div>
+        <input type="range" id="atendimentosPorDia" min="1" max="50" value="10" />
+        <div class="slider-minmax"><span>1</span><span>50</span></div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label-row">
+          <span class="slider-label">Créditos por atendimento</span>
+          <span class="slider-value" id="val-creditosPorAtendimento">25 cr</span>
+        </div>
+        <input type="range" id="creditosPorAtendimento" min="1" max="100" value="30" />
+        <div class="slider-minmax"><span>1 cr</span><span>100 cr</span></div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label-row">
+          <span class="slider-label">Dias de trabalho do agente/mês</span>
+          <span class="slider-value" id="val-diasTrabalho">8</span>
+        </div>
+        <input type="range" id="diasTrabalho" min="1" max="30" value="30" />
+        <div class="slider-minmax"><span>1</span><span>30</span></div>
+      </div>
+
+      <!-- Calculados -->
+      <div class="badge-row">
+        <div class="badge">
+          <span class="badge-label">Créditos por dia</span>
+          <span class="badge-value" id="badge-credDia">125 cr/dia</span>
+        </div>
+        <div class="badge">
+          <span class="badge-label">Créditos por mês</span>
+          <span class="badge-value" id="badge-credMes">1.000 cr/mês</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Precificação -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+        </svg>
+        Precificação
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label-row">
+          <span class="slider-label">Número de imobiliárias clientes</span>
+          <span class="slider-value" id="val-numImob">5</span>
+        </div>
+        <input type="range" id="numImob" min="1" max="50" value="1" />
+        <div class="slider-minmax"><span>1</span><span>50</span></div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label-row">
+          <span class="slider-label">Margem desejada</span>
+          <span class="slider-value" id="val-margem">50%</span>
+        </div>
+        <input type="range" id="margem" min="10" max="90" step="5" value="50" />
+        <div class="slider-minmax"><span>10%</span><span>90%</span></div>
+      </div>
+    </div>
+
+  </div><!-- /grid entrada -->
+
+  <!-- ══ SEÇÃO 2: CÁLCULO ══ -->
+  <div class="section-header" style="margin-top:32px;">
+    <div class="section-badge calculo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+      </svg>
+      Resultado do Cálculo
+    </div>
+    <span class="section-desc">Calculado automaticamente a partir dos dados acima</span>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Custos -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+        </svg>
+        Custos
+      </div>
+
+      <div class="plan-group-label">Plano GPT Maker</div>
+      <div class="plan-grid" id="gptPlans">
+        <button class="plan-btn active-blue" data-idx="0" onclick="selectGptPlan(0)">
+          <p class="plan-name">Basic</p>
+          <p class="plan-price">R$ 87/mês</p>
+          <p class="plan-cred">2.500 cr</p>
+        </button>
+        <button class="plan-btn" data-idx="1" onclick="selectGptPlan(1)">
+          <p class="plan-name">Standard</p>
+          <p class="plan-price">R$ 397/mês</p>
+          <p class="plan-cred">11.500 cr</p>
+        </button>
+        <button class="plan-btn" data-idx="2" onclick="selectGptPlan(2)">
+          <p class="plan-name">Corporate</p>
+          <p class="plan-price">R$ 997/mês</p>
+          <p class="plan-cred">30.000 cr</p>
+        </button>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label-row">
+          <span class="slider-label">Infraestrutura (Railway)</span>
+          <span class="slider-value" id="val-infra">R$ 15</span>
+        </div>
+        <input type="range" id="infra" min="5" max="100" step="5" value="20" />
+        <div class="slider-minmax"><span>R$ 5</span><span>R$ 100</span></div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Detalhamento inline -->
+      <div class="detail-row"><span>GPT Maker</span><span class="c-white" id="det-gpt">R$ 0,00</span></div>
+      <div class="detail-row"><span>Infraestrutura</span><span class="c-white" id="det-infra">R$ 0,00</span></div>
+      <div class="detail-row" style="margin-top:4px;">
+        <span style="font-weight:600;color:#cbd5e1;">Custo total</span>
+        <span class="c-red" style="font-weight:700;" id="det-custo">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div>
+
+      <!-- Hero: Preço Ideal -->
+      <div class="hero-card">
+        <div class="hero-label">Preço ideal por imobiliária</div>
+        <div class="hero-price" id="res-precoIdeal">R$ 0,00</div>
+        <div class="hero-sub">
+          com <span id="res-margemLabel">50%</span> de margem
+          para <span id="res-numImobLabel">5</span> cliente(s)
+        </div>
+        <div class="hero-mini-grid">
+          <div class="hero-mini">
+            <div class="hero-mini-label">Receita projetada</div>
+            <div class="hero-mini-value c-green" id="res-receita">R$ 0,00</div>
+          </div>
+          <div class="hero-mini">
+            <div class="hero-mini-label">Custo total</div>
+            <div class="hero-mini-value c-red" id="res-custoTotal">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Métricas 2×2 -->
+      <div class="metrics-grid" style="margin-top:12px;">
+        <div class="metric-card">
+          <div class="metric-label">Custo por imobiliária</div>
+          <div class="metric-value c-white" id="res-custoPorImob">R$ 0,00</div>
+          <div class="metric-sub" id="res-custoPorImobSub">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Break-even</div>
+          <div class="metric-value c-white" id="res-breakeven">0 clientes</div>
+          <div class="metric-sub">para cobrir custos</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total de créditos/mês</div>
+          <div class="metric-value c-white" id="res-totalMsg">—</div>
+          <div class="metric-sub" id="res-totalMsgSub">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Margem bruta</div>
+          <div class="metric-value" id="det-margem">R$ 0,00</div>
+          <div class="metric-sub" id="det-margemLabel">—</div>
+        </div>
+      </div>
+
+      <!-- Capacity alert -->
+      <div class="alert ok" id="alert-capacity" style="margin-top:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        <div>
+          <div class="alert-title" id="alert-title">Plano Basic suporta o volume</div>
+          <div class="alert-desc" id="alert-desc">—</div>
+          <div class="alert-desc" id="alert-cap">—</div>
+          <div class="alert-desc" id="alert-saldo">—</div>
+        </div>
+      </div>
+    </div><!-- /resultados -->
+
+  </div><!-- /grid calculo -->
+
+  <!-- ══ SEÇÃO 3: SETUP ══ -->
+  <div class="section-header" style="margin-top:32px;">
+    <div class="section-badge setup">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+        <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+      </svg>
+      Custo de Setup
+    </div>
+    <span class="section-desc">Cobrado uma única vez na contratação</span>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Atividades -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+        </svg>
+        Atividades
+      </div>
+
+      <!-- Configuração -->
+      <div class="setup-activity">
+        <div class="setup-activity-label">Configuração do Agente</div>
+        <div class="setup-activity-row">
+          <div class="setup-input-wrap">
+            <span class="setup-input-label">Horas</span>
+            <div class="slider-label-row"><span></span><span class="slider-value" id="val-horasConfig">24</span></div>
+            <input type="range" id="horasConfig" min="0" max="80" value="24" />
+            <div class="slider-minmax"><span>0</span><span>80h</span></div>
+          </div>
+          <div class="setup-input-wrap">
+            <span class="setup-input-label">R$/hora</span>
+            <div class="slider-label-row"><span></span><span class="slider-value" id="val-valorConfig">R$ 100</span></div>
+            <input type="range" id="valorConfig" min="50" max="500" step="10" value="100" />
+            <div class="slider-minmax"><span>R$50</span><span>R$500</span></div>
+          </div>
+          <div class="setup-subtotal">
+            <span class="setup-subtotal-label">Subtotal</span>
+            <span class="setup-subtotal-value" id="sub-config">R$ 2.400</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- API -->
+      <div class="setup-activity">
+        <div class="setup-activity-label">Desenvolvimento de API</div>
+        <div class="setup-activity-row">
+          <div class="setup-input-wrap">
+            <span class="setup-input-label">Horas</span>
+            <div class="slider-label-row"><span></span><span class="slider-value" id="val-horasApi">40</span></div>
+            <input type="range" id="horasApi" min="0" max="120" value="40" />
+            <div class="slider-minmax"><span>0</span><span>120h</span></div>
+          </div>
+          <div class="setup-input-wrap">
+            <span class="setup-input-label">R$/hora</span>
+            <div class="slider-label-row"><span></span><span class="slider-value" id="val-valorApi">R$ 150</span></div>
+            <input type="range" id="valorApi" min="50" max="500" step="10" value="150" />
+            <div class="slider-minmax"><span>R$50</span><span>R$500</span></div>
+          </div>
+          <div class="setup-subtotal">
+            <span class="setup-subtotal-label">Subtotal</span>
+            <span class="setup-subtotal-value" id="sub-api">R$ 6.000</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Treinamento -->
+      <div class="setup-activity">
+        <div class="setup-activity-label">Treinamento da Equipe</div>
+        <div class="setup-activity-row">
+          <div class="setup-input-wrap">
+            <span class="setup-input-label">Horas</span>
+            <div class="slider-label-row"><span></span><span class="slider-value" id="val-horasTreino">8</span></div>
+            <input type="range" id="horasTreino" min="0" max="40" value="8" />
+            <div class="slider-minmax"><span>0</span><span>40h</span></div>
+          </div>
+          <div class="setup-input-wrap">
+            <span class="setup-input-label">R$/hora</span>
+            <div class="slider-label-row"><span></span><span class="slider-value" id="val-valorTreino">R$ 80</span></div>
+            <input type="range" id="valorTreino" min="50" max="500" step="10" value="80" />
+            <div class="slider-minmax"><span>R$50</span><span>R$500</span></div>
+          </div>
+          <div class="setup-subtotal">
+            <span class="setup-subtotal-label">Subtotal</span>
+            <span class="setup-subtotal-value" id="sub-treino">R$ 640</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="slider-row" style="margin-top:4px;">
+        <div class="slider-label-row">
+          <span class="slider-label">Parcelar setup em</span>
+          <span class="slider-value" id="val-parcelas">3 meses</span>
+        </div>
+        <input type="range" id="parcelas" min="1" max="12" value="3" />
+        <div class="slider-minmax"><span>À vista</span><span>12×</span></div>
+      </div>
+    </div>
+
+    <!-- Resultados do Setup -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+        </svg>
+        Resultado do Setup
+      </div>
+
+      <div style="text-align:center; padding:16px 0 12px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;font-weight:600;">Total de Setup</div>
+        <div style="font-size:36px;font-weight:700;color:#fff;" id="res-totalSetup">R$ 9.040,00</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px;" id="res-parcelaLabel">em 3× de R$ 3.013,33/mês</div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="detail-row"><span>Configuração</span><span class="c-white" id="res-subConfig">R$ 2.400,00</span></div>
+      <div class="detail-row"><span>Desenvolvimento de API</span><span class="c-white" id="res-subApi">R$ 6.000,00</span></div>
+      <div class="detail-row"><span>Treinamento</span><span class="c-white" id="res-subTreino">R$ 640,00</span></div>
+
+      <hr class="divider" />
+
+      <div class="detail-row">
+        <span>Payback do setup</span>
+        <span class="c-amber" id="res-payback">— meses</span>
+      </div>
+      <div class="detail-row">
+        <span>Mensalidade com parcela do setup</span>
+        <span class="c-blue" id="res-precoComSetup">R$ 0,00</span>
+      </div>
+      <div style="font-size:10px;color:#475569;margin-top:6px;" id="res-precoComSetupDesc">—</div>
+    </div>
+
+  </div><!-- /grid setup -->
+
+  <div class="footer">ImovIA © <span id="ano"></span> — Simulação baseada nos planos GPT Maker e Railway atuais</div>
+</div>
+
+<script>
+  document.getElementById('ano').textContent = new Date().getFullYear()
+
+  const GPT_PLANS = [
+    { nome: 'Basic',     preco: 87,   creditos: 2500  },
+    { nome: 'Standard',  preco: 397,  creditos: 11500 },
+    { nome: 'Corporate', preco: 997,  creditos: 30000 },
+  ]
+
+  let gptPlanIdx = 0
+
+  function fmt(v) {
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
+  function num(v, d = 0) {
+    return v.toLocaleString('pt-BR', { maximumFractionDigits: d })
+  }
+  function pct(v) { return `${v.toFixed(1)}%` }
+
+  function selectGptPlan(idx) {
+    gptPlanIdx = idx
+    document.querySelectorAll('#gptPlans .plan-btn').forEach((btn, i) => {
+      btn.classList.toggle('active-blue', i === idx)
+    })
+    recalc()
+  }
+
+  function val(id) { return parseFloat(document.getElementById(id).value) }
+
+  function recalc() {
+    const atendimentosPorDia      = val('atendimentosPorDia')
+    const creditosPorAtendimento  = val('creditosPorAtendimento')
+    const diasTrabalho            = val('diasTrabalho')
+    const infra                   = val('infra')
+    const numImob                 = val('numImob')
+    const margemDesejada          = val('margem')
+    const gptPlan                 = GPT_PLANS[gptPlanIdx]
+
+    // Volume por imobiliária
+    const creditosPorDia = atendimentosPorDia * creditosPorAtendimento
+    const creditosPorMes = creditosPorDia * diasTrabalho
+
+    // Total (todas as imobiliárias)
+    const creditosNecessarios = creditosPorMes * numImob
+    const atendimentosPorMes  = atendimentosPorDia * diasTrabalho
+
+    // Custos — GPT Maker é assinatura fixa
+    const custoGpt   = gptPlan.preco
+    const custoTotal = custoGpt + infra
+
+    // Capacidade do plano
+    const capacidadeAtendimentos = Math.floor(gptPlan.creditos / creditosPorAtendimento)
+    const suporta = creditosNecessarios <= gptPlan.creditos
+
+    // Precificação
+    const fatorMargem  = 1 - margemDesejada / 100
+    const precoIdeal   = fatorMargem > 0 && numImob > 0 ? custoTotal / (numImob * fatorMargem) : 0
+    const receita      = numImob * precoIdeal
+    const margemReal   = receita > 0 ? ((receita - custoTotal) / receita) * 100 : 0
+    const custoPorimob = numImob > 0 ? custoTotal / numImob : 0
+    const breakeven    = precoIdeal > 0 ? Math.ceil(custoTotal / precoIdeal) : 0
+
+    // ── Atualizar display sliders ──
+    document.getElementById('val-atendimentosPorDia').textContent     = num(atendimentosPorDia)
+    document.getElementById('val-creditosPorAtendimento').textContent = num(creditosPorAtendimento) + ' cr'
+    document.getElementById('val-diasTrabalho').textContent           = num(diasTrabalho)
+    document.getElementById('val-infra').textContent                  = 'R$ ' + num(infra)
+    document.getElementById('val-numImob').textContent                = num(numImob)
+    document.getElementById('val-margem').textContent                 = num(margemDesejada) + '%'
+
+    // Badges calculados
+    document.getElementById('badge-credDia').textContent = num(creditosPorDia) + ' cr/dia'
+    document.getElementById('badge-credMes').textContent = num(creditosPorMes) + ' cr/mês'
+
+    // Hero
+    document.getElementById('res-precoIdeal').textContent   = fmt(precoIdeal)
+    document.getElementById('res-margemLabel').textContent  = pct(margemDesejada)
+    document.getElementById('res-numImobLabel').textContent = num(numImob)
+    document.getElementById('res-receita').textContent      = fmt(receita)
+    document.getElementById('res-custoTotal').textContent   = fmt(custoTotal)
+
+    // Métricas
+    document.getElementById('res-custoPorImob').textContent    = fmt(custoPorimob)
+    document.getElementById('res-custoPorImobSub').textContent = num(creditosPorMes) + ' cr/mês'
+    document.getElementById('res-breakeven').textContent       = breakeven + ' cliente' + (breakeven !== 1 ? 's' : '')
+    document.getElementById('res-totalMsg').textContent    = num(creditosNecessarios)
+    document.getElementById('res-totalMsgSub').textContent = num(numImob) + ' × ' + num(creditosPorMes) + ' cr'
+
+    // Capacity alert
+    const alertEl = document.getElementById('alert-capacity')
+    alertEl.className = 'alert ' + (suporta ? 'ok' : 'err')
+    document.getElementById('alert-title').textContent =
+      suporta
+        ? `Plano ${gptPlan.nome} suporta o volume`
+        : `Plano ${gptPlan.nome} insuficiente — upgrade necessário`
+    document.getElementById('alert-desc').innerHTML =
+      `Necessário: <strong>${num(creditosNecessarios)} cr</strong> — Disponível: <strong>${num(gptPlan.creditos)} cr</strong>`
+    document.getElementById('alert-cap').textContent =
+      `Capacidade: até ${num(capacidadeAtendimentos * numImob)} atendimentos/mês (${num(capacidadeAtendimentos)} por imobiliária)`
+    const saldo = gptPlan.creditos - creditosNecessarios
+    const saldoEl = document.getElementById('alert-saldo')
+    saldoEl.innerHTML = saldo >= 0
+      ? `Saldo restante: <strong style="color:#86efac">${num(saldo)} cr</strong>`
+      : `Faltam: <strong style="color:#fca5a5">${num(Math.abs(saldo))} cr</strong> para cobrir o volume`
+
+    // Detalhamento de custos (coluna esquerda)
+    document.getElementById('det-gpt').textContent   = fmt(custoGpt)
+    document.getElementById('det-infra').textContent = fmt(infra)
+    document.getElementById('det-custo').textContent = fmt(custoTotal)
+
+    // Margem (card métricas)
+    const margemValor = receita - custoTotal
+    const detMargem = document.getElementById('det-margem')
+    detMargem.textContent = fmt(margemValor)
+    detMargem.className   = 'metric-value ' + (margemValor >= 0 ? 'c-green' : 'c-red')
+    document.getElementById('det-margemLabel').textContent = pct(margemReal)
+  }
+
+  function recalcSetup() {
+    const horasConfig  = val('horasConfig')
+    const valorConfig  = val('valorConfig')
+    const horasApi     = val('horasApi')
+    const valorApi     = val('valorApi')
+    const horasTreino  = val('horasTreino')
+    const valorTreino  = val('valorTreino')
+    const parcelas     = val('parcelas')
+
+    const setupConfig  = horasConfig * valorConfig
+    const setupApi     = horasApi * valorApi
+    const setupTreino  = horasTreino * valorTreino
+    const totalSetup   = setupConfig + setupApi + setupTreino
+    const parcelaMensal = parcelas > 0 ? totalSetup / parcelas : totalSetup
+
+    // Pega preço ideal do cálculo mensal
+    const fatorMargem  = 1 - val('margem') / 100
+    const numImob      = val('numImob')
+    const infra        = val('infra')
+    const gptPlan      = GPT_PLANS[gptPlanIdx]
+    const custoTotal   = gptPlan.preco + infra
+    const precoIdeal   = fatorMargem > 0 && numImob > 0 ? custoTotal / (numImob * fatorMargem) : 0
+    const margemMensal = precoIdeal * numImob - custoTotal
+    const payback      = margemMensal > 0 ? Math.ceil(totalSetup / margemMensal) : null
+    const precoFinal   = precoIdeal + parcelaMensal
+
+    // Sliders display
+    document.getElementById('val-horasConfig').textContent  = horasConfig + 'h'
+    document.getElementById('val-valorConfig').textContent  = 'R$ ' + num(valorConfig)
+    document.getElementById('val-horasApi').textContent     = horasApi + 'h'
+    document.getElementById('val-valorApi').textContent     = 'R$ ' + num(valorApi)
+    document.getElementById('val-horasTreino').textContent  = horasTreino + 'h'
+    document.getElementById('val-valorTreino').textContent  = 'R$ ' + num(valorTreino)
+    document.getElementById('val-parcelas').textContent     = parcelas === 1 ? 'À vista' : parcelas + ' meses'
+
+    // Subtotais
+    document.getElementById('sub-config').textContent  = fmt(setupConfig)
+    document.getElementById('sub-api').textContent     = fmt(setupApi)
+    document.getElementById('sub-treino').textContent  = fmt(setupTreino)
+
+    // Resultados
+    document.getElementById('res-totalSetup').textContent  = fmt(totalSetup)
+    document.getElementById('res-parcelaLabel').textContent =
+      parcelas === 1 ? 'Cobrado à vista' : `em ${parcelas}× de ${fmt(parcelaMensal)}/mês`
+    document.getElementById('res-subConfig').textContent   = fmt(setupConfig)
+    document.getElementById('res-subApi').textContent      = fmt(setupApi)
+    document.getElementById('res-subTreino').textContent   = fmt(setupTreino)
+    document.getElementById('res-payback').textContent     =
+      payback ? `${payback} ${payback === 1 ? 'mês' : 'meses'}` : '—'
+    document.getElementById('res-precoComSetup').textContent = fmt(precoFinal)
+    document.getElementById('res-precoComSetupDesc').textContent =
+      `${fmt(precoIdeal)} mensalidade + ${fmt(parcelaMensal)} parcela do setup`
+  }
+
+  // Conectar todos os sliders
+  ['atendimentosPorDia','creditosPorAtendimento','diasTrabalho',
+   'infra','numImob','margem'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => { recalc(); recalcSetup() })
+  })
+
+  ;['horasConfig','valorConfig','horasApi','valorApi',
+    'horasTreino','valorTreino','parcelas'].forEach(id => {
+    document.getElementById(id).addEventListener('input', recalcSetup)
+  })
+
+  recalc()       // render inicial
+  recalcSetup()  // render inicial setup
+
+  // ── Chat animado ──
+  const SCRIPT = [
+    { tipo:'agente',  texto:'Olá! 👋 Sou o assistente virtual da Vale do Aço Imóveis. Como posso te chamar?', delay:600 },
+    { tipo:'cliente', texto:'Oi, pode chamar de Carlos', delay:2200 },
+    { tipo:'agente',  texto:'Prazer, Carlos! Você busca um imóvel para comprar ou alugar?', delay:1600 },
+    { tipo:'cliente', texto:'Comprar', delay:1800 },
+    { tipo:'agente',  texto:'Que tipo de imóvel você procura? Casa, apartamento ou sala comercial?', delay:1500 },
+    { tipo:'cliente', texto:'Apartamento', delay:1700 },
+    { tipo:'agente',  texto:'Quantos quartos você precisa?', delay:1400 },
+    { tipo:'cliente', texto:'3 quartos, com suíte', delay:2000 },
+    { tipo:'agente',  texto:'Qual é o seu orçamento máximo?', delay:1400 },
+    { tipo:'cliente', texto:'Até R$ 450 mil', delay:1900 },
+    { tipo:'agente',  texto:'Em qual cidade ou bairro você prefere?', delay:1400 },
+    { tipo:'cliente', texto:'Ipatinga — Horto ou Bom Retiro', delay:2400 },
+    { tipo:'agente',  texto:'Perfil cadastrado com sucesso ✅ Já encontrei 2 imóveis compatíveis:', delay:1800 },
+    { tipo:'imovel',  titulo:'Apto 3/4 · Horto — Ipatinga', detalhes:'R$ 420.000 · 85 m² · 2 vagas · 🔗 ver fotos', delay:1200 },
+    { tipo:'imovel',  titulo:'Apto 3/4 · Bom Retiro — Ipatinga', detalhes:'R$ 398.000 · 78 m² · 1 vaga · 🔗 ver fotos', delay:1000 },
+    { tipo:'agente',  texto:'Nosso corretor vai entrar em contato para agendar as visitas 😊 Posso ajudar com mais alguma coisa?', delay:1600 },
+  ]
+
+  const chatBody = document.getElementById('chatBody')
+  let chatTimers = []
+
+  function addTyping() {
+    const el = document.createElement('div')
+    el.className = 'typing'
+    el.id = 'typing-indicator'
+    el.innerHTML = '<span></span><span></span><span></span>'
+    chatBody.appendChild(el)
+    chatBody.scrollTop = chatBody.scrollHeight
+    return el
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typing-indicator')
+    if (el) el.remove()
+  }
+
+  function addMsg(item) {
+    removeTyping()
+    const el = document.createElement('div')
+    if (item.tipo === 'imovel') {
+      el.className = 'msg msg-imovel'
+      el.innerHTML = `<div class="msg-imovel-titulo">🏠 ${item.titulo}</div><div class="msg-imovel-det">${item.detalhes}</div>`
+    } else {
+      el.className = `msg msg-${item.tipo}`
+      el.textContent = item.texto
+    }
+    chatBody.appendChild(el)
+    chatBody.scrollTop = chatBody.scrollHeight
+  }
+
+  function runChat() {
+    chatTimers.forEach(clearTimeout)
+    chatTimers = []
+    chatBody.innerHTML = ''
+    let t = 400
+    SCRIPT.forEach((item, i) => {
+      // Typing indicator antes de mensagens do agente/imovel
+      if (item.tipo === 'agente' || item.tipo === 'imovel') {
+        const tTyping = t
+        chatTimers.push(setTimeout(() => addTyping(), tTyping))
+        t += item.delay
+      } else {
+        t += item.delay
+      }
+      const tMsg = t
+      chatTimers.push(setTimeout(() => addMsg(item), tMsg))
+      t += 300
+    })
+    // Loop após 5s do fim
+    chatTimers.push(setTimeout(runChat, t + 5000))
+  }
+
+  runChat()
+</script>
+</body>
+</html>

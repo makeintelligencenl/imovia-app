@@ -15,12 +15,16 @@
     "db:studio": "turbo run db:studio --filter=@corretor/api"
   },
   "devDependencies": {
+    "prettier": "^3.4.2",
     "turbo": "^2.3.3",
-    "typescript": "^5.7.2",
-    "prettier": "^3.4.2"
+    "typescript": "^5.7.2"
   },
   "packageManager": "npm@11.9.0",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "docx": "^9.7.1",
+    "puppeteer": "^25.1.0"
   }
 }

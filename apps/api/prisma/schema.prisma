@@ -20,10 +20,11 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  imoveis   Imovel[]
-  perfis    PerfilBusca[]
-  matches   Match[]
+  users          User[]
+  imoveis        Imovel[]
+  perfis         PerfilBusca[]
+  matches        Match[]
+  pipelineEtapas PipelineEtapa[]
 
   @@map("tenants")
 }
@@ -173,13 +174,33 @@ model PerfilBusca {
 }
 
 // ─────────────────────────────────────────
+// Etapas do pipeline (customizáveis por tenant)
+// ─────────────────────────────────────────
+model PipelineEtapa {
+  id        String   @id @default(cuid())
+  nome      String                         // ex: "Novo", "Contatado", "Visita Agendada"
+  cor       String   @db.VarChar(7)        // hex ex: "#3B82F6"
+  ordem     Int                            // posição na coluna do Kanban
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  matches  Match[]
+
+  @@unique([tenantId, nome])
+  @@index([tenantId, ordem])
+  @@map("pipeline_etapas")
+}
+
+// ─────────────────────────────────────────
 // Registro de matches gerados
 // ─────────────────────────────────────────
 model Match {
-  id        String      @id @default(cuid())
-  status    StatusMatch @default(NOTIFICADO)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   perfilId String
   perfil   PerfilBusca @relation(fields: [perfilId], references: [id])
@@ -187,19 +208,14 @@ model Match {
   imovelId String
   imovel   Imovel @relation(fields: [imovelId], references: [id])
 
+  etapaId String
+  etapa   PipelineEtapa @relation(fields: [etapaId], references: [id])
+
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([perfilId, imovelId])
   @@index([tenantId])
+  @@index([tenantId, etapaId])
   @@map("matches")
-}
-
-enum StatusMatch {
-  NOTIFICADO    // Cliente foi notificado
-  VISUALIZADO   // Cliente abriu/viu o imóvel
-  INTERESSADO   // Cliente sinalizou interesse
-  EM_NEGOCIACAO // Corretor em contato
-  FECHADO       // Negócio fechado
-  DESCARTADO    // Cliente não quis
 }

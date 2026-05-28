@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
-import { StatusMatch } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { NotificacoesService } from '../notificacoes/notificacoes.service'
+import { PipelineService } from '../pipeline/pipeline.service'
 
 @Injectable()
 export class MatchingService {
@@ -10,11 +10,11 @@ export class MatchingService {
   constructor(
     private prisma: PrismaService,
     private notificacoesService: NotificacoesService,
+    private pipelineService: PipelineService,
   ) {}
 
   // ─────────────────────────────────────────
   // Disparado quando um IMÓVEL é cadastrado
-  // Busca todos os perfis compatíveis
   // ─────────────────────────────────────────
   async executarMatching(tenantId: string, imovelId: string) {
     const imovel = await this.prisma.imovel.findFirst({
@@ -28,22 +28,19 @@ export class MatchingService {
         tenantId,
         ativo: true,
         finalidade: imovel.finalidade,
-        // Compara por ID — sem risco de case mismatch
         tipos: { some: { id: imovel.tipoId } },
         precoMin: { lte: imovel.preco },
         precoMax: { gte: imovel.preco },
         areaMin: { lte: imovel.areaM2 },
         cidades: { hasSome: [imovel.cidade.nome] },
         AND: [
-          // quartosMin null = sem preferência de quartos
           ...(imovel.quartos
             ? [{ OR: [{ quartosMin: null }, { quartosMin: { lte: imovel.quartos } }] }]
             : []),
-          // Bairro: sem preferência (null ou vazio) ou bairro preferido inclui o do imóvel
           {
             OR: [
-              { bairros: { equals: null } },   // seed antigo gravou NULL
-              { bairros: { isEmpty: true } },  // cadastro novo grava {}
+              { bairros: { equals: null } },
+              { bairros: { isEmpty: true } },
               { bairros: { hasSome: [imovel.bairro] } },
             ],
           },
@@ -56,14 +53,12 @@ export class MatchingService {
       perfisCompativeis.map((perfil) => this.gerarMatch(perfil, imovel, tenantId)),
     )
     const matchesEncontrados = resultados.filter(Boolean).length
-
     this.logger.log(`[Imóvel ${imovelId}] ${matchesEncontrados} matches gerados`)
     return { matchesEncontrados }
   }
 
   // ─────────────────────────────────────────
   // Disparado quando um PERFIL é cadastrado
-  // Busca todos os imóveis disponíveis compatíveis
   // ─────────────────────────────────────────
   async executarMatchingParaPerfil(tenantId: string, perfilId: string) {
     const perfil = await this.prisma.perfilBusca.findFirst({
@@ -94,14 +89,12 @@ export class MatchingService {
       imoveisCompativeis.map((imovel) => this.gerarMatch(perfil, imovel, tenantId)),
     )
     const matchesEncontrados = resultados.filter(Boolean).length
-
     this.logger.log(`[Perfil ${perfilId}] ${matchesEncontrados} matches gerados`)
     return { matchesEncontrados }
   }
 
   // ─────────────────────────────────────────
-  // Cria o match e envia notificação
-  // (evita duplicatas automaticamente)
+  // Cria o match na primeira etapa do pipeline
   // ─────────────────────────────────────────
   private async gerarMatch(perfil: any, imovel: any, tenantId: string): Promise<boolean> {
     const jaExiste = await this.prisma.match.findUnique({
@@ -109,18 +102,25 @@ export class MatchingService {
     })
     if (jaExiste) return false
 
+    // Usa sempre a primeira etapa do pipeline do tenant
+    const primeiraEtapa = await this.pipelineService.primeiraEtapa(tenantId)
+
     await this.prisma.match.create({
-      data: { perfilId: perfil.id, imovelId: imovel.id, tenantId, status: 'NOTIFICADO' },
+      data: {
+        perfilId: perfil.id,
+        imovelId: imovel.id,
+        tenantId,
+        etapaId: primeiraEtapa.id,
+      },
     })
 
     await this.notificacoesService.enviarNotificacaoMatch(perfil, imovel)
-
-    this.logger.log(`Match: perfil ${perfil.id} ↔ imóvel ${imovel.id}`)
+    this.logger.log(`Match: perfil ${perfil.id} ↔ imóvel ${imovel.id} [etapa: ${primeiraEtapa.nome}]`)
     return true
   }
 
   // ─────────────────────────────────────────
-  // Listagem e atualização de matches
+  // Listagem de matches com etapa incluída
   // ─────────────────────────────────────────
   async listarMatches(tenantId: string, filters?: { imovelId?: string; perfilId?: string }) {
     return this.prisma.match.findMany({
@@ -128,17 +128,26 @@ export class MatchingService {
       include: {
         imovel: { include: { tipo: true, cidade: true } },
         perfil: { include: { tipos: true } },
+        etapa:  true,
       },
       orderBy: { createdAt: 'desc' },
     })
   }
 
-  async atualizarStatusMatch(tenantId: string, matchId: string, status: string) {
+  // ─────────────────────────────────────────
+  // Mover match para outra etapa do pipeline
+  // ─────────────────────────────────────────
+  async moverEtapa(tenantId: string, matchId: string, etapaId: string) {
     const match = await this.prisma.match.findFirst({ where: { id: matchId, tenantId } })
     if (!match) throw new NotFoundException('Match não encontrado')
+
+    const etapa = await this.prisma.pipelineEtapa.findFirst({ where: { id: etapaId, tenantId, ativo: true } })
+    if (!etapa) throw new NotFoundException('Etapa não encontrada')
+
     return this.prisma.match.update({
       where: { id: matchId },
-      data: { status: status as StatusMatch },
+      data: { etapaId },
+      include: { etapa: true },
     })
   }
 }
