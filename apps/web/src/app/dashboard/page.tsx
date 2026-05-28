@@ -11,7 +11,14 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 
-// â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tipos ─────────────────────────────────────────────────────────────────────
+interface PipelineEtapa {
+  id: string
+  nome: string
+  cor: string
+  ordem: number
+}
+
 interface Imovel {
   id: string; titulo: string; preco: number; bairro: string
   finalidade: string; status: string
@@ -20,41 +27,22 @@ interface Imovel {
 }
 interface Perfil { id: string; clienteNome: string }
 interface Match {
-  id: string; status: string; createdAt: string
+  id: string
+  etapaId: string
+  etapa: PipelineEtapa
+  createdAt: string
   imovel: { id: string; titulo: string; preco: number; cidade: { nome: string } }
   perfil: { clienteNome: string }
 }
 
-// â”€â”€ Constantes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const STATUS_FUNIL = [
-  { key: 'NOTIFICADO',    label: 'Notificado',    color: '#94A3B8' },
-  { key: 'VISUALIZADO',   label: 'Visualizado',   color: '#60A5FA' },
-  { key: 'INTERESSADO',   label: 'Interessado',   color: '#FBBF24' },
-  { key: 'EM_NEGOCIACAO', label: 'Em negociação', color: '#F97316' },
-  { key: 'FECHADO',       label: 'Fechado',       color: '#34D399' },
-  { key: 'DESCARTADO',    label: 'Descartado',    color: '#F87171' },
-]
-
-const STATUS_BADGE: Record<string, string> = {
-  NOTIFICADO:    'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
-  VISUALIZADO:   'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
-  INTERESSADO:   'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-  EM_NEGOCIACAO: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
-  FECHADO:       'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-  DESCARTADO:    'bg-red-50 text-red-600 ring-1 ring-red-200',
-}
-const STATUS_LABEL: Record<string, string> = {
-  NOTIFICADO: 'Notificado', VISUALIZADO: 'Visualizado', INTERESSADO: 'Interessado',
-  EM_NEGOCIACAO: 'Em negociação', FECHADO: 'Fechado', DESCARTADO: 'Descartado',
-}
-
+// ── Constantes ────────────────────────────────────────────────────────────────
 const DONUT_COLORS = ['#3B82F6','#8B5CF6','#F59E0B','#10B981','#EF4444','#06B6D4','#EC4899']
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-// â”€â”€ Componente Donut simples â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Componente Donut ──────────────────────────────────────────────────────────
 function DonutChart({ data, title }: { data: { name: string; value: number }[]; title: string }) {
   const total = data.reduce((s, d) => s + d.value, 0)
   return (
@@ -85,39 +73,68 @@ function DonutChart({ data, title }: { data: { name: string; value: number }[]; 
   )
 }
 
-// â”€â”€ Página â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Página ────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const [imoveis,  setImoveis]  = useState<Imovel[]>([])
   const [perfis,   setPerfis]   = useState<Perfil[]>([])
   const [matches,  setMatches]  = useState<Match[]>([])
+  const [etapas,   setEtapas]   = useState<PipelineEtapa[]>([])
   const [loading,  setLoading]  = useState(true)
+  const [apiError, setApiError] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      api.get<Imovel[]>('/imoveis'),
-      api.get<Perfil[]>('/perfis'),
-      api.get<Match[]>('/matches'),
-    ]).then(([im, pe, ma]) => {
-      setImoveis(im); setPerfis(pe); setMatches(ma)
-    }).finally(() => setLoading(false))
+    // Carrega cada endpoint independentemente para não bloquear os outros em caso de erro
+    const loadAll = async () => {
+      setLoading(true)
+      setApiError(false)
+      let hasError = false
+
+      const [im, pe, ma, et] = await Promise.allSettled([
+        api.get<Imovel[]>('/imoveis'),
+        api.get<Perfil[]>('/perfis'),
+        api.get<Match[]>('/matches'),
+        api.get<PipelineEtapa[]>('/pipeline/etapas'),
+      ])
+
+      if (im.status === 'fulfilled') setImoveis(im.value)
+      else { console.error('Erro ao carregar imóveis:', im.reason); hasError = true }
+
+      if (pe.status === 'fulfilled') setPerfis(pe.value)
+      else { console.error('Erro ao carregar perfis:', pe.reason); hasError = true }
+
+      if (ma.status === 'fulfilled') setMatches(ma.value)
+      else { console.error('Erro ao carregar matches:', ma.reason); hasError = true }
+
+      if (et.status === 'fulfilled') setEtapas(et.value)
+      else console.warn('Erro ao carregar etapas:', et.reason)
+
+      if (hasError) setApiError(true)
+      setLoading(false)
+    }
+
+    loadAll()
   }, [])
 
-  // â”€â”€ Derivações â”€â”€
+  // ── Derivações ──
   const hoje        = new Date().toDateString()
   const disponiveis = imoveis.filter((i) => i.status === 'DISPONIVEL').length
   const vendidos    = imoveis.filter((i) => ['VENDIDO', 'ALUGADO'].includes(i.status)).length
   const matchesHoje = matches.filter((m) => new Date(m.createdAt).toDateString() === hoje).length
-  const fechados    = matches.filter((m) => m.status === 'FECHADO').length
-  const taxaConv    = matches.length ? Math.round(fechados / matches.length * 100) : 0
+
+  // Última etapa = maior ordem (ex: "Encerrado" / "Fechado")
+  const ultimaEtapa = etapas.length ? etapas[etapas.length - 1] : null
+  const convertidos  = ultimaEtapa ? matches.filter((m) => m.etapaId === ultimaEtapa.id).length : 0
+  const taxaConv     = matches.length ? Math.round(convertidos / matches.length * 100) : 0
+
   const ticketMedio = imoveis.length
     ? imoveis.reduce((s, i) => s + Number(i.preco), 0) / imoveis.length
     : 0
 
-  // Funil de matches
-  const funilData = STATUS_FUNIL.map((s) => ({
-    name:  s.label,
-    total: matches.filter((m) => m.status === s.key).length,
-    color: s.color,
+  // Funil de matches por etapa (dinâmico)
+  const funilData = etapas.map((e) => ({
+    name:  e.nome,
+    total: matches.filter((m) => m.etapaId === e.id).length,
+    color: e.cor,
   }))
 
   // Donut — tipos de imóvel
@@ -132,7 +149,7 @@ export default function DashboardPage() {
   ].filter((d) => d.value > 0)
 
   // Imóveis sem match
-  const idsComMatch = new Set(matches.map((m) => m.imovel.id))
+  const idsComMatch    = new Set(matches.map((m) => m.imovel.id))
   const imoveisSemMatch = imoveis
     .filter((i) => i.status === 'DISPONIVEL' && !idsComMatch.has(i.id))
     .slice(0, 6)
@@ -141,13 +158,29 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* â”€â”€ Cabeçalho â”€â”€ */}
+      {/* ── Cabeçalho ── */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Visão geral da sua imobiliária</p>
       </div>
 
-      {/* â”€â”€ KPIs â”€â”€ */}
+      {/* ── Alerta de erro de API ── */}
+      {apiError && !loading && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Não foi possível carregar alguns dados. Verifique se a API está no ar e tente recarregar a página.
+          </span>
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-auto shrink-0 text-xs font-medium underline hover:no-underline"
+          >
+            Recarregar
+          </button>
+        </div>
+      )}
+
+      {/* ── KPIs ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Imóveis */}
         <Card className="rounded-xl shadow-sm border-l-4 border-l-blue-500">
@@ -226,8 +259,8 @@ export default function DashboardPage() {
                 </p>
                 {!loading && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {fechados > 0
-                      ? <span className="text-emerald-600 font-medium">{fechados} negócio(s) fechado(s)</span>
+                    {convertidos > 0
+                      ? <span className="text-emerald-600 font-medium">{convertidos} negócio(s) convertido(s)</span>
                       : 'média dos imóveis ativos'}
                   </p>
                 )}
@@ -240,12 +273,12 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* â”€â”€ Gráficos: Funil + Donuts â”€â”€ */}
+      {/* ── Gráficos: Funil + Donuts ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Funil de matches (ocupa 1/3) */}
+        {/* Funil de matches dinâmico */}
         <Card className="rounded-xl shadow-sm lg:col-span-1">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Funil de matches</CardTitle>
+            <CardTitle className="text-sm font-semibold">Funil do pipeline</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {loading || matches.length === 0 ? (
@@ -256,7 +289,7 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={funilData} layout="vertical" margin={{ left: 8, right: 24 }}>
                   <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
                   <Tooltip
                     cursor={{ fill: 'rgba(0,0,0,0.04)' }}
                     formatter={(v: number) => [v, 'matches']}
@@ -279,7 +312,7 @@ export default function DashboardPage() {
         <DonutChart data={finalidadeData} title="Imóveis por finalidade" />
       </div>
 
-      {/* â”€â”€ Linha inferior: Últimos matches + Imóveis sem match â”€â”€ */}
+      {/* ── Linha inferior: Últimos matches + Imóveis sem match ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Últimos matches */}
         <Card className="rounded-xl shadow-sm">
@@ -300,19 +333,29 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {matches.slice(0, 7).map((m) => (
-                  <div key={m.id} className="flex items-center justify-between py-2.5 gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{m.imovel.titulo}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {m.perfil.clienteNome} · {m.imovel.cidade.nome} · {formatDate(m.createdAt)}
-                      </p>
+                {matches.slice(0, 7).map((m) => {
+                  const cor = m.etapa?.cor ?? '#6B7280'
+                  return (
+                    <div key={m.id} className="flex items-center justify-between py-2.5 gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{m.imovel.titulo}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {m.perfil.clienteNome} · {m.imovel.cidade.nome} · {formatDate(m.createdAt)}
+                        </p>
+                      </div>
+                      <span
+                        className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: cor + '20',
+                          color: cor,
+                          outline: `1px solid ${cor}50`,
+                        }}
+                      >
+                        {m.etapa?.nome ?? '—'}
+                      </span>
                     </div>
-                    <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[m.status] ?? ''}`}>
-                      {STATUS_LABEL[m.status] ?? m.status}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>
