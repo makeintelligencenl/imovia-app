@@ -272,9 +272,10 @@ function MatchesContent() {
   const currentUser  = getCurrentUser()
   const userIsAdmin  = currentUser?.role === 'ADMIN'
 
-  const urlImovelId = searchParams.get('imovelId') ?? ''
-  const urlPerfilId = searchParams.get('perfilId') ?? ''
-  const urlLabel    = searchParams.get('label') ?? ''
+  const urlImovelId  = searchParams.get('imovelId') ?? ''
+  const urlPerfilId  = searchParams.get('perfilId') ?? ''
+  const urlLabel     = searchParams.get('label') ?? ''
+  const urlRecentes  = searchParams.get('recentes') ?? ''   // '7' | '30' | 'hoje'
 
   const [matches,    setMatches]    = useState<Match[]>([])
   const [etapas,     setEtapas]     = useState<PipelineEtapa[]>([])
@@ -285,6 +286,13 @@ function MatchesContent() {
   const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
+  // Filtro de data: inicializa do URL param quando vindo do dashboard
+  const [filtroData, setFiltroData] = useState<'__todos__' | 'hoje' | '7dias' | '30dias'>(
+    urlRecentes === 'hoje' ? 'hoje'
+    : urlRecentes === '7'  ? '7dias'
+    : urlRecentes === '30' ? '30dias'
+    : '__todos__'
+  )
   const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -353,15 +361,29 @@ function MatchesContent() {
       !m.imovel.cidade.nome.toLowerCase().includes(texto) &&
       !m.perfil.clienteEmail.toLowerCase().includes(texto)
     ) return false
-    if (filtroEtapa      !== '__todos__' && m.etapaId             !== filtroEtapa)      return false
-    if (filtroFinalidade !== '__todas__' && m.imovel.finalidade    !== filtroFinalidade) return false
+    if (filtroEtapa      !== '__todos__' && m.etapaId          !== filtroEtapa)      return false
+    if (filtroFinalidade !== '__todas__' && m.imovel.finalidade !== filtroFinalidade) return false
+    // Filtro de data
+    if (filtroData !== '__todos__') {
+      const criado = new Date(m.createdAt)
+      const agora  = Date.now()
+      if (filtroData === 'hoje') {
+        if (criado.toDateString() !== new Date().toDateString()) return false
+      } else if (filtroData === '7dias') {
+        if (agora - criado.getTime() > 7 * 86_400_000) return false
+      } else if (filtroData === '30dias') {
+        if (agora - criado.getTime() > 30 * 86_400_000) return false
+      }
+    }
     return true
   })
 
-  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__'
+  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '__todos__'
 
   function limparFiltros() {
-    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setPage(1)
+    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('__todos__'); setPage(1)
+    // Remove params de URL
+    router.replace('/dashboard/matches')
   }
 
   const matchesPaginados = matchesFiltrados.slice((page - 1) * pageSize, page * pageSize)
@@ -399,6 +421,21 @@ function MatchesContent() {
         </div>
       </div>
 
+      {/* ── Banner: vindo de "Últimos matches" no Dashboard ── */}
+      {urlRecentes && !urlImovelId && !urlPerfilId && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="flex-1">
+            Mostrando matches dos <strong>
+              {filtroData === 'hoje' ? 'últimas 24h' : filtroData === '7dias' ? 'últimos 7 dias' : 'últimos 30 dias'}
+            </strong>
+          </span>
+          <button onClick={() => { setFiltroData('__todos__'); router.replace('/dashboard/matches') }} className="ml-auto p-0.5 rounded hover:bg-blue-100">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ── Banner de contexto ── */}
       {(urlImovelId || urlPerfilId) && urlLabel && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
@@ -416,7 +453,7 @@ function MatchesContent() {
       {/* ── Filtros ── */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
             <div className="lg:col-span-2 space-y-1">
               <Label className="text-xs">Buscar</Label>
               <div className="relative">
@@ -457,6 +494,18 @@ function MatchesContent() {
                       </span>
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Período</Label>
+              <Select value={filtroData} onValueChange={(v: any) => { setFiltroData(v); setPage(1) }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__todos__">Todos</SelectItem>
+                  <SelectItem value="hoje">Hoje</SelectItem>
+                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
                 </SelectContent>
               </Select>
             </div>

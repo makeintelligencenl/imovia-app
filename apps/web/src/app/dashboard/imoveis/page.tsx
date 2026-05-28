@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Search, X } from 'lucide-react'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2, Search, X, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -65,12 +66,17 @@ const BLANK_FORM = {
   estado: '', cep: '', codigoOrigem: '', descricao: '', urlImovel: '',
 }
 
-export default function ImoveisPage() {
+function ImoveisContent() {
+  const searchParams  = useSearchParams()
+  const router        = useRouter()
+  const semMatchParam = searchParams.get('semMatch') === '1'
+
   const [imoveis, setImoveis]     = useState<Imovel[]>([])
   const [tipos, setTipos]         = useState<TipoImovel[]>([])
   const [estados, setEstados]     = useState<Estado[]>([])
   const [cidades, setCidades]     = useState<Cidade[]>([])
   const [loading, setLoading]     = useState(true)
+  const [idsComMatch, setIdsComMatch] = useState<Set<string>>(new Set())
 
   // Filtros
   const [filtroTexto, setFiltroTexto]         = useState('')
@@ -94,14 +100,21 @@ export default function ImoveisPage() {
 
   async function load() {
     try {
-      const [imoveisData, tiposData, estadosData] = await Promise.all([
+      const requests: Promise<any>[] = [
         api.get<Imovel[]>('/imoveis'),
         api.get<TipoImovel[]>('/tipos'),
         api.get<Estado[]>('/localidades/estados'),
-      ])
+      ]
+      if (semMatchParam) {
+        requests.push(api.get<{ imovel: { id: string } }[]>('/matches'))
+      }
+      const [imoveisData, tiposData, estadosData, matchesData] = await Promise.all(requests)
       setImoveis(imoveisData)
       setTipos(tiposData)
       setEstados(estadosData)
+      if (matchesData) {
+        setIdsComMatch(new Set((matchesData as { imovel: { id: string } }[]).map((m) => m.imovel.id)))
+      }
     } finally {
       setLoading(false)
     }
@@ -114,10 +127,12 @@ export default function ImoveisPage() {
     setCidades(data)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [semMatchParam]) // re-load se o filtro mudar
 
-  // â”€â”€ Filtro client-side â”€â”€
+  // ── Filtro client-side ──
   const imovelFiltrado = imoveis.filter((i) => {
+    // Filtro especial: apenas disponíveis sem match (vindo do dashboard)
+    if (semMatchParam && (i.status !== 'DISPONIVEL' || idsComMatch.has(i.id))) return false
     const texto = filtroTexto.toLowerCase()
     if (texto && !i.titulo.toLowerCase().includes(texto) &&
         !i.bairro.toLowerCase().includes(texto) &&
@@ -282,18 +297,34 @@ export default function ImoveisPage() {
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
 
-      {/* â”€â”€ Cabeçalho â”€â”€ */}
-      <div className="flex items-center justify-between">
+      {/* ── Cabeçalho ── */}
+      <div className=”flex items-center justify-between”>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Imóveis</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className=”text-2xl font-bold tracking-tight”>Imóveis</h1>
+          <p className=”text-sm text-muted-foreground mt-0.5”>
             {loading ? 'Carregando...' : `${imovelFiltrado.length} de ${imoveis.length} imóvel(is)`}
           </p>
         </div>
-        <Button onClick={abrirCriar} className="gap-2 shadow-sm">
-          <Plus className="h-4 w-4" /> Novo imóvel
+        <Button onClick={abrirCriar} className=”gap-2 shadow-sm”>
+          <Plus className=”h-4 w-4” /> Novo imóvel
         </Button>
       </div>
+
+      {/* ── Banner: filtro vindo do Dashboard ── */}
+      {semMatchParam && (
+        <div className=”flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm”>
+          <AlertCircle className=”h-4 w-4 shrink-0 text-amber-500” />
+          <span className=”flex-1”>
+            Mostrando apenas <strong>imóveis disponíveis sem match</strong> — estes precisam de atenção.
+          </span>
+          <button
+            onClick={() => router.replace('/dashboard/imoveis')}
+            className=”flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 shrink-0”
+          >
+            <X className=”h-3.5 w-3.5” /> Limpar filtro
+          </button>
+        </div>
+      )}
 
       {/* â”€â”€ Filtros â”€â”€ */}
       <Card className="shadow-sm rounded-xl">
@@ -612,5 +643,13 @@ export default function ImoveisPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function ImoveisPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-slate-500">Carregando imóveis...</div>}>
+      <ImoveisContent />
+    </Suspense>
   )
 }
