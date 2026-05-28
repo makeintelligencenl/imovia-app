@@ -86,32 +86,32 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
   const cor = match.etapa?.cor ?? '#6B7280'
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border-l-4 p-3 space-y-2 ${isDragging ? 'opacity-50' : ''}`}
+      className={`bg-white rounded-lg shadow-sm border-l-[3px] p-2 space-y-1.5 ${isDragging ? 'opacity-50' : ''}`}
       style={{ borderLeftColor: cor }}
     >
-      <p className="text-xs font-semibold text-slate-800 leading-tight line-clamp-2">
+      <p className="text-[11px] font-semibold text-slate-800 leading-tight line-clamp-2">
         {match.imovel.titulo}
       </p>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-[10px] text-muted-foreground leading-tight">
         {match.imovel.bairro}, {match.imovel.cidade.nome}
       </p>
       <div className="flex items-center gap-1">
-        <Users className="h-3 w-3 text-muted-foreground shrink-0" />
-        <p className="text-[11px] text-slate-600 truncate">{match.perfil.clienteNome}</p>
+        <Users className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+        <p className="text-[10px] text-slate-600 truncate">{match.perfil.clienteNome}</p>
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-700 tabular-nums">
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[10px] font-bold text-slate-700 tabular-nums truncate">
           {formatCurrency(match.imovel.preco)}
         </span>
-        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
-          {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
+        <span className={`text-[9px] font-semibold px-1 py-0.5 rounded-full shrink-0 ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
+          {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Alug.'}
         </span>
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[9px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded truncate">
           {match.imovel.tipo?.nome ?? '—'}
         </span>
-        <span className="text-[10px] text-muted-foreground">{timeAgo(match.createdAt)}</span>
+        <span className="text-[9px] text-muted-foreground shrink-0">{timeAgo(match.createdAt)}</span>
       </div>
     </div>
   )
@@ -144,16 +144,19 @@ function DroppableColumn({ etapa, matches }: { etapa: PipelineEtapa; matches: Ma
   const textColor = textColorForBg(etapa.cor)
 
   return (
-    <div className="flex-none w-56 bg-slate-100 rounded-xl flex flex-col">
+    <div className="flex-1 min-w-0 bg-slate-100 rounded-xl flex flex-col">
       <div
-        className="rounded-t-xl px-3 py-2.5 flex items-center justify-between"
+        className="rounded-t-xl px-2 py-2 flex items-center justify-between gap-1"
         style={{ backgroundColor: etapa.cor }}
       >
-        <span className="text-xs font-bold uppercase tracking-wide truncate" style={{ color: textColor }}>
+        <span
+          className="text-[11px] font-bold uppercase tracking-wide truncate leading-tight"
+          style={{ color: textColor }}
+        >
           {etapa.nome}
         </span>
         <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full ml-2 shrink-0"
+          className="text-[11px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
           style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: textColor }}
         >
           {matches.length}
@@ -162,12 +165,12 @@ function DroppableColumn({ etapa, matches }: { etapa: PipelineEtapa; matches: Ma
 
       <div
         ref={setNodeRef}
-        className={`flex flex-col gap-2 p-2 overflow-y-auto flex-1 min-h-[120px] rounded-b-xl transition-colors ${
+        className={`flex flex-col gap-1.5 p-1.5 overflow-y-auto flex-1 min-h-[120px] rounded-b-xl transition-colors ${
           isOver ? 'bg-blue-50 ring-2 ring-blue-300 ring-inset' : ''
         }`}
       >
         {matches.length === 0 && !isOver && (
-          <p className="text-xs text-muted-foreground text-center py-6 opacity-50">Solte aqui</p>
+          <p className="text-[11px] text-muted-foreground text-center py-6 opacity-50">Solte aqui</p>
         )}
         {matches.map((m) => (
           <DraggableCard key={m.id} match={m} />
@@ -211,7 +214,7 @@ function KanbanView({
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
+      <div className="flex gap-2 w-full" style={{ minHeight: '60vh' }}>
         {etapas.map((etapa) => (
           <DroppableColumn
             key={etapa.id}
