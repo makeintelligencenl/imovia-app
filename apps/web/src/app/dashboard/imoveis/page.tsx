@@ -163,7 +163,7 @@ function ImoveisContent() {
   const filtrosAtivos =
     filtroTexto || filtroTipo !== '__todos__' || filtroFinalidade !== '__todas__' || filtroStatus !== '__todos__'
 
-  // â”€â”€ Criar / Editar â”€â”€
+  // Criar / Editar
   function abrirCriar() {
     setFormData({ ...BLANK_FORM })
     setEditId(null)
@@ -261,7 +261,7 @@ function ImoveisContent() {
     }
   }
 
-  // â”€â”€ Alterar status inline â”€â”€
+  // Alterar status inline
   async function handleStatusChange(id: string, status: string) {
     // Atualiza otimisticamente na UI
     setImoveis((prev) => prev.map((i) => i.id === id ? { ...i, status } : i))
@@ -274,7 +274,7 @@ function ImoveisContent() {
     }
   }
 
-  // â”€â”€ Excluir â”€â”€
+  // Excluir
   async function handleExcluir() {
     if (!deleteTarget) return
     setDeleting(true)
@@ -292,7 +292,7 @@ function ImoveisContent() {
 
   return (
     <div className="space-y-4">
-      {/* â”€â”€ Overlay de Match â”€â”€ */}
+      {/* Overlay de Match */}
       {matchCount > 0 && (
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
@@ -326,7 +326,7 @@ function ImoveisContent() {
         </div>
       )}
 
-      {/* â”€â”€ Filtros â”€â”€ */}
+      {/* Filtros */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
@@ -387,7 +387,7 @@ function ImoveisContent() {
         </CardContent>
       </Card>
 
-      {/* â”€â”€ Tabela â”€â”€ */}
+      {/* Tabela */}
       <Card className="shadow-sm rounded-xl overflow-hidden">
         <CardContent className="p-0">
           <Table>
@@ -494,7 +494,7 @@ function ImoveisContent() {
         </CardContent>
       </Card>
 
-      {/* â”€â”€ Modal Criar / Editar â”€â”€ */}
+      {/* Modal Criar / Editar */}
       <Dialog open={formMode !== null} onOpenChange={(open) => !open && setFormMode(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -624,7 +624,7 @@ function ImoveisContent() {
         </DialogContent>
       </Dialog>
 
-      {/* â”€â”€ Modal Confirmar Exclusão â”€â”€ */}
+      {/* Modal Confirmar Exclusão */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
