@@ -58,6 +58,27 @@ function BarLabel(props: any) {
   )
 }
 
+// ── Label externa do Donut ────────────────────────────────────────────────────
+function DonutLabel({ cx, cy, midAngle, outerRadius, value, percent }: any) {
+  if (!value || percent < 0.04) return null          // oculta fatias muito pequenas
+  const RADIAN = Math.PI / 180
+  const radius = outerRadius + 24
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+  return (
+    <text
+      x={x} y={y}
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      fontSize={11}
+      fontWeight="700"
+      fill="#374151"
+    >
+      {value} ({Math.round(percent * 100)}%)
+    </text>
+  )
+}
+
 // ── Componente Donut ──────────────────────────────────────────────────────────
 function DonutChart({ data, title }: { data: { name: string; value: number }[]; title: string }) {
   const total = data.reduce((s, d) => s + d.value, 0)
@@ -68,12 +89,19 @@ function DonutChart({ data, title }: { data: { name: string; value: number }[]; 
       </CardHeader>
       <CardContent className="pt-0">
         {total === 0 ? (
-          <div className="flex items-center justify-center h-[180px] text-sm text-muted-foreground">Sem dados</div>
+          <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados</div>
         ) : (
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={200}>
             <PieChart>
-              <Pie data={data} cx="50%" cy="50%" innerRadius={48} outerRadius={72}
-                dataKey="value" paddingAngle={2}>
+              <Pie
+                data={data}
+                cx="50%" cy="46%"
+                innerRadius={44} outerRadius={66}
+                dataKey="value"
+                paddingAngle={2}
+                label={DonutLabel}
+                labelLine={false}
+              >
                 {data.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={(v: number) => [`${v} (${Math.round(v / total * 100)}%)`, '']} />
