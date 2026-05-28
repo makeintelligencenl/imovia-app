@@ -1,10 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Home, Users, GitMerge, TrendingUp, ArrowRight, Layers, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
+import { getCurrentUser } from '@/lib/auth'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList,
   PieChart, Pie, Cell, Legend, Label,
@@ -124,12 +126,19 @@ function DonutChart({ data, title }: { data: { name: string; value: number }[]; 
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
+  const router     = useRouter()
   const [imoveis,  setImoveis]  = useState<Imovel[]>([])
   const [perfis,   setPerfis]   = useState<Perfil[]>([])
   const [matches,  setMatches]  = useState<Match[]>([])
   const [etapas,   setEtapas]   = useState<PipelineEtapa[]>([])
   const [loading,  setLoading]  = useState(true)
   const [apiError, setApiError] = useState(false)
+
+  useEffect(() => {
+    // Corretores vao para o dashboard deles
+    const user = getCurrentUser()
+    if (user?.role === 'CORRETOR') { router.replace('/dashboard/corretor'); return }
+  }, [router])
 
   useEffect(() => {
     const loadAll = async () => {

@@ -7,8 +7,7 @@ import { cn } from '@/lib/utils'
 
 interface UserInfo { name: string; email: string; role: string }
 
-const NAV_ITEMS = [
-  { href: '/dashboard',                   label: 'Dashboard',       icon: LayoutDashboard, adminOnly: false },
+const NAV_ITEMS_BASE = [
   { href: '/dashboard/imoveis',           label: 'Imóveis',         icon: Home,            adminOnly: false },
   { href: '/dashboard/perfis',            label: 'Perfis de Busca', icon: Users,           adminOnly: false },
   { href: '/dashboard/matches',           label: 'Matches',         icon: GitMerge,        adminOnly: false },
@@ -20,6 +19,15 @@ export function Sidebar() {
   const router   = useRouter()
   const [user,      setUser]      = useState<UserInfo | null>(null)
   const [collapsed, setCollapsed] = useState(false)
+
+  // Link do Dashboard varia por role
+  const dashboardHref = user?.role === 'CORRETOR' ? '/dashboard/corretor' : '/dashboard'
+
+  // NAV com Dashboard no topo, href dinamico
+  const NAV_ITEMS = [
+    { href: dashboardHref, label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
+    ...NAV_ITEMS_BASE,
+  ]
 
   useEffect(() => {
     try {
@@ -116,8 +124,9 @@ export function Sidebar() {
           </p>
         )}
         {NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === 'ADMIN').map((item) => {
-          const isActive = item.href === '/dashboard'
-            ? pathname === item.href
+          const isDashboardItem = item.href === '/dashboard' || item.href === '/dashboard/corretor'
+          const isActive = isDashboardItem
+            ? pathname === '/dashboard' || pathname === '/dashboard/corretor'
             : pathname.startsWith(item.href)
           return (
             <Link
