@@ -76,7 +76,7 @@ export class BotController {
       total: matches.length,
       imoveis: matches.map((m) => ({
         matchId: m.id,
-        statusMatch: m.status,
+        statusMatch: (m as any).etapa?.nome ?? null,
         imovel: {
           id: m.imovel.id,
           titulo: m.imovel.titulo,
