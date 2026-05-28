@@ -7,7 +7,7 @@ import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, Label,
 } from 'recharts'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -58,30 +58,24 @@ function BarLabel(props: any) {
   )
 }
 
-// ── Label externa do Donut ────────────────────────────────────────────────────
-function DonutLabel({ cx, cy, midAngle, outerRadius, value, percent }: any) {
-  if (!value || percent < 0.04) return null          // oculta fatias muito pequenas
-  const RADIAN = Math.PI / 180
-  const radius = outerRadius + 24
-  const x = cx + radius * Math.cos(-midAngle * RADIAN)
-  const y = cy + radius * Math.sin(-midAngle * RADIAN)
-  return (
-    <text
-      x={x} y={y}
-      textAnchor={x > cx ? 'start' : 'end'}
-      dominantBaseline="central"
-      fontSize={11}
-      fontWeight="700"
-      fill="#374151"
-    >
-      {value} ({Math.round(percent * 100)}%)
-    </text>
-  )
-}
-
 // ── Componente Donut ──────────────────────────────────────────────────────────
 function DonutChart({ data, title }: { data: { name: string; value: number }[]; title: string }) {
   const total = data.reduce((s, d) => s + d.value, 0)
+
+  const centerLabel = ({ viewBox }: any) => {
+    const { cx, cy } = viewBox ?? {}
+    return (
+      <g>
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize={22} fontWeight="700" fill="#111827">
+          {total}
+        </text>
+        <text x={cx} y={cy + 11} textAnchor="middle" fontSize={10} fill="#6B7280">
+          imóveis
+        </text>
+      </g>
+    )
+  }
+
   return (
     <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2">
@@ -95,18 +89,31 @@ function DonutChart({ data, title }: { data: { name: string; value: number }[]; 
             <PieChart>
               <Pie
                 data={data}
-                cx="50%" cy="46%"
-                innerRadius={44} outerRadius={66}
+                cx="50%" cy="44%"
+                innerRadius={46} outerRadius={68}
                 dataKey="value"
                 paddingAngle={2}
-                label={DonutLabel}
                 labelLine={false}
               >
                 {data.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                <Label content={centerLabel} position="center" />
               </Pie>
               <Tooltip formatter={(v: number) => [`${v} (${Math.round(v / total * 100)}%)`, '']} />
-              <Legend iconType="circle" iconSize={8}
-                formatter={(v) => <span className="text-xs text-muted-foreground">{v}</span>} />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                formatter={(value) => {
+                  const item = data.find((d) => d.name === value)
+                  const pct  = item ? Math.round(item.value / total * 100) : 0
+                  return (
+                    <span className="text-xs text-muted-foreground">
+                      {value}{' '}
+                      <span className="font-semibold text-foreground">{item?.value}</span>
+                      <span className="text-muted-foreground/70"> ({pct}%)</span>
+                    </span>
+                  )
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         )}
