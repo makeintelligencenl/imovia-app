@@ -4,6 +4,7 @@ import {
   GitMerge, LayoutDashboard, Home, Search, ChevronDown,
   Pencil, Trash2, TrendingUp, Zap, Shield, BarChart3,
   Bot, MessageSquare, ClipboardList, Handshake,
+  CalendarDays, UserRound, MessageCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatAnimado } from '@/components/chat-animado'
@@ -68,8 +69,9 @@ function MockDashboard() {
           {[
             { icon: LayoutDashboard, label: 'Dashboard', active: true },
             { icon: Home,            label: 'Imóveis' },
-            { icon: Users,           label: 'Perfis' },
+            { icon: UserRound,       label: 'Clientes' },
             { icon: GitMerge,        label: 'Matches' },
+            { icon: CalendarDays,    label: 'Agenda' },
           ].map((item) => (
             <div key={item.label} className={`flex items-center gap-1.5 px-1.5 py-1 rounded text-[9px] font-medium ${item.active ? 'bg-blue-500/15 text-blue-400' : 'text-slate-400'}`}>
               <item.icon className="h-2.5 w-2.5 shrink-0" /> {item.label}
@@ -284,6 +286,213 @@ function MockMatches() {
   )
 }
 
+/* ─── MOCKUP: Clientes ──────────────────────────────────────────── */
+function MockClientes() {
+  return (
+    <div className="bg-slate-100 rounded-xl overflow-hidden shadow-2xl border border-slate-200 text-[10px]">
+      <div className="flex" style={{ minHeight: 380 }}>
+        {/* mini sidebar */}
+        <div className="w-28 bg-[#0F172A] flex flex-col shrink-0 py-3 px-2 gap-2">
+          <div className="flex items-center gap-1.5 mb-1 px-1">
+            <div className="p-1 rounded bg-blue-500/20"><Building2 className="h-3 w-3 text-blue-400" /></div>
+            <p className="text-[9px] font-bold text-white">Imov<span className="text-blue-400">IA</span></p>
+          </div>
+          <p className="text-[8px] uppercase tracking-widest text-slate-600 px-1 mt-1">Menu</p>
+          {[
+            { icon: LayoutDashboard, label: 'Dashboard' },
+            { icon: Home,            label: 'Imóveis' },
+            { icon: UserRound,       label: 'Clientes', active: true },
+            { icon: GitMerge,        label: 'Matches' },
+            { icon: CalendarDays,    label: 'Agenda' },
+          ].map((item) => (
+            <div key={item.label} className={`flex items-center gap-1.5 px-1.5 py-1 rounded text-[9px] font-medium ${item.active ? 'bg-blue-500/15 text-blue-400' : 'text-slate-400'}`}>
+              <item.icon className="h-2.5 w-2.5 shrink-0" /> {item.label}
+            </div>
+          ))}
+        </div>
+
+        {/* conteúdo detalhe do cliente */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* hero */}
+          <div className="flex items-center gap-3 px-4 py-3" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)' }}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-[13px] shrink-0"
+              style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)' }}>MS</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold text-white leading-tight">Maria Clara Santos</p>
+              <p className="text-[9px] text-blue-200 mt-0.5">maria.santos@email.com · (31) 98765-4321</p>
+              <div className="flex gap-1 mt-1">
+                {['2 perfis','5 matches','Corretor: Tiago Lana'].map(b => (
+                  <span key={b} className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,.15)', color: '#e0f2fe' }}>{b}</span>
+                ))}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="inline-block bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">● Ativo</div>
+              <p className="text-[8px] text-blue-200 mt-0.5">Cliente desde 15/01/2025</p>
+            </div>
+          </div>
+
+          {/* dados */}
+          <div className="px-4 py-2 border-b border-slate-200 bg-white">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Dados do Cliente</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                ['WhatsApp', '+55 31 98765-4321'],
+                ['CPF', '123.456.789-00'],
+                ['Observações', 'Prefere fins de semana para visitas'],
+              ].map(([label, val]) => (
+                <div key={label}>
+                  <p className="text-[8px] text-slate-400">{label}</p>
+                  <p className="text-[9px] text-slate-700 font-medium truncate">{val}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* perfis */}
+          <div className="px-4 py-2 border-b border-slate-200 bg-white">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Perfis de Busca</p>
+            <div className="flex gap-2">
+              <div className="flex-1 border-2 border-blue-400 rounded-lg p-2 bg-blue-50 cursor-pointer">
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">Compra</span>
+                <p className="text-[9px] font-semibold text-slate-700 mt-1">BH · Savassi / Funcionários</p>
+                <p className="text-[8px] text-slate-500">R$ 400k–700k · 80–120 m² · 3q</p>
+                <p className="text-[8px] text-blue-600 font-semibold mt-0.5">● 3 matches</p>
+              </div>
+              <div className="flex-1 border border-slate-200 rounded-lg p-2 bg-white cursor-pointer">
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">Aluguel</span>
+                <p className="text-[9px] font-semibold text-slate-700 mt-1">BH · Lourdes / S. Agostinho</p>
+                <p className="text-[8px] text-slate-500">R$ 3k–6k · 60–90 m² · 2q</p>
+                <p className="text-[8px] text-slate-400 font-semibold mt-0.5">● 2 matches</p>
+              </div>
+            </div>
+          </div>
+
+          {/* matches do perfil selecionado */}
+          <div className="px-4 py-2 flex-1 bg-slate-50">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Matches · Perfil: Compra – Savassi</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { t: 'Ap. Av. Contorno, 820', l: 'Savassi · R$ 590k', e: 'Contato Inicial', c: '#3b82f6' },
+                { t: 'Ap. Rua Pernambuco, 1050', l: 'Funcionários · R$ 620k', e: 'Visita Agendada', c: '#8b5cf6' },
+                { t: 'Ap. Rua Maranhão, 440', l: 'Savassi · R$ 480k', e: 'Proposta', c: '#f59e0b' },
+              ].map((m) => (
+                <div key={m.t} className="bg-white border border-slate-200 rounded-lg p-2">
+                  <p className="text-[9px] font-semibold text-slate-700 leading-tight">{m.t}</p>
+                  <p className="text-[8px] text-slate-400 mt-0.5">{m.l}</p>
+                  <span className="inline-block mt-1 text-[8px] font-bold text-white px-1.5 py-0.5 rounded-full" style={{ background: m.c }}>{m.e}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── MOCKUP: Agenda ────────────────────────────────────────────── */
+function MockAgenda() {
+  const days = [
+    { n: '27', other: true, events: [] },
+    { n: '28', other: true, events: [] },
+    { n: '29', other: true, events: [] },
+    { n: '30', other: true, events: [] },
+    { n: '1',  events: [] },
+    { n: '2',  events: [] },
+    { n: '3',  events: [{ label: '10h · Ap. Savassi', type: 'visita' }] },
+    { n: '4',  events: [] },
+    { n: '5',  events: [{ label: '09h · Retorno João', type: 'retorno' }] },
+    { n: '6',  events: [] },
+    { n: '7',  events: [{ label: '14h · Casa Pampulha', type: 'visita' }, { label: '16h · Proposta Ana', type: 'proposta' }] },
+    { n: '8',  events: [] },
+    { n: '9',  events: [{ label: '11h · Ap. Lourdes', type: 'visita' }] },
+    { n: '10', events: [] },
+    { n: '11', events: [] },
+    { n: '12', events: [] },
+    { n: '13', events: [{ label: '10h · Follow-up Pedro', type: 'retorno' }] },
+    { n: '14', events: [] },
+    { n: '15', events: [{ label: '09h · Cobertura BH', type: 'visita' }] },
+    { n: '16', events: [] },
+    { n: '17', events: [{ label: '10h · Ap. Belvedere', type: 'visita' }, { label: '14h · Casa Mangabeiras', type: 'visita' }] },
+    { n: '18', events: [] },
+    { n: '19', events: [] },
+    { n: '20', events: [] },
+    { n: '21', events: [{ label: '15h · Proposta Carlos', type: 'proposta' }] },
+    { n: '22', events: [] },
+    { n: '23', events: [] },
+    { n: '24', today: true, events: [{ label: '10h · Ap. Savassi', type: 'visita' }, { label: '14h · Maria Santos', type: 'retorno' }] },
+    { n: '25', events: [] },
+    { n: '26', events: [] },
+    { n: '27', events: [] },
+    { n: '28', events: [] },
+    { n: '29', events: [] },
+    { n: '30', events: [] },
+    { n: '31', events: [] },
+  ]
+  const typeColor: Record<string, string> = {
+    visita:   'bg-green-100 text-green-700',
+    retorno:  'bg-yellow-100 text-yellow-700',
+    proposta: 'bg-violet-100 text-violet-700',
+  }
+  return (
+    <div className="bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200 text-[10px]">
+      {/* header */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#0F172A]">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-3.5 w-3.5 text-blue-400" />
+          <p className="font-bold text-white text-xs">Agenda · Maio / 2026</p>
+        </div>
+        <div className="flex gap-1">
+          <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-white text-[9px] cursor-pointer">‹</div>
+          <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-white text-[9px] cursor-pointer">›</div>
+        </div>
+      </div>
+      {/* day headers */}
+      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
+        {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => (
+          <div key={d} className="py-1.5 text-center text-[8px] font-bold text-slate-400 uppercase tracking-wide">{d}</div>
+        ))}
+      </div>
+      {/* days grid */}
+      <div className="grid grid-cols-7" style={{ gridAutoRows: '56px' }}>
+        {days.map((d, i) => (
+          <div key={i} className={`border-r border-b border-slate-50 p-1 overflow-hidden ${d.other ? 'bg-slate-50/50' : ''}`}>
+            <div className={`text-[9px] font-semibold mb-0.5 w-4 h-4 flex items-center justify-center rounded-full ${
+              d.today ? 'bg-blue-600 text-white' : d.other ? 'text-slate-300' : 'text-slate-500'
+            }`}>{d.n}</div>
+            {d.events.slice(0, 2).map((e, ei) => (
+              <div key={ei} className={`text-[7px] font-semibold px-1 py-0.5 rounded mb-0.5 truncate ${typeColor[e.type]}`}>{e.label}</div>
+            ))}
+          </div>
+        ))}
+      </div>
+      {/* próximas visitas */}
+      <div className="border-t border-slate-100 px-4 py-2.5 bg-slate-50">
+        <p className="text-[9px] font-bold text-slate-700 mb-1.5">Próximas visitas — hoje</p>
+        {[
+          { time: '10:00', title: 'Ap. 3Q · Av. do Contorno, 820 – Savassi', sub: 'Maria Clara Santos · Corretor: Tiago Lana' },
+          { time: '14:00', title: 'Retorno · Maria Santos – follow-up proposta', sub: 'via WhatsApp · Corretor: Tiago Lana' },
+        ].map((ev) => (
+          <div key={ev.time} className="flex gap-2 items-start mb-1.5 bg-white border border-slate-100 rounded-lg p-2">
+            <span className="text-[9px] font-bold text-blue-600 shrink-0 w-8">{ev.time}</span>
+            <div>
+              <p className="text-[9px] font-semibold text-slate-700 leading-tight">{ev.title}</p>
+              <p className="text-[8px] text-slate-400">{ev.sub}</p>
+            </div>
+          </div>
+        ))}
+        {/* legenda */}
+        <div className="flex gap-3 mt-2">
+          {[['Visita','bg-green-100 text-green-700'],['Retorno','bg-yellow-100 text-yellow-700'],['Proposta','bg-violet-100 text-violet-700']].map(([l,c])=>(
+            <span key={l} className={`text-[8px] font-semibold px-2 py-0.5 rounded-full ${c}`}>{l}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── MAIN PAGE ─────────────────────────────────────────────────── */
 export default function LandingPage() {
   const features = [
@@ -327,6 +536,26 @@ export default function LandingPage() {
       title: 'Integra com seu ERP atual',
       desc: 'Não é preciso trocar de sistema. O ImovIA conecta ao ERP da sua imobiliária via API, importando imóveis e sincronizando dados automaticamente.',
     },
+    {
+      icon: UserRound,
+      title: 'Gestão de Clientes (CRM)',
+      desc: 'Ficha completa do cliente com múltiplos perfis de busca, histórico de matches e corretor responsável — tudo centralizado em uma única tela.',
+    },
+    {
+      icon: CalendarDays,
+      title: 'Agenda de Visitas',
+      desc: 'Agende visitas diretamente do match no pipeline. Calendário compartilhado com visitas, retornos e propostas por corretor ou equipe.',
+    },
+    {
+      icon: Shield,
+      title: 'Visão Admin vs. Corretor',
+      desc: 'O Admin enxerga toda a carteira. O Corretor vê apenas seus clientes e matches — garantindo foco, privacidade e responsabilidade de atendimento.',
+    },
+    {
+      icon: MessageCircle,
+      title: 'WhatsApp pré-preenchido',
+      desc: 'Clique no número do cliente e abra o WhatsApp já com uma mensagem de saudação personalizada pronta — agilidade no primeiro contato.',
+    },
   ]
 
   const steps = [
@@ -368,6 +597,10 @@ export default function LandingPage() {
     { feature: 'Funil de negociação integrado',           nos: true,  zap: false },
     { feature: 'Dashboard analítico por imobiliária',     nos: true,  zap: false },
     { feature: 'Perfis de busca detalhados',              nos: true,  zap: true  },
+    { feature: 'Gestão de clientes (CRM) integrada',      nos: true,  zap: false },
+    { feature: 'Agenda de visitas integrada ao pipeline', nos: true,  zap: false },
+    { feature: 'Corretor associado ao cliente',           nos: true,  zap: false },
+    { feature: 'Visão Admin vs. Corretor segmentada',     nos: true,  zap: false },
   ]
 
   return (
@@ -387,6 +620,8 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-600">
             <a href="#como-funciona" className="hover:text-slate-900 transition-colors">Como funciona</a>
             <a href="#agente-ia" className="hover:text-slate-900 transition-colors">Agente IA</a>
+            <a href="#clientes" className="hover:text-slate-900 transition-colors">Clientes</a>
+            <a href="#agenda" className="hover:text-slate-900 transition-colors">Agenda</a>
             <a href="#funcionalidades" className="hover:text-slate-900 transition-colors">Funcionalidades</a>
             <a href="#diferenciais" className="hover:text-slate-900 transition-colors">Diferenciais</a>
           </div>
@@ -711,6 +946,41 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── SCREENS: CLIENTES ───────────────────────────────────── */}
+      <section id="clientes" className="py-24 bg-white overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="lg:w-2/5">
+              <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 rounded-full px-3 py-1 text-xs font-semibold mb-3 border border-blue-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Novo
+              </div>
+              <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">Gestão de Clientes</p>
+              <h2 className="text-3xl font-bold text-slate-900 mb-4">Toda a jornada do cliente em um único lugar</h2>
+              <p className="text-slate-500 leading-relaxed mb-6">
+                Ficha completa com dados, múltiplos perfis de busca e matches integrados. Clique em um perfil e veja imediatamente os imóveis compatíveis — sem sair da página do cliente.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Corretor responsável associado diretamente ao cliente',
+                  'Múltiplos perfis de busca por cliente (compra e aluguel simultâneos)',
+                  'Matches filtrados por perfil selecionado',
+                  'Contato via WhatsApp com mensagem pré-preenchida',
+                  'Visão segmentada: ADMIN vê todos, Corretor vê seus clientes',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="lg:w-3/5 w-full">
+              <MockClientes />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── SCREENS: MATCHES ────────────────────────────────────── */}
       <section className="py-24 bg-white overflow-hidden">
         <div className="max-w-6xl mx-auto px-6">
@@ -738,6 +1008,41 @@ export default function LandingPage() {
             </div>
             <div className="lg:w-3/5 w-full">
               <MockMatches />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SCREENS: AGENDA ─────────────────────────────────────── */}
+      <section id="agenda" className="py-24 bg-slate-50 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
+            <div className="lg:w-2/5">
+              <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 rounded-full px-3 py-1 text-xs font-semibold mb-3 border border-blue-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Novo
+              </div>
+              <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">Agenda de Visitas</p>
+              <h2 className="text-3xl font-bold text-slate-900 mb-4">Agenda integrada ao pipeline de vendas</h2>
+              <p className="text-slate-500 leading-relaxed mb-6">
+                Agende visitas diretamente do card de match no Kanban. A agenda consolida todos os compromissos da equipe em um único calendário — visitas, retornos e propostas.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Agendamento em 1 clique direto do match',
+                  'Calendário compartilhado por corretor ou toda a equipe',
+                  'Tipos de evento: Visita, Retorno e Proposta',
+                  'Lista de próximas visitas do dia na tela inicial',
+                  'Notificação por WhatsApp antes da visita',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="lg:w-3/5 w-full">
+              <MockAgenda />
             </div>
           </div>
         </div>
@@ -833,6 +1138,8 @@ export default function LandingPage() {
               '✓ Atendimento 24h/dia',
               '✓ Setup em dias, não meses',
               '✓ Corretor só entra no momento certo',
+              '✓ CRM + Agenda integrados',
+              '✓ Matching automático',
             ].map(item => (
               <span key={item} className="text-sm text-slate-300 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full">
                 {item}
