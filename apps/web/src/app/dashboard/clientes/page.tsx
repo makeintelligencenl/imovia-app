@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Search, X, MessageCircle, UserRound, GitMerge } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X, MessageCircle, UserRound, GitMerge, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -300,22 +300,10 @@ export default function ClientesPage() {
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {c.perfis.map((p) => (
-                            <Link
-                              key={p.id}
-                              href={`/dashboard/perfis`}
-                              title={p.cidades.join(', ')}
-                            >
-                              <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-pointer hover:opacity-75 ${FINALIDADE_BADGE[p.finalidade]}`}>
-                                {p.finalidade === 'VENDA' ? 'Compra' : 'Aluguel'}
-                              </span>
-                            </Link>
-                          ))}
-                          <Link href={`/dashboard/matches?label=${encodeURIComponent(c.nome)}`}>
-                            <span className="inline-flex items-center gap-0.5 text-[10px] text-slate-500 hover:text-slate-700 px-1.5 py-0.5 rounded bg-slate-100 cursor-pointer">
-                              <GitMerge className="h-3 w-3" />
-                              Matches
+                            <span key={p.id} title={p.cidades.join(', ')} className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${FINALIDADE_BADGE[p.finalidade]}`}>
+                              {p.finalidade === 'VENDA' ? 'Compra' : 'Aluguel'}
                             </span>
-                          </Link>
+                          ))}
                         </div>
                       )}
                     </TableCell>
@@ -326,6 +314,11 @@ export default function ClientesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
+                        <Link href={`/dashboard/clientes/${c.id}`}>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Ver detalhes e perfis">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
                         <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar" onClick={() => abrirEditar(c)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>

@@ -66,7 +66,7 @@ export class ClientesService {
       include: {
         ...INCLUDE_DEFAULT,
         perfis: {
-          include:  { tipos: true },
+          include:  { tipos: true, _count: { select: { matches: true } } },
           orderBy:  { createdAt: 'desc' },
         },
       },
