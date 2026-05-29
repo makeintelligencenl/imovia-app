@@ -398,7 +398,7 @@ function MatchesContent() {
 
   // Tipos disponíveis derivados dos matches carregados (sem chamada extra)
   const tiposDisponiveis = Array.from(
-    new Map(matches.map((m) => [m.imovel.tipo?.nome, m.imovel.tipo?.nome]).filter(([k]) => k)).values(),
+    new Set(matches.map((m) => m.imovel.tipo?.nome).filter((n): n is string => !!n)),
   ).sort()
 
   const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '__todos__' || filtroTipo !== '__todos__'
