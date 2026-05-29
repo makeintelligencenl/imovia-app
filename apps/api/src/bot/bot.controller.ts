@@ -34,9 +34,10 @@ export class BotController {
     const perfil = await this.perfisService.create(tenantId, perfilData)
     return {
       perfilId: perfil.id,
-      clienteNome: perfil.clienteNome,
-      clienteEmail: perfil.clienteEmail,
-      clienteWhatsapp: perfil.clienteWhatsapp,
+      clienteId: perfil.clienteId,
+      clienteNome: perfil.cliente?.nome,
+      clienteEmail: perfil.cliente?.email,
+      clienteWhatsapp: perfil.cliente?.whatsapp,
       finalidade: perfil.finalidade,
       precoMin: perfil.precoMin,
       precoMax: perfil.precoMax,
