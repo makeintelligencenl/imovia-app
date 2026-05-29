@@ -15,15 +15,16 @@ export class MatchingController {
   @ApiOperation({ summary: 'Lista matches. CORRETOR vê apenas os seus' })
   findAll(
     @Request() req: any,
-    @Query('imovelId')  imovelId?:  string,
-    @Query('perfilId')  perfilId?:  string,
-    @Query('clienteId') clienteId?: string,
+    @Query('imovelId')    imovelId?:    string,
+    @Query('perfilId')    perfilId?:    string,
+    @Query('clienteId')   clienteId?:   string,
+    @Query('createdAfter') createdAfter?: string,
   ) {
     return this.matchingService.listarMatches(
       req.user.tenantId,
       req.user.id,
       req.user.role,
-      { imovelId, perfilId, clienteId },
+      { imovelId, perfilId, clienteId, createdAfter },
     )
   }
 

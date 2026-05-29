@@ -138,12 +138,13 @@ export class MatchingService {
     tenantId: string,
     userId: string,
     userRole: string,
-    filters?: { imovelId?: string; perfilId?: string; clienteId?: string },
+    filters?: { imovelId?: string; perfilId?: string; clienteId?: string; createdAfter?: string },
   ) {
-    const { clienteId, ...rest } = filters ?? {}
+    const { clienteId, createdAfter, ...rest } = filters ?? {}
     const where: any = { tenantId, ...rest }
 
-    if (clienteId) where.perfil = { clienteId }
+    if (clienteId)    where.perfil    = { clienteId }
+    if (createdAfter) where.createdAt = { gte: new Date(createdAfter) }
     if (userRole === 'CORRETOR') where.corretorId = userId
 
     return this.prisma.match.findMany({

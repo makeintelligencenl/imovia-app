@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TablePagination } from '@/components/ui/table-pagination'
+import { LeadScore } from '@/components/ui/lead-score'
 import { api } from '@/lib/api'
 import { formatWhatsappLink } from '@/lib/utils'
 import Link from 'next/link'
@@ -38,6 +39,7 @@ interface Cliente {
   corretor?: CorretorResumido
   ativo: boolean
   createdAt: string
+  leadScore: number
   _count: { perfis: number }
   perfis: PerfilResumido[]
 }
@@ -237,6 +239,7 @@ export default function ClientesPage() {
                 <TableHead>Contato</TableHead>
                 <TableHead>CPF</TableHead>
                 <TableHead>Corretor</TableHead>
+                <TableHead>Score</TableHead>
                 <TableHead>Perfis de Busca</TableHead>
                 <TableHead>Observações</TableHead>
                 <TableHead className="w-20 text-center">Ações</TableHead>
@@ -245,13 +248,13 @@ export default function ClientesPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : clientes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-16 text-center">
+                  <TableCell colSpan={8} className="py-16 text-center">
                     <UserRound className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
                     <p className="text-sm text-muted-foreground">
                       {search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado ainda.'}
@@ -293,6 +296,9 @@ export default function ClientesPage() {
                       ) : (
                         <span className="text-xs text-muted-foreground italic">Sem responsável</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <LeadScore score={c.leadScore} size="md" />
                     </TableCell>
                     <TableCell>
                       {c.perfis.length === 0 ? (

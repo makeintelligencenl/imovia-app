@@ -750,18 +750,28 @@ function MatchesContent() {
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
   const [filtroTipo,       setFiltroTipo]       = useState('__todos__')
   const [filtroCorretor,   setFiltroCorretor]   = useState('__todos__')
-  const [filtroData, setFiltroData] = useState<'__todos__' | 'hoje' | '7dias' | '30dias'>(
+  const [filtroData, setFiltroData] = useState<'__todos__' | 'hoje' | '7dias' | '15dias' | '30dias'>(
     urlRecentes === 'hoje' ? 'hoje'
     : urlRecentes === '7'  ? '7dias'
     : urlRecentes === '30' ? '30dias'
-    : '__todos__'
+    : '15dias'
   )
   const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
+  // Converte período UI → ISO para enviar à API
+  function periodoToCreatedAfter(periodo: string): string | undefined {
+    const now = Date.now()
+    if (periodo === 'hoje')   return new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+    if (periodo === '7dias')  return new Date(now - 7  * 86_400_000).toISOString()
+    if (periodo === '15dias') return new Date(now - 15 * 86_400_000).toISOString()
+    if (periodo === '30dias') return new Date(now - 30 * 86_400_000).toISOString()
+    return undefined
+  }
+
+  // Carrega etapas e corretores uma única vez
   useEffect(() => {
     const requests: Promise<any>[] = [
-      api.get<Match[]>('/matches'),
       api.get<PipelineEtapa[]>('/pipeline/etapas'),
     ]
     if (userIsAdmin) {
@@ -771,12 +781,22 @@ function MatchesContent() {
         ),
       )
     }
-    Promise.allSettled(requests).then(([mr, er, cr]) => {
-      if (mr.status === 'fulfilled') setMatches(mr.value)
+    Promise.allSettled(requests).then(([er, cr]) => {
       if (er.status === 'fulfilled') setEtapas(er.value)
       if (cr && cr.status === 'fulfilled') setCorretores(cr.value)
-    }).finally(() => setLoading(false))
+    })
   }, [userIsAdmin])
+
+  // Re-busca matches no servidor sempre que o período mudar
+  useEffect(() => {
+    setLoading(true)
+    const createdAfter = periodoToCreatedAfter(filtroData)
+    const qs = createdAfter ? `?createdAfter=${encodeURIComponent(createdAfter)}` : ''
+    api.get<Match[]>(`/matches${qs}`)
+      .then(setMatches)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [filtroData])
 
   async function handleEtapaChange(matchId: string, etapaId: string) {
     const oldMatch = matches.find((m) => m.id === matchId)
@@ -854,17 +874,6 @@ function MatchesContent() {
     if (filtroTipo       !== '__todos__'       && m.imovel.tipo?.nome      !== filtroTipo)       return false
     if (filtroCorretor   === '__sem_corretor__' && m.corretorId !== null)                        return false
     if (filtroCorretor !== '__todos__' && filtroCorretor !== '__sem_corretor__' && m.corretorId !== filtroCorretor) return false
-    if (filtroData !== '__todos__') {
-      const criado = new Date(m.createdAt)
-      const agora  = Date.now()
-      if (filtroData === 'hoje') {
-        if (criado.toDateString() !== new Date().toDateString()) return false
-      } else if (filtroData === '7dias') {
-        if (agora - criado.getTime() > 7 * 86_400_000) return false
-      } else if (filtroData === '30dias') {
-        if (agora - criado.getTime() > 30 * 86_400_000) return false
-      }
-    }
     return true
   })
 
@@ -872,10 +881,11 @@ function MatchesContent() {
     new Set(matches.map((m) => m.imovel.tipo?.nome).filter((n): n is string => !!n)),
   ).sort()
 
-  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '__todos__' || filtroTipo !== '__todos__' || filtroCorretor !== '__todos__'
+  // '15dias' é o padrão — não conta como filtro ativo
+  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '15dias' || filtroTipo !== '__todos__' || filtroCorretor !== '__todos__'
 
   function limparFiltros() {
-    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('__todos__'); setFiltroTipo('__todos__'); setFiltroCorretor('__todos__'); setPage(1)
+    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('15dias'); setFiltroTipo('__todos__'); setFiltroCorretor('__todos__'); setPage(1)
     router.replace('/dashboard/matches')
   }
 
@@ -947,7 +957,7 @@ function MatchesContent() {
           <span className="flex-1">
             Mostrando matches dos{' '}
             <strong>
-              {filtroData === 'hoje' ? 'ultimas 24h' : filtroData === '7dias' ? 'ultimos 7 dias' : 'ultimos 30 dias'}
+              {filtroData === 'hoje' ? 'últimas 24h' : filtroData === '7dias' ? 'últimos 7 dias' : filtroData === '15dias' ? 'últimos 15 dias' : 'últimos 30 dias'}
             </strong>
           </span>
           <button onClick={() => { setFiltroData('__todos__'); router.replace('/dashboard/matches') }} className="ml-auto p-0.5 rounded hover:bg-blue-100">
@@ -1051,8 +1061,9 @@ function MatchesContent() {
                 <SelectContent>
                   <SelectItem value="__todos__">Todos</SelectItem>
                   <SelectItem value="hoje">Hoje</SelectItem>
-                  <SelectItem value="7dias">Ultimos 7 dias</SelectItem>
-                  <SelectItem value="30dias">Ultimos 30 dias</SelectItem>
+                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                  <SelectItem value="15dias">Últimos 15 dias</SelectItem>
+                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
                 </SelectContent>
               </Select>
             </div>

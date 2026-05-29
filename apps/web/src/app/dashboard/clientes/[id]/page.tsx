@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api } from '@/lib/api'
 import { formatWhatsappLink } from '@/lib/utils'
+import { LeadScore } from '@/components/ui/lead-score'
 import Link from 'next/link'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -47,8 +48,16 @@ interface Cliente {
   corretor?: CorretorResumido
   ativo: boolean
   createdAt: string
+  leadScore: number
   perfis: Perfil[]
   _count: { perfis: number }
+}
+
+interface Etapa {
+  id: string
+  nome: string
+  cor: string
+  ordem: number
 }
 
 interface Match {
@@ -107,9 +116,11 @@ export default function ClienteDetalhePage() {
   const [cliente,         setCliente]         = useState<Cliente | null>(null)
   const [matches,         setMatches]         = useState<Match[]>([])
   const [tipos,           setTipos]           = useState<Tipo[]>([])
+  const [etapas,          setEtapas]          = useState<Etapa[]>([])
   const [corretores,      setCorretores]      = useState<CorretorResumido[]>([])
   const [loading,         setLoading]         = useState(true)
   const [selectedPerfil,  setSelectedPerfil]  = useState<string | null>(null)
+  const [movingMatch,     setMovingMatch]     = useState<string | null>(null)
 
   // Modal editar cliente
   const [editOpen,   setEditOpen]   = useState(false)
@@ -149,6 +160,7 @@ export default function ClienteDetalhePage() {
     loadCliente()
     loadMatches()
     api.get<Tipo[]>('/tipos').then(setTipos).catch(() => {})
+    api.get<Etapa[]>('/pipeline/etapas').then(setEtapas).catch(() => {})
     api.get<CorretorResumido[]>('/users').then(setCorretores).catch(() => {})
   }, [id])
 
@@ -278,6 +290,28 @@ export default function ClienteDetalhePage() {
     finally  { setRemovingPerfil(false) }
   }
 
+  // ─── Mover etapa do match ─────────────────────────────────────────────────────
+
+  async function handleMoverEtapa(matchId: string, etapaId: string) {
+    setMovingMatch(matchId)
+    // atualiza otimisticamente na UI
+    const novaEtapa = etapas.find(e => e.id === etapaId)
+    if (novaEtapa) {
+      setMatches(prev => prev.map(m =>
+        m.id === matchId ? { ...m, etapa: { id: novaEtapa.id, nome: novaEtapa.nome, cor: novaEtapa.cor } } : m
+      ))
+    }
+    try {
+      await api.patch(`/matches/${matchId}/etapa`, { etapaId })
+      toast.success('Etapa atualizada.')
+    } catch {
+      toast.error('Erro ao mover etapa')
+      loadMatches() // reverte em caso de erro
+    } finally {
+      setMovingMatch(null)
+    }
+  }
+
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -351,8 +385,9 @@ export default function ClienteDetalhePage() {
             </div>
           </div>
 
-          {/* Status + data — direita */}
+          {/* Score + Status + data — direita */}
           <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
+            <LeadScore score={cliente.leadScore} size="lg" />
             <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-base ${cliente.ativo ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-300' : 'bg-red-50 text-red-600 ring-1 ring-red-200'}`}>
               <span className={`w-2.5 h-2.5 rounded-full ${cliente.ativo ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(34,197,94,0.2)]' : 'bg-red-500'}`} />
               {cliente.ativo ? 'Ativo' : 'Inativo'}
@@ -538,21 +573,42 @@ export default function ClienteDetalhePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {matchesFiltrados.map(m => (
                     <div key={m.id} className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 hover:shadow-sm transition-all">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                          <svg className="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                      {/* Ícone + título */}
+                      <div className="flex items-start gap-2 mb-3">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <svg className="h-3.5 w-3.5 text-indigo-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
                         </div>
-                        <span
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-800 leading-tight truncate">{m.imovel.titulo}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            R$ {Number(m.imovel.preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} · {m.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Dropdown etapa */}
+                      <Select
+                        value={m.etapa.id}
+                        disabled={movingMatch === m.id}
+                        onValueChange={(etapaId) => handleMoverEtapa(m.id, etapaId)}
+                      >
+                        <SelectTrigger
+                          className="h-7 text-[11px] font-semibold border-0 px-2 py-0 rounded-full w-full"
                           style={etapaStyle(m.etapa.cor)}
                         >
-                          {m.etapa.nome}
-                        </span>
-                      </div>
-                      <p className="text-xs font-semibold text-slate-800 leading-tight">{m.imovel.titulo}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        R$ {Number(m.imovel.preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} · {m.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
-                      </p>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {etapas.map(e => (
+                            <SelectItem key={e.id} value={e.id}>
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.cor }} />
+                                {e.nome}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   ))}
                 </div>
