@@ -29,4 +29,9 @@ export class CreateClienteDto {
   @IsString()
   @IsOptional()
   observacoes?: string
+
+  @ApiPropertyOptional({ description: 'ID do corretor responsável pelo cliente' })
+  @IsString()
+  @IsOptional()
+  corretorId?: string
 }

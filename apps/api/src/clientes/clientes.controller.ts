@@ -20,7 +20,7 @@ export class ClientesController {
   @Get()
   @ApiOperation({ summary: 'Lista clientes. Filtro: search=texto' })
   findAll(@Request() req: any, @Query('search') search?: string) {
-    return this.clientesService.findAll(req.user.tenantId, search)
+    return this.clientesService.findAll(req.user.tenantId, req.user.id, req.user.role, search)
   }
 
   @Get(':id')

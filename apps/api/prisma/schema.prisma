@@ -49,6 +49,7 @@ model User {
   matchesAssociados Match[]          @relation("MatchCorretor")
   historico         MatchHistorico[]
   visitas           Visita[]         @relation("VisitaCorretor")
+  clientes          Cliente[]        @relation("ClienteCorretor")
 
   @@map("users")
 }
@@ -73,6 +74,9 @@ model Cliente {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  corretorId String?
+  corretor   User?         @relation("ClienteCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
+
   tenantId String
   tenant   Tenant        @relation(fields: [tenantId], references: [id])
   perfis   PerfilBusca[]
@@ -80,6 +84,7 @@ model Cliente {
 
   @@index([tenantId])
   @@index([tenantId, email])
+  @@index([tenantId, corretorId])
   @@map("clientes")
 }
 

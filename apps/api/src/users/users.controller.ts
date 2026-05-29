@@ -13,9 +13,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Lista todos os usuários do tenant (ADMIN only)' })
+  @ApiOperation({ summary: 'Lista usuários do tenant (todos os autenticados)' })
   listar(@Request() req: any) {
     return this.usersService.listar(req.user.tenantId)
   }

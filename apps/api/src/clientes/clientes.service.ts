@@ -2,7 +2,21 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateClienteDto } from './dto/create-cliente.dto'
 
-const PERFIL_COUNT = { _count: { select: { perfis: true } } } as const
+const CORRETOR_SELECT = { select: { id: true, name: true, email: true } } as const
+
+const INCLUDE_DEFAULT = {
+  _count:   { select: { perfis: true } },
+  corretor: CORRETOR_SELECT,
+} as const
+
+const INCLUDE_FULL = {
+  ...INCLUDE_DEFAULT,
+  perfis: {
+    where:   { ativo: true },
+    select:  { id: true, finalidade: true, cidades: true },
+    orderBy: { createdAt: 'desc' as const },
+  },
+} as const
 
 @Injectable()
 export class ClientesService {
@@ -10,34 +24,38 @@ export class ClientesService {
 
   async create(tenantId: string, dto: CreateClienteDto) {
     return this.prisma.cliente.create({
-      data: { ...dto, tenantId },
-      include: PERFIL_COUNT,
+      data:    { ...dto, tenantId },
+      include: INCLUDE_DEFAULT,
     })
   }
 
-  async findAll(tenantId: string, search?: string) {
+  async findAll(
+    tenantId: string,
+    userId: string,
+    role: string,
+    search?: string,
+  ) {
+    const corretorFilter =
+      role === 'CORRETOR'
+        ? { OR: [{ corretorId: userId }, { corretorId: null }] }
+        : {}
+
     return this.prisma.cliente.findMany({
       where: {
         tenantId,
         ativo: true,
+        ...corretorFilter,
         ...(search
           ? {
               OR: [
-                { nome:     { contains: search, mode: 'insensitive' } },
-                { email:    { contains: search, mode: 'insensitive' } },
-                { whatsapp: { contains: search, mode: 'insensitive' } },
+                { nome:     { contains: search, mode: 'insensitive' as const } },
+                { email:    { contains: search, mode: 'insensitive' as const } },
+                { whatsapp: { contains: search, mode: 'insensitive' as const } },
               ],
             }
           : {}),
       },
-      include: {
-        ...PERFIL_COUNT,
-        perfis: {
-          where: { ativo: true },
-          select: { id: true, finalidade: true, cidades: true },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
+      include:  INCLUDE_FULL,
       orderBy: { nome: 'asc' },
     })
   }
@@ -46,10 +64,10 @@ export class ClientesService {
     const c = await this.prisma.cliente.findFirst({
       where: { id, tenantId },
       include: {
-        ...PERFIL_COUNT,
+        ...INCLUDE_DEFAULT,
         perfis: {
-          include: { tipos: true },
-          orderBy: { createdAt: 'desc' },
+          include:  { tipos: true },
+          orderBy:  { createdAt: 'desc' },
         },
       },
     })
@@ -60,9 +78,9 @@ export class ClientesService {
   async update(tenantId: string, id: string, dto: Partial<CreateClienteDto>) {
     await this.findById(tenantId, id)
     return this.prisma.cliente.update({
-      where: { id },
-      data: dto,
-      include: PERFIL_COUNT,
+      where:   { id },
+      data:    dto,
+      include: INCLUDE_DEFAULT,
     })
   }
 

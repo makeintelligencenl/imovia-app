@@ -1,18 +1,24 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Search, X, MessageCircle, UserRound, GitMerge, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X, MessageCircle, UserRound, GitMerge } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Card, CardContent } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TablePagination } from '@/components/ui/table-pagination'
 import { api } from '@/lib/api'
 import { formatWhatsappLink } from '@/lib/utils'
 import Link from 'next/link'
+
+interface CorretorResumido {
+  id: string
+  name: string
+  email: string
+}
 
 interface PerfilResumido {
   id: string
@@ -28,14 +34,21 @@ interface Cliente {
   telefone?: string
   cpf?: string
   observacoes?: string
+  corretorId?: string
+  corretor?: CorretorResumido
   ativo: boolean
   createdAt: string
   _count: { perfis: number }
   perfis: PerfilResumido[]
 }
 
+interface UserSession {
+  id: string
+  role: 'ADMIN' | 'CORRETOR'
+}
+
 const BLANK_FORM = {
-  nome: '', email: '', whatsapp: '', telefone: '', cpf: '', observacoes: '',
+  nome: '', email: '', whatsapp: '', telefone: '', cpf: '', observacoes: '', corretorId: '',
 }
 
 const FINALIDADE_BADGE: Record<string, string> = {
@@ -44,20 +57,35 @@ const FINALIDADE_BADGE: Record<string, string> = {
 }
 
 export default function ClientesPage() {
-  const [clientes, setClientes] = useState<Cliente[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [search,  setSearch]    = useState('')
+  const [clientes,   setClientes]   = useState<Cliente[]>([])
+  const [corretores, setCorretores] = useState<CorretorResumido[]>([])
+  const [userSession, setUserSession] = useState<UserSession | null>(null)
+  const [loading,    setLoading]    = useState(true)
+  const [search,     setSearch]     = useState('')
 
-  const [formMode,   setFormMode]   = useState<'criar' | 'editar' | null>(null)
-  const [formData,   setFormData]   = useState({ ...BLANK_FORM })
-  const [editId,     setEditId]     = useState<string | null>(null)
-  const [saving,     setSaving]     = useState(false)
+  const [formMode, setFormMode] = useState<'criar' | 'editar' | null>(null)
+  const [formData, setFormData] = useState({ ...BLANK_FORM })
+  const [editId,   setEditId]   = useState<string | null>(null)
+  const [saving,   setSaving]   = useState(false)
 
   const [deleteTarget, setDeleteTarget] = useState<Cliente | null>(null)
   const [deleting,     setDeleting]     = useState(false)
 
   const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  const isAdmin = userSession?.role === 'ADMIN'
+
+  // Sessão do usuário logado
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('user')
+      if (stored) {
+        const u = JSON.parse(stored)
+        setUserSession({ id: u.id ?? u.sub ?? '', role: u.role })
+      }
+    } catch {}
+  }, [])
 
   async function load(q?: string) {
     try {
@@ -69,7 +97,14 @@ export default function ClientesPage() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  async function loadCorretores() {
+    try {
+      const data = await api.get<CorretorResumido[]>('/users')
+      setCorretores(data)
+    } catch {}
+  }
+
+  useEffect(() => { load(); loadCorretores() }, [])
 
   // Debounce search
   useEffect(() => {
@@ -99,6 +134,7 @@ export default function ClientesPage() {
       telefone:    c.telefone    ?? '',
       cpf:         c.cpf         ?? '',
       observacoes: c.observacoes ?? '',
+      corretorId:  c.corretorId  ?? '',
     })
     setEditId(c.id)
     setFormMode('editar')
@@ -117,6 +153,7 @@ export default function ClientesPage() {
       telefone:    formData.telefone    || undefined,
       cpf:         formData.cpf         || undefined,
       observacoes: formData.observacoes || undefined,
+      corretorId:  formData.corretorId  || undefined,
     }
     try {
       if (formMode === 'criar') {
@@ -199,6 +236,7 @@ export default function ClientesPage() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>CPF</TableHead>
+                <TableHead>Corretor</TableHead>
                 <TableHead>Perfis de Busca</TableHead>
                 <TableHead>Observações</TableHead>
                 <TableHead className="w-20 text-center">Ações</TableHead>
@@ -207,13 +245,13 @@ export default function ClientesPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : clientes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center">
+                  <TableCell colSpan={7} className="py-16 text-center">
                     <UserRound className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
                     <p className="text-sm text-muted-foreground">
                       {search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado ainda.'}
@@ -250,6 +288,13 @@ export default function ClientesPage() {
                       <span className="text-xs text-muted-foreground">{c.cpf || '—'}</span>
                     </TableCell>
                     <TableCell>
+                      {c.corretor ? (
+                        <span className="text-xs font-medium text-slate-700">{c.corretor.name}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Sem responsável</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {c.perfis.length === 0 ? (
                         <span className="text-xs text-muted-foreground italic">Sem perfis</span>
                       ) : (
@@ -274,7 +319,7 @@ export default function ClientesPage() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-[180px]">
+                    <TableCell className="max-w-[160px]">
                       <p className="text-xs text-muted-foreground truncate" title={c.observacoes ?? ''}>
                         {c.observacoes || '—'}
                       </p>
@@ -331,6 +376,30 @@ export default function ClientesPage() {
               <Label>CPF</Label>
               <Input placeholder="123.456.789-00" {...field('cpf')} />
             </div>
+
+            {/* Corretor responsável — ADMIN vê todos; CORRETOR vê só ele mesmo */}
+            <div className="sm:col-span-2 space-y-1">
+              <Label>Corretor responsável</Label>
+              <Select
+                value={formData.corretorId || '__none__'}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({ ...prev, corretorId: v === '__none__' ? '' : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem responsável definido" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem responsável definido</SelectItem>
+                  {(isAdmin ? corretores : corretores.filter((u) => u.id === userSession?.id)).map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="sm:col-span-2 space-y-1">
               <Label>Observações</Label>
               <textarea
