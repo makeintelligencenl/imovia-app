@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type VisitaStatus = 'AGENDADA' | 'CONFIRMADA' | 'REALIZADA' | 'CANCELADA'
+type VisitaStatus = 'AGENDADA' | 'REALIZADA' | 'CANCELADA'
 
 interface Visita {
   id: string
@@ -47,10 +47,9 @@ interface Corretor {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<VisitaStatus, { label: string; chip: string; dot: string; badge: string }> = {
-  AGENDADA:   { label: 'Agendada',   chip: 'bg-blue-500 text-white',    dot: 'bg-blue-500',    badge: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'    },
-  CONFIRMADA: { label: 'Confirmada', chip: 'bg-emerald-500 text-white', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
-  REALIZADA:  { label: 'Realizada',  chip: 'bg-slate-400 text-white',   dot: 'bg-slate-400',   badge: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'  },
-  CANCELADA:  { label: 'Cancelada',  chip: 'bg-red-400 text-white',     dot: 'bg-red-400',     badge: 'bg-red-50 text-red-600 ring-1 ring-red-200'        },
+  AGENDADA:  { label: 'Agendada',  chip: 'bg-blue-500 text-white',    dot: 'bg-blue-500',    badge: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'         },
+  REALIZADA: { label: 'Realizada', chip: 'bg-emerald-500 text-white', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
+  CANCELADA: { label: 'Cancelada', chip: 'bg-red-500 text-white',     dot: 'bg-red-500',     badge: 'bg-red-50 text-red-600 ring-1 ring-red-200'            },
 }
 
 const MESES = [

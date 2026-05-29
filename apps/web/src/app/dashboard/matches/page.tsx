@@ -747,6 +747,7 @@ function MatchesContent() {
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
   const [filtroTipo,       setFiltroTipo]       = useState('__todos__')
+  const [filtroCorretor,   setFiltroCorretor]   = useState('__todos__')
   const [filtroData, setFiltroData] = useState<'__todos__' | 'hoje' | '7dias' | '30dias'>(
     urlRecentes === 'hoje' ? 'hoje'
     : urlRecentes === '7'  ? '7dias'
@@ -845,9 +846,11 @@ function MatchesContent() {
       !m.imovel.cidade.nome.toLowerCase().includes(texto) &&
       !m.perfil.clienteEmail.toLowerCase().includes(texto)
     ) return false
-    if (filtroEtapa      !== '__todos__' && m.etapaId               !== filtroEtapa)      return false
-    if (filtroFinalidade !== '__todas__' && m.imovel.finalidade      !== filtroFinalidade) return false
-    if (filtroTipo       !== '__todos__' && m.imovel.tipo?.nome      !== filtroTipo)       return false
+    if (filtroEtapa      !== '__todos__'       && m.etapaId               !== filtroEtapa)      return false
+    if (filtroFinalidade !== '__todas__'       && m.imovel.finalidade      !== filtroFinalidade) return false
+    if (filtroTipo       !== '__todos__'       && m.imovel.tipo?.nome      !== filtroTipo)       return false
+    if (filtroCorretor   === '__sem_corretor__' && m.corretorId !== null)                        return false
+    if (filtroCorretor !== '__todos__' && filtroCorretor !== '__sem_corretor__' && m.corretorId !== filtroCorretor) return false
     if (filtroData !== '__todos__') {
       const criado = new Date(m.createdAt)
       const agora  = Date.now()
@@ -866,10 +869,10 @@ function MatchesContent() {
     new Set(matches.map((m) => m.imovel.tipo?.nome).filter((n): n is string => !!n)),
   ).sort()
 
-  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '__todos__' || filtroTipo !== '__todos__'
+  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '__todos__' || filtroTipo !== '__todos__' || filtroCorretor !== '__todos__'
 
   function limparFiltros() {
-    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('__todos__'); setFiltroTipo('__todos__'); setPage(1)
+    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('__todos__'); setFiltroTipo('__todos__'); setFiltroCorretor('__todos__'); setPage(1)
     router.replace('/dashboard/matches')
   }
 
@@ -890,7 +893,7 @@ function MatchesContent() {
       {visitaLoading && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3.5 bg-slate-900 text-white rounded-2xl shadow-2xl text-sm font-medium pointer-events-none select-none">
           <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin shrink-0" />
-          Aguarde, abrindo agenda para agendar a visita...
+          Aguarde, abrindo tela para agendar a visita...
         </div>
       )}
 
@@ -967,7 +970,7 @@ function MatchesContent() {
       {/* Filtros */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userIsAdmin ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-3 items-end`}>
             <div className="lg:col-span-2 space-y-1">
               <Label className="text-xs">Buscar</Label>
               <div className="relative">
@@ -1003,6 +1006,21 @@ function MatchesContent() {
                 </SelectContent>
               </Select>
             </div>
+            {userIsAdmin && (
+              <div className="space-y-1">
+                <Label className="text-xs">Corretor</Label>
+                <Select value={filtroCorretor} onValueChange={(v) => { setFiltroCorretor(v); setPage(1) }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__todos__">Todos</SelectItem>
+                    <SelectItem value="__sem_corretor__">Sem corretor</SelectItem>
+                    {corretores.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
               <Label className="text-xs">Etapa</Label>
               <Select value={filtroEtapa} onValueChange={(v) => { setFiltroEtapa(v); setPage(1) }}>
