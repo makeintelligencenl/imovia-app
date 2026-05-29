@@ -2,13 +2,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, LayoutDashboard, Home, Users, GitMerge, LogOut, ChevronLeft, ChevronRight, Settings2, CalendarDays } from 'lucide-react'
+import { Building2, LayoutDashboard, Home, Users, GitMerge, LogOut, ChevronLeft, ChevronRight, Settings2, CalendarDays, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface UserInfo { name: string; email: string; role: string }
 
 const NAV_ITEMS_BASE = [
   { href: '/dashboard/imoveis',           label: 'Imóveis',         icon: Home,            adminOnly: false },
+  { href: '/dashboard/clientes',          label: 'Clientes',        icon: UserRound,       adminOnly: false },
   { href: '/dashboard/perfis',            label: 'Perfis de Busca', icon: Users,           adminOnly: false },
   { href: '/dashboard/matches',           label: 'Matches',         icon: GitMerge,        adminOnly: false },
   { href: '/dashboard/agenda',            label: 'Agenda',          icon: CalendarDays,    adminOnly: false },

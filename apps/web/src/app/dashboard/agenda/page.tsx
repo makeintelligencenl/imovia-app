@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import {
   ChevronLeft, ChevronRight, Plus, X, Trash2, CalendarDays,
-  Clock, MapPin, User, Phone, Mail, AlignLeft,
+  Clock, MapPin, User, AlignLeft, UserRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -18,15 +18,21 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 type VisitaStatus = 'AGENDADA' | 'REALIZADA' | 'CANCELADA'
 
+interface ClienteResumido {
+  id: string
+  nome: string
+  email: string
+  whatsapp?: string
+}
+
 interface Visita {
   id: string
   imovelId: string
   imovel: { id: string; titulo: string; bairro: string; cidade: { nome: string } }
+  clienteId: string
+  cliente: ClienteResumido
   corretorId: string | null
   corretor: { id: string; name: string } | null
-  clienteNome: string
-  clienteEmail: string | null
-  clienteWhatsapp: string | null
   dataHora: string
   duracaoMin: number
   status: VisitaStatus
@@ -74,7 +80,6 @@ const TIME_SLOTS = Array.from({ length: 29 }, (_, i) => {
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-/** Extrai HH:mm de um ISO armazenado como UTC naive */
 function isoTime(iso: string) { return iso.substring(11, 16) }
 function isoDate(iso: string) { return iso.substring(0, 10) }
 function buildISO(date: string, time: string) { return `${date}T${time}:00.000Z` }
@@ -85,16 +90,14 @@ function todayISO() {
 }
 
 const emptyForm = (defaultDate?: string) => ({
-  imovelId:        '',
-  corretorId:      '',
-  clienteNome:     '',
-  clienteEmail:    '',
-  clienteWhatsapp: '',
-  data:            defaultDate ?? todayISO(),
-  hora:            '09:00',
-  duracaoMin:      60,
-  status:          'AGENDADA' as VisitaStatus,
-  observacoes:     '',
+  imovelId:   '',
+  clienteId:  '',
+  corretorId: '',
+  data:        defaultDate ?? todayISO(),
+  hora:        '09:00',
+  duracaoMin:  60,
+  status:      'AGENDADA' as VisitaStatus,
+  observacoes: '',
 })
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -123,6 +126,7 @@ export default function AgendaPage() {
   // ── Data ────────────────────────────────────────────────────────────────────
   const [visitas,    setVisitas]    = useState<Visita[]>([])
   const [imoveis,    setImoveis]    = useState<Imovel[]>([])
+  const [clientes,   setClientes]   = useState<ClienteResumido[]>([])
   const [corretores, setCorretores] = useState<Corretor[]>([])
   const [loading,    setLoading]    = useState(true)
   const [filtroCorretor, setFiltroCorretor] = useState('__todos__')
@@ -141,6 +145,7 @@ export default function AgendaPage() {
 
   useEffect(() => {
     api.get<Imovel[]>('/imoveis').then(setImoveis).catch(() => {})
+    api.get<ClienteResumido[]>('/clientes').then(setClientes).catch(() => {})
     if (isAdmin) {
       api.get<{ id: string; name: string; role: string }[]>('/users')
         .then(users => setCorretores(users.filter(u => u.role === 'CORRETOR')))
@@ -167,16 +172,14 @@ export default function AgendaPage() {
     setModalMode('edit')
     setEditTarget(v)
     setForm({
-      imovelId:        v.imovelId,
-      corretorId:      v.corretorId ?? '',
-      clienteNome:     v.clienteNome,
-      clienteEmail:    v.clienteEmail    ?? '',
-      clienteWhatsapp: v.clienteWhatsapp ?? '',
-      data:            isoDate(v.dataHora),
-      hora:            isoTime(v.dataHora),
-      duracaoMin:      v.duracaoMin,
-      status:          v.status,
-      observacoes:     v.observacoes ?? '',
+      imovelId:   v.imovelId,
+      clienteId:  v.clienteId,
+      corretorId: v.corretorId ?? '',
+      data:        isoDate(v.dataHora),
+      hora:        isoTime(v.dataHora),
+      duracaoMin:  v.duracaoMin,
+      status:      v.status,
+      observacoes: v.observacoes ?? '',
     })
     setModalOpen(true)
   }
@@ -188,20 +191,18 @@ export default function AgendaPage() {
   }
 
   async function handleSave() {
-    if (!form.imovelId)    return toast.error('Selecione um imovel')
-    if (!form.clienteNome.trim()) return toast.error('Informe o nome do cliente')
-    if (!form.data)        return toast.error('Selecione a data')
+    if (!form.imovelId)  return toast.error('Selecione um imovel')
+    if (!form.clienteId) return toast.error('Selecione o cliente')
+    if (!form.data)      return toast.error('Selecione a data')
 
     const payload = {
-      imovelId:        form.imovelId,
-      corretorId:      form.corretorId  || null,
-      clienteNome:     form.clienteNome.trim(),
-      clienteEmail:    form.clienteEmail    || null,
-      clienteWhatsapp: form.clienteWhatsapp || null,
-      dataHora:        buildISO(form.data, form.hora),
-      duracaoMin:      form.duracaoMin,
-      status:          form.status,
-      observacoes:     form.observacoes || null,
+      imovelId:   form.imovelId,
+      clienteId:  form.clienteId,
+      corretorId: form.corretorId  || null,
+      dataHora:   buildISO(form.data, form.hora),
+      duracaoMin: form.duracaoMin,
+      status:     form.status,
+      observacoes: form.observacoes || null,
     }
 
     setSaving(true)
@@ -239,7 +240,7 @@ export default function AgendaPage() {
   }
 
   // ── Calendar grid ────────────────────────────────────────────────────────────
-  const firstDow   = new Date(Date.UTC(year, month, 1)).getUTCDay()   // 0=Dom
+  const firstDow   = new Date(Date.UTC(year, month, 1)).getUTCDay()
   const daysInMon  = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
 
   const cells: (number | null)[] = [
@@ -249,7 +250,6 @@ export default function AgendaPage() {
   while (cells.length % 7 !== 0) cells.push(null)
   const rows = cells.length / 7
 
-  // Agrupa visitas por dia do mês
   const byDay: Record<number, Visita[]> = {}
   for (const v of visitas) {
     const d = new Date(v.dataHora)
@@ -271,35 +271,22 @@ export default function AgendaPage() {
 
       {/* ── Cabeçalho ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-
-        {/* Navegação de mês */}
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={prevMonth}
-            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-          >
+          <button onClick={prevMonth} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <button
-            onClick={nextMonth}
-            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-          >
+          <button onClick={nextMonth} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
             <ChevronRight className="h-5 w-5" />
           </button>
           <h1 className="text-xl font-bold text-slate-800 min-w-[190px]">
             {MESES[month]} <span className="text-slate-400 font-normal">{year}</span>
           </h1>
-          <button
-            onClick={goToday}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-          >
+          <button onClick={goToday} className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
             Hoje
           </button>
         </div>
 
-        {/* Filtros + legenda + botao */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Filtro por corretor (ADMIN) */}
           {isAdmin && corretores.length > 0 && (
             <Select value={filtroCorretor} onValueChange={setFiltroCorretor}>
               <SelectTrigger className="h-9 w-[170px] text-sm">
@@ -314,7 +301,6 @@ export default function AgendaPage() {
             </Select>
           )}
 
-          {/* Legenda */}
           <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
             {(Object.entries(STATUS_CFG) as [VisitaStatus, typeof STATUS_CFG[VisitaStatus]][]).map(([s, cfg]) => (
               <div key={s} className="flex items-center gap-1.5">
@@ -324,7 +310,6 @@ export default function AgendaPage() {
             ))}
           </div>
 
-          {/* Nova Visita */}
           <button
             onClick={() => openCreate()}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
@@ -337,20 +322,14 @@ export default function AgendaPage() {
 
       {/* ── Calendário ── */}
       <Card className="shadow-sm rounded-xl overflow-hidden flex-1 flex flex-col">
-
-        {/* Cabeçalho dos dias da semana */}
         <div className="grid grid-cols-7 bg-slate-50 border-b">
           {DIAS_SEMANA.map(d => (
-            <div
-              key={d}
-              className="text-center text-[11px] font-semibold text-slate-400 py-2.5 uppercase tracking-wider"
-            >
+            <div key={d} className="text-center text-[11px] font-semibold text-slate-400 py-2.5 uppercase tracking-wider">
               {d}
             </div>
           ))}
         </div>
 
-        {/* Grid dos dias */}
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-slate-400 text-sm py-20">
             Carregando...
@@ -375,30 +354,24 @@ export default function AgendaPage() {
                   onClick={() => day && openCreate(dayStr)}
                   className={cn(
                     'border-r border-b relative p-1 transition-colors',
-                    day
-                      ? 'cursor-pointer hover:bg-blue-50/50 group'
-                      : 'bg-slate-50/50 pointer-events-none',
+                    day ? 'cursor-pointer hover:bg-blue-50/50 group' : 'bg-slate-50/50 pointer-events-none',
                     isWk && day ? 'bg-slate-50/40' : '',
                   )}
                 >
                   {day && (
                     <>
-                      {/* Numero do dia */}
                       <div className="flex items-start justify-between mb-0.5">
                         <span className="invisible text-[11px]">x</span>
-                        <span
-                          className={cn(
-                            'text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-colors',
-                            isToday(day)
-                              ? 'bg-blue-600 text-white font-bold'
-                              : 'text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700',
-                          )}
-                        >
+                        <span className={cn(
+                          'text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full transition-colors',
+                          isToday(day)
+                            ? 'bg-blue-600 text-white font-bold'
+                            : 'text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700',
+                        )}>
                           {day}
                         </span>
                       </div>
 
-                      {/* Chips de visitas */}
                       <div className="space-y-[2px]">
                         {dayVisitas.slice(0, MAX_CHIPS).map(v => {
                           const cfg = STATUS_CFG[v.status]
@@ -406,7 +379,7 @@ export default function AgendaPage() {
                             <button
                               key={v.id}
                               onClick={e => { e.stopPropagation(); openEdit(v) }}
-                              title={`${isoTime(v.dataHora)} — ${v.clienteNome}\n${v.imovel.titulo}`}
+                              title={`${isoTime(v.dataHora)} — ${v.cliente.nome}\n${v.imovel.titulo}`}
                               className={cn(
                                 'w-full text-left flex items-center gap-1 px-1.5 py-[2px] rounded text-[11px] font-medium truncate hover:opacity-80 transition-opacity',
                                 cfg.chip,
@@ -414,7 +387,7 @@ export default function AgendaPage() {
                               )}
                             >
                               <span className="shrink-0 font-bold tabular-nums">{isoTime(v.dataHora)}</span>
-                              <span className="truncate">{v.clienteNome}</span>
+                              <span className="truncate">{v.cliente.nome}</span>
                             </button>
                           )
                         })}
@@ -428,7 +401,6 @@ export default function AgendaPage() {
                         )}
                       </div>
 
-                      {/* Mini botao + (aparece no hover) */}
                       <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Plus className="h-3.5 w-3.5 text-blue-400" />
                       </div>
@@ -459,18 +431,12 @@ export default function AgendaPage() {
                   {modalMode === 'create' ? 'Nova Visita' : 'Editar Visita'}
                 </h2>
                 {modalMode === 'edit' && editTarget && (
-                  <span className={cn(
-                    'ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-full',
-                    STATUS_CFG[editTarget.status].badge,
-                  )}>
+                  <span className={cn('ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-full', STATUS_CFG[editTarget.status].badge)}>
                     {STATUS_CFG[editTarget.status].label}
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-              >
+              <button onClick={() => setModalOpen(false)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -483,10 +449,7 @@ export default function AgendaPage() {
                 <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5" /> Imovel *
                 </Label>
-                <Select
-                  value={form.imovelId}
-                  onValueChange={v => setF('imovelId', v)}
-                >
+                <Select value={form.imovelId} onValueChange={v => setF('imovelId', v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o imovel..." />
                   </SelectTrigger>
@@ -497,50 +460,38 @@ export default function AgendaPage() {
                     {imoveis.map(im => (
                       <SelectItem key={im.id} value={im.id}>
                         <span className="font-medium">{im.titulo}</span>
-                        <span className="text-slate-400 ml-1.5 text-xs">
-                          {im.bairro}, {im.cidade.nome}
-                        </span>
+                        <span className="text-slate-400 ml-1.5 text-xs">{im.bairro}, {im.cidade.nome}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Cliente nome */}
+              {/* Cliente */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5" /> Nome do Cliente *
+                  <UserRound className="h-3.5 w-3.5" /> Cliente *
                 </Label>
-                <Input
-                  placeholder="Ex: Joao da Silva"
-                  value={form.clienteNome}
-                  onChange={e => setF('clienteNome', e.target.value)}
-                />
-              </div>
-
-              {/* Contato */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5" /> E-mail
-                  </Label>
-                  <Input
-                    type="email"
-                    placeholder="email@exemplo.com"
-                    value={form.clienteEmail}
-                    onChange={e => setF('clienteEmail', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5" /> WhatsApp
-                  </Label>
-                  <Input
-                    placeholder="(11) 99999-9999"
-                    value={form.clienteWhatsapp}
-                    onChange={e => setF('clienteWhatsapp', e.target.value)}
-                  />
-                </div>
+                {clientes.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-1">
+                    Nenhum cliente cadastrado.{' '}
+                    <a href="/dashboard/clientes" className="text-blue-600 underline">Cadastrar →</a>
+                  </p>
+                ) : (
+                  <Select value={form.clienteId} onValueChange={v => setF('clienteId', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o cliente..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clientes.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <span className="font-medium">{c.nome}</span>
+                          <span className="text-slate-400 ml-1.5 text-xs">{c.email}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Data + Hora */}
@@ -549,11 +500,7 @@ export default function AgendaPage() {
                   <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                     <CalendarDays className="h-3.5 w-3.5" /> Data *
                   </Label>
-                  <Input
-                    type="date"
-                    value={form.data}
-                    onChange={e => setF('data', e.target.value)}
-                  />
+                  <Input type="date" value={form.data} onChange={e => setF('data', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
@@ -574,10 +521,7 @@ export default function AgendaPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-600">Duracao</Label>
-                  <Select
-                    value={String(form.duracaoMin)}
-                    onValueChange={v => setF('duracaoMin', Number(v))}
-                  >
+                  <Select value={String(form.duracaoMin)} onValueChange={v => setF('duracaoMin', Number(v))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {DURACAO_OPTS.map(o => (
@@ -588,10 +532,7 @@ export default function AgendaPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-600">Status</Label>
-                  <Select
-                    value={form.status}
-                    onValueChange={v => setF('status', v as VisitaStatus)}
-                  >
+                  <Select value={form.status} onValueChange={v => setF('status', v as VisitaStatus)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {(Object.entries(STATUS_CFG) as [VisitaStatus, typeof STATUS_CFG[VisitaStatus]][]).map(([k, cfg]) => (

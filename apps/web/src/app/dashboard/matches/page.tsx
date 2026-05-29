@@ -61,9 +61,12 @@ interface Match {
   }
   perfil: {
     id: string
-    clienteNome: string
-    clienteEmail: string
-    clienteWhatsapp?: string
+    cliente: {
+      id: string
+      nome: string
+      email: string
+      whatsapp?: string
+    }
   }
 }
 
@@ -108,6 +111,7 @@ interface VisitaRapidaData {
   imovelId: string
   imovelTitulo: string
   imovelLocal: string
+  clienteId: string
   clienteNome: string
   clienteEmail: string
   clienteWhatsapp: string
@@ -140,16 +144,14 @@ function AgendarVisitaModal({
     setSaving(true)
     try {
       await api.post('/visitas', {
-        matchId:         data.matchId,
-        imovelId:        data.imovelId,
-        corretorId:      form.corretorId || null,
-        clienteNome:     data.clienteNome,
-        clienteEmail:    data.clienteEmail  || null,
-        clienteWhatsapp: data.clienteWhatsapp || null,
-        dataHora:        `${form.data}T${form.hora}:00.000Z`,
-        duracaoMin:      form.duracaoMin,
-        status:          'AGENDADA',
-        observacoes:     form.observacoes || null,
+        matchId:    data.matchId,
+        imovelId:   data.imovelId,
+        clienteId:  data.clienteId,
+        corretorId: form.corretorId || null,
+        dataHora:   `${form.data}T${form.hora}:00.000Z`,
+        duracaoMin: form.duracaoMin,
+        status:     'AGENDADA',
+        observacoes: form.observacoes || null,
       })
       toast.success('Visita adicionada a agenda')
       onClose()
@@ -507,17 +509,17 @@ function MatchCard({
       {/* 1. Nome do cliente + WhatsApp */}
       <div className="flex items-center justify-between gap-1">
         <p className="text-[13px] font-bold text-slate-800 leading-tight truncate">
-          {match.perfil.clienteNome}
+          {match.perfil.cliente.nome}
         </p>
-        {match.perfil.clienteWhatsapp && (
+        {match.perfil.cliente.whatsapp && (
           <a
             href={formatWhatsappLink(
-              match.perfil.clienteWhatsapp,
-              `Ola ${match.perfil.clienteNome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
+              match.perfil.cliente.whatsapp,
+              `Ola ${match.perfil.cliente.nome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
             )}
             target="_blank"
             rel="noopener noreferrer"
-            title={`WhatsApp: ${match.perfil.clienteWhatsapp}`}
+            title={`WhatsApp: ${match.perfil.cliente.whatsapp}`}
             className="shrink-0 flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
@@ -802,9 +804,10 @@ function MatchesContent() {
             imovelId:        match.imovel.id,
             imovelTitulo:    match.imovel.titulo,
             imovelLocal:     `${match.imovel.bairro}, ${match.imovel.cidade.nome}`,
-            clienteNome:     match.perfil.clienteNome,
-            clienteEmail:    match.perfil.clienteEmail ?? '',
-            clienteWhatsapp: match.perfil.clienteWhatsapp ?? '',
+            clienteId:       match.perfil.cliente.id,
+            clienteNome:     match.perfil.cliente.nome,
+            clienteEmail:    match.perfil.cliente.email ?? '',
+            clienteWhatsapp: match.perfil.cliente.whatsapp ?? '',
             corretorId:      match.corretorId,
           })
         }
@@ -842,9 +845,9 @@ function MatchesContent() {
     if (
       texto &&
       !m.imovel.titulo.toLowerCase().includes(texto) &&
-      !m.perfil.clienteNome.toLowerCase().includes(texto) &&
+      !m.perfil.cliente.nome.toLowerCase().includes(texto) &&
       !m.imovel.cidade.nome.toLowerCase().includes(texto) &&
-      !m.perfil.clienteEmail.toLowerCase().includes(texto)
+      !m.perfil.cliente.email.toLowerCase().includes(texto)
     ) return false
     if (filtroEtapa      !== '__todos__'       && m.etapaId               !== filtroEtapa)      return false
     if (filtroFinalidade !== '__todas__'       && m.imovel.finalidade      !== filtroFinalidade) return false
@@ -1125,15 +1128,15 @@ function MatchesContent() {
                         {formatCurrency(match.imovel.preco)}
                       </TableCell>
                       <TableCell>
-                        <p className="text-sm font-medium">{match.perfil.clienteNome}</p>
+                        <p className="text-sm font-medium">{match.perfil.cliente.nome}</p>
                       </TableCell>
                       <TableCell>
-                        <p className="text-xs text-muted-foreground">{match.perfil.clienteEmail}</p>
-                        {match.perfil.clienteWhatsapp && (
+                        <p className="text-xs text-muted-foreground">{match.perfil.cliente.email}</p>
+                        {match.perfil.cliente.whatsapp && (
                           <a
                             href={formatWhatsappLink(
-                              match.perfil.clienteWhatsapp,
-                              `Ola ${match.perfil.clienteNome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
+                              match.perfil.cliente.whatsapp,
+                              `Ola ${match.perfil.cliente.nome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
                             )}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -1141,7 +1144,7 @@ function MatchesContent() {
                             title="Abrir WhatsApp"
                           >
                             <MessageCircle className="h-3 w-3 shrink-0" />
-                            {match.perfil.clienteWhatsapp}
+                            {match.perfil.cliente.whatsapp}
                           </a>
                         )}
                       </TableCell>

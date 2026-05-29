@@ -4,6 +4,11 @@ import { PrismaService } from '../prisma/prisma.service'
 import { MatchingService } from '../matching/matching.service'
 import { CreatePerfilDto } from './dto/create-perfil.dto'
 
+const INCLUDE_DEFAULT = {
+  tipos:   true,
+  cliente: { select: { id: true, nome: true, email: true, whatsapp: true, telefone: true } },
+} as const
+
 @Injectable()
 export class PerfisService {
   private readonly logger = new Logger(PerfisService.name)
@@ -20,17 +25,14 @@ export class PerfisService {
       data: {
         ...rest,
         finalidade: dto.finalidade as Finalidade,
-        bairros: rest.bairros ?? [],   // garante [] ao invés de NULL
-        cidades: rest.cidades ?? [],
+        bairros:    rest.bairros ?? [],
+        cidades:    rest.cidades ?? [],
         tenantId,
-        tipos: {
-          connect: tiposIds.map((id) => ({ id })),
-        },
+        tipos: { connect: tiposIds.map((id) => ({ id })) },
       },
-      include: { tipos: true },
+      include: INCLUDE_DEFAULT,
     })
 
-    // Fire-and-forget: verifica imóveis já cadastrados que combinam com o novo perfil
     this.matchingService
       .executarMatchingParaPerfil(tenantId, perfil.id)
       .catch((err: Error) =>
@@ -42,37 +44,40 @@ export class PerfisService {
 
   async findAll(tenantId: string) {
     return this.prisma.perfilBusca.findMany({
-      where: { tenantId, ativo: true },
-      include: { tipos: true },
+      where:   { tenantId, ativo: true },
+      include: INCLUDE_DEFAULT,
       orderBy: { createdAt: 'desc' },
     })
   }
 
   async findById(tenantId: string, id: string) {
     const perfil = await this.prisma.perfilBusca.findFirst({
-      where: { id, tenantId },
-      include: { tipos: true },
+      where:   { id, tenantId },
+      include: INCLUDE_DEFAULT,
     })
     if (!perfil) throw new NotFoundException('Perfil de busca não encontrado')
     return perfil
   }
 
   async findCompatíveisComImovel(tenantId: string, imovelId: string) {
-    const imovel = await this.prisma.imovel.findFirst({ where: { id: imovelId, tenantId }, include: { cidade: true } })
+    const imovel = await this.prisma.imovel.findFirst({
+      where: { id: imovelId, tenantId },
+      include: { cidade: true },
+    })
     if (!imovel) throw new NotFoundException('Imóvel não encontrado')
 
     return this.prisma.perfilBusca.findMany({
       where: {
         tenantId,
-        ativo: true,
+        ativo:      true,
         finalidade: imovel.finalidade,
-        tipos: { some: { id: imovel.tipoId } },
-        precoMin: { lte: imovel.preco },
-        precoMax: { gte: imovel.preco },
-        areaMin: { lte: imovel.areaM2 },
-        cidades: { hasSome: [imovel.cidade.nome] },
+        tipos:      { some: { id: imovel.tipoId } },
+        precoMin:   { lte: imovel.preco },
+        precoMax:   { gte: imovel.preco },
+        areaMin:    { lte: imovel.areaM2 },
+        cidades:    { hasSome: [imovel.cidade.nome] },
       },
-      include: { tipos: true },
+      include: INCLUDE_DEFAULT,
     })
   }
 
@@ -88,7 +93,7 @@ export class PerfisService {
           tipos: { set: tiposIds.map((tid) => ({ id: tid })) },
         }),
       },
-      include: { tipos: true },
+      include: INCLUDE_DEFAULT,
     })
   }
 

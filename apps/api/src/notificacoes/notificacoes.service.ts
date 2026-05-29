@@ -13,16 +13,17 @@ export class NotificacoesService {
 
   async enviarNotificacaoMatch(perfil: any, imovel: any) {
     const promises: Promise<void>[] = []
+    const cliente = perfil.cliente ?? perfil  // compatibilidade
 
-    if (perfil.clienteEmail) {
+    if (cliente.email) {
       promises.push(
-        this.emailService.enviarMatchEmail(perfil.clienteEmail, perfil.clienteNome, imovel),
+        this.emailService.enviarMatchEmail(cliente.email, cliente.nome ?? cliente.clienteNome, imovel),
       )
     }
 
-    if (perfil.clienteWhatsapp) {
+    if (cliente.whatsapp) {
       promises.push(
-        this.whatsappService.enviarMatchWhatsapp(perfil.clienteWhatsapp, perfil.clienteNome, imovel),
+        this.whatsappService.enviarMatchWhatsapp(cliente.whatsapp, cliente.nome ?? cliente.clienteNome, imovel),
       )
     }
 

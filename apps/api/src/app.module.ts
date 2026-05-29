@@ -15,6 +15,7 @@ import { BotModule } from './bot/bot.module'
 import { PipelineModule } from './pipeline/pipeline.module'
 import { UsersModule } from './users/users.module'
 import { VisitasModule } from './visitas/visitas.module'
+import { ClientesModule } from './clientes/clientes.module'
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { VisitasModule } from './visitas/visitas.module'
     TenantsModule,
     TiposModule,
     ImoveisModule,
+    ClientesModule,
     PerfisModule,
     MatchingModule,
     NotificacoesModule,

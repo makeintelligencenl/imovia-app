@@ -48,7 +48,7 @@ export class MatchingService {
           },
         ],
       },
-      include: { tipos: true },
+      include: { tipos: true, cliente: true },
     })
 
     const resultados = await Promise.all(
@@ -65,7 +65,7 @@ export class MatchingService {
   async executarMatchingParaPerfil(tenantId: string, perfilId: string) {
     const perfil = await this.prisma.perfilBusca.findFirst({
       where: { id: perfilId, tenantId, ativo: true },
-      include: { tipos: true },
+      include: { tipos: true, cliente: true },
     })
     if (!perfil) return { matchesEncontrados: 0 }
 
@@ -150,7 +150,7 @@ export class MatchingService {
       where,
       include: {
         imovel:   { include: { tipo: true, cidade: true } },
-        perfil:   { include: { tipos: true } },
+        perfil:   { include: { tipos: true, cliente: true } },
         etapa:    true,
         corretor: { select: CORRETOR_SELECT },
       },

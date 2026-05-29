@@ -1,6 +1,6 @@
-﻿'use client'
+'use client'
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Search, X, MessageCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X, MessageCircle, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,17 +13,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Card, CardContent } from '@/components/ui/card'
 import { TablePagination } from '@/components/ui/table-pagination'
 import { api } from '@/lib/api'
-import { formatCurrency, formatWhatsappLink } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { celebrateMatch } from '@/lib/match-celebration'
 import { MatchOverlay } from '@/components/ui/match-overlay'
 
 interface TipoImovel { id: string; nome: string }
 
+interface ClienteResumido { id: string; nome: string; email: string; whatsapp?: string }
+
 interface Perfil {
   id: string
-  clienteNome: string
-  clienteEmail: string
-  clienteWhatsapp?: string
+  clienteId: string
+  cliente: ClienteResumido
   finalidade: string
   tipos: TipoImovel[]
   precoMin: number | string
@@ -37,46 +38,44 @@ interface Perfil {
 }
 
 const BLANK_FORM = {
-  clienteNome: '', clienteEmail: '', clienteWhatsapp: '',
-  finalidade: '', precoMin: '', precoMax: '',
+  clienteId: '', finalidade: '', precoMin: '', precoMax: '',
   areaMin: '', quartosMin: '', cidades: '', bairros: '',
 }
 
 export default function PerfisPage() {
-  const [perfis, setPerfis]   = useState<Perfil[]>([])
-  const [tipos, setTipos]     = useState<TipoImovel[]>([])
-  const [loading, setLoading] = useState(true)
+  const [perfis,    setPerfis]   = useState<Perfil[]>([])
+  const [tipos,     setTipos]    = useState<TipoImovel[]>([])
+  const [clientes,  setClientes] = useState<ClienteResumido[]>([])
+  const [loading,   setLoading]  = useState(true)
 
-  // Filtros
-  const [filtroTexto, setFiltroTexto]           = useState('')
+  const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
-  const [filtroTipo, setFiltroTipo]             = useState('__todos__')
+  const [filtroTipo,       setFiltroTipo]       = useState('__todos__')
 
-  // Modal criar/editar
-  const [formMode, setFormMode]             = useState<'criar' | 'editar' | null>(null)
-  const [formData, setFormData]             = useState({ ...BLANK_FORM })
-  const [tiposSelecionados, setTiposSel]   = useState<string[]>([])
-  const [editId, setEditId]                 = useState<string | null>(null)
-  const [saving, setSaving]                 = useState(false)
+  const [formMode,         setFormMode]   = useState<'criar' | 'editar' | null>(null)
+  const [formData,         setFormData]   = useState({ ...BLANK_FORM })
+  const [tiposSelecionados, setTiposSel]  = useState<string[]>([])
+  const [editId,           setEditId]    = useState<string | null>(null)
+  const [saving,           setSaving]    = useState(false)
 
-  // Modal excluir
   const [deleteTarget, setDeleteTarget] = useState<Perfil | null>(null)
-  const [deleting, setDeleting]         = useState(false)
-  const [matchCount, setMatchCount]     = useState(0)
-  const [matchHref, setMatchHref]       = useState('/dashboard/matches')
+  const [deleting,     setDeleting]     = useState(false)
+  const [matchCount,   setMatchCount]   = useState(0)
+  const [matchHref,    setMatchHref]    = useState('/dashboard/matches')
 
-  // Paginação
-  const [page, setPage]         = useState(1)
+  const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   async function load() {
     try {
-      const [perfisData, tiposData] = await Promise.all([
+      const [perfisData, tiposData, clientesData] = await Promise.all([
         api.get<Perfil[]>('/perfis'),
         api.get<TipoImovel[]>('/tipos'),
+        api.get<ClienteResumido[]>('/clientes'),
       ])
       setPerfis(perfisData)
       setTipos(tiposData)
+      setClientes(clientesData)
     } finally {
       setLoading(false)
     }
@@ -84,12 +83,11 @@ export default function PerfisPage() {
 
   useEffect(() => { load() }, [])
 
-  // Filtro client-side
   const perfisFiltrados = perfis.filter((p) => {
     const texto = filtroTexto.toLowerCase()
     if (texto &&
-      !p.clienteNome.toLowerCase().includes(texto) &&
-      !p.clienteEmail.toLowerCase().includes(texto) &&
+      !p.cliente.nome.toLowerCase().includes(texto) &&
+      !p.cliente.email.toLowerCase().includes(texto) &&
       !p.cidades.some((c) => c.toLowerCase().includes(texto))) return false
     if (filtroFinalidade !== '__todas__' && p.finalidade !== filtroFinalidade) return false
     if (filtroTipo !== '__todos__' && !p.tipos.some((t) => t.id === filtroTipo)) return false
@@ -99,19 +97,11 @@ export default function PerfisPage() {
   const filtrosAtivos = filtroTexto || filtroFinalidade !== '__todas__' || filtroTipo !== '__todos__'
 
   function limparFiltros() {
-    setFiltroTexto('')
-    setFiltroFinalidade('__todas__')
-    setFiltroTipo('__todos__')
-    setPage(1)
+    setFiltroTexto(''); setFiltroFinalidade('__todas__'); setFiltroTipo('__todos__'); setPage(1)
   }
-
-  const handleFiltroTexto      = (v: string) => { setFiltroTexto(v);      setPage(1) }
-  const handleFiltroFinalidade = (v: string) => { setFiltroFinalidade(v); setPage(1) }
-  const handleFiltroTipo       = (v: string) => { setFiltroTipo(v);       setPage(1) }
 
   const perfisPaginados = perfisFiltrados.slice((page - 1) * pageSize, page * pageSize)
 
-  // Abrir criar
   function abrirCriar() {
     setFormData({ ...BLANK_FORM })
     setTiposSel([])
@@ -119,19 +109,16 @@ export default function PerfisPage() {
     setFormMode('criar')
   }
 
-  // Abrir editar
   function abrirEditar(p: Perfil) {
     setFormData({
-      clienteNome:     p.clienteNome,
-      clienteEmail:    p.clienteEmail,
-      clienteWhatsapp: p.clienteWhatsapp ?? '',
-      finalidade:      p.finalidade,
-      precoMin:        String(p.precoMin),
-      precoMax:        String(p.precoMax),
-      areaMin:         String(p.areaMin),
-      quartosMin:      p.quartosMin != null ? String(p.quartosMin) : '',
-      cidades:         p.cidades.join(', '),
-      bairros:         p.bairros.join(', '),
+      clienteId:  p.clienteId,
+      finalidade: p.finalidade,
+      precoMin:   String(p.precoMin),
+      precoMax:   String(p.precoMax),
+      areaMin:    String(p.areaMin),
+      quartosMin: p.quartosMin != null ? String(p.quartosMin) : '',
+      cidades:    p.cidades.join(', '),
+      bairros:    p.bairros.join(', '),
     })
     setTiposSel(p.tipos.map((t) => t.id))
     setEditId(p.id)
@@ -142,7 +129,7 @@ export default function PerfisPage() {
     setTiposSel((prev) => prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id])
   }
 
-  function field(name: keyof typeof BLANK_FORM) {
+  function field(name: keyof Omit<typeof BLANK_FORM, 'clienteId' | 'finalidade'>) {
     return {
       value: formData[name],
       onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -150,9 +137,8 @@ export default function PerfisPage() {
     }
   }
 
-  // Salvar
   async function handleSalvar() {
-    if (!formData.clienteNome || !formData.clienteEmail || !formData.finalidade ||
+    if (!formData.clienteId || !formData.finalidade ||
         !formData.precoMin || !formData.precoMax || !formData.areaMin || !formData.cidades) {
       toast.error('Preencha os campos obrigatórios')
       return
@@ -163,24 +149,22 @@ export default function PerfisPage() {
     }
     setSaving(true)
     const payload = {
-      clienteNome:     formData.clienteNome,
-      clienteEmail:    formData.clienteEmail,
-      clienteWhatsapp: formData.clienteWhatsapp || undefined,
-      finalidade:      formData.finalidade,
-      tiposIds:        tiposSelecionados,
-      precoMin:        Number(formData.precoMin),
-      precoMax:        Number(formData.precoMax),
-      areaMin:         Number(formData.areaMin),
-      quartosMin:      formData.quartosMin ? Number(formData.quartosMin) : undefined,
-      cidades:         formData.cidades.split(',').map((c) => c.trim()).filter(Boolean),
-      bairros:         formData.bairros ? formData.bairros.split(',').map((b) => b.trim()).filter(Boolean) : [],
+      clienteId:  formData.clienteId,
+      finalidade: formData.finalidade,
+      tiposIds:   tiposSelecionados,
+      precoMin:   Number(formData.precoMin),
+      precoMax:   Number(formData.precoMax),
+      areaMin:    Number(formData.areaMin),
+      quartosMin: formData.quartosMin ? Number(formData.quartosMin) : undefined,
+      cidades:    formData.cidades.split(',').map((c) => c.trim()).filter(Boolean),
+      bairros:    formData.bairros ? formData.bairros.split(',').map((b) => b.trim()).filter(Boolean) : [],
     }
     try {
       if (formMode === 'criar') {
         const matchesAntes = await api.get<any[]>('/matches')
         const qtdAntes = matchesAntes.length
 
-        const criado = await api.post<{ id: string; clienteNome: string }>('/perfis', payload)
+        const criado = await api.post<{ id: string; cliente: { nome: string } }>('/perfis', payload)
         setFormMode(null)
         load()
         toast.success('Perfil cadastrado! Verificando matches...')
@@ -190,7 +174,7 @@ export default function PerfisPage() {
         const matchesDepois = await api.get<any[]>('/matches')
         const novos = matchesDepois.length - qtdAntes
         if (novos > 0) {
-          const params = new URLSearchParams({ perfilId: criado.id, label: criado.clienteNome })
+          const params = new URLSearchParams({ perfilId: criado.id, label: criado.cliente.nome })
           setMatchHref(`/dashboard/matches?${params.toString()}`)
           celebrateMatch()
           setMatchCount(novos)
@@ -208,7 +192,6 @@ export default function PerfisPage() {
     }
   }
 
-  // Excluir
   async function handleExcluir() {
     if (!deleteTarget) return
     setDeleting(true)
@@ -226,12 +209,10 @@ export default function PerfisPage() {
 
   return (
     <div className="space-y-4">
-      {/* Overlay de Match */}
       {matchCount > 0 && (
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
 
-      {/* Cabecalho */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Perfis de Busca</h1>
@@ -256,13 +237,13 @@ export default function PerfisPage() {
                   className="pl-8"
                   placeholder="Nome, e-mail ou cidade..."
                   value={filtroTexto}
-                  onChange={(e) => handleFiltroTexto(e.target.value)}
+                  onChange={(e) => { setFiltroTexto(e.target.value); setPage(1) }}
                 />
               </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Finalidade</Label>
-              <Select value={filtroFinalidade} onValueChange={handleFiltroFinalidade}>
+              <Select value={filtroFinalidade} onValueChange={(v) => { setFiltroFinalidade(v); setPage(1) }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__todas__">Todas</SelectItem>
@@ -273,7 +254,7 @@ export default function PerfisPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Tipo de imóvel</Label>
-              <Select value={filtroTipo} onValueChange={handleFiltroTipo}>
+              <Select value={filtroTipo} onValueChange={(v) => { setFiltroTipo(v); setPage(1) }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__todos__">Todos os tipos</SelectItem>
@@ -283,10 +264,7 @@ export default function PerfisPage() {
             </div>
           </div>
           {filtrosAtivos && (
-            <button
-              onClick={limparFiltros}
-              className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
+            <button onClick={limparFiltros} className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
               <X className="h-3 w-3" /> Limpar filtros
             </button>
           )}
@@ -324,23 +302,13 @@ export default function PerfisPage() {
                 perfisPaginados.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>
-                      <p className="font-medium">{p.clienteNome}</p>
-                      <p className="text-xs text-muted-foreground">{p.clienteEmail}</p>
-                      {p.clienteWhatsapp && (
-                        <a
-                          href={formatWhatsappLink(
-                            p.clienteWhatsapp,
-                            `Ola ${p.clienteNome}! Quero conversar sobre sua busca de imovel.`,
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 hover:underline mt-0.5"
-                          title="Abrir WhatsApp"
-                        >
-                          <MessageCircle className="h-3 w-3 shrink-0" />
-                          {p.clienteWhatsapp}
-                        </a>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        <UserRound className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <div>
+                          <p className="font-medium text-sm">{p.cliente.nome}</p>
+                          <p className="text-xs text-muted-foreground">{p.cliente.email}</p>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${p.finalidade === 'VENDA' ? 'bg-violet-50 text-violet-700 ring-1 ring-violet-200' : 'bg-orange-50 text-orange-700 ring-1 ring-orange-200'}`}>
@@ -397,18 +365,39 @@ export default function PerfisPage() {
             <DialogTitle>{formMode === 'criar' ? 'Novo perfil de busca' : 'Editar perfil'}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Nome do cliente *</Label>
-              <Input placeholder="João Silva" {...field('clienteNome')} />
+
+            {/* Cliente */}
+            <div className="sm:col-span-2 space-y-1">
+              <Label>Cliente *</Label>
+              {clientes.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  Nenhum cliente cadastrado.{' '}
+                  <a href="/dashboard/clientes" className="text-blue-600 underline">Cadastrar agora →</a>
+                </p>
+              ) : (
+                <Select
+                  value={formData.clienteId}
+                  onValueChange={(v) => setFormData((p) => ({ ...p, clienteId: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="flex items-center gap-2">
+                          <UserRound className="h-3.5 w-3.5 text-slate-400" />
+                          {c.nome}
+                          <span className="text-xs text-muted-foreground">{c.email}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
-            <div className="space-y-1">
-              <Label>E-mail *</Label>
-              <Input type="email" placeholder="joao@email.com" {...field('clienteEmail')} />
-            </div>
-            <div className="space-y-1">
-              <Label>WhatsApp</Label>
-              <Input placeholder="+5531999999999" {...field('clienteWhatsapp')} />
-            </div>
+
+            {/* Finalidade */}
             <div className="space-y-1">
               <Label>Finalidade *</Label>
               <Select value={formData.finalidade} onValueChange={(v) => setFormData((p) => ({ ...p, finalidade: v }))}>
@@ -419,6 +408,8 @@ export default function PerfisPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Tipos */}
             <div className="sm:col-span-2 space-y-2">
               <Label>Tipos de imóvel aceitos *</Label>
               <div className="flex flex-wrap gap-4">
@@ -434,6 +425,7 @@ export default function PerfisPage() {
                 ))}
               </div>
             </div>
+
             <div className="space-y-1">
               <Label>Preço mínimo (R$) *</Label>
               <Input type="number" min="0" placeholder="500000" {...field('precoMin')} />
@@ -468,14 +460,14 @@ export default function PerfisPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Confirmar Exclusao */}
+      {/* Modal Excluir */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Excluir perfil</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir o perfil de <strong>{deleteTarget?.clienteNome}</strong>?
-              Os matches associados também serão removidos. Essa ação não pode ser desfeita.
+              Tem certeza que deseja excluir o perfil de{' '}
+              <strong>{deleteTarget?.cliente.nome}</strong>? Os matches associados também serão removidos.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -1,28 +1,16 @@
-import { IsString, IsNumber, IsArray, IsEnum, IsOptional, IsEmail, Min } from 'class-validator'
+import { IsString, IsNumber, IsArray, IsEnum, IsOptional, Min } from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class CreatePerfilDto {
-  @ApiProperty({ example: 'João Silva' })
+  @ApiProperty({ description: 'ID do cliente (ver GET /clientes)' })
   @IsString()
-  clienteNome: string
-
-  @ApiProperty({ example: 'joao@email.com' })
-  @IsEmail()
-  clienteEmail: string
-
-  @ApiPropertyOptional({ example: '+5511999999999' })
-  @IsString()
-  @IsOptional()
-  clienteWhatsapp?: string
+  clienteId: string
 
   @ApiProperty({ enum: ['ALUGUEL', 'VENDA'] })
   @IsEnum(['ALUGUEL', 'VENDA'])
   finalidade: string
 
-  @ApiProperty({
-    example: ['id-do-tipo-1', 'id-do-tipo-2'],
-    description: 'IDs dos tipos de imóvel aceitos (veja GET /api/v1/tipos)',
-  })
+  @ApiProperty({ example: ['id-do-tipo-1'] })
   @IsArray()
   tiposIds: string[]
 
