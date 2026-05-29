@@ -25,6 +25,7 @@ model Tenant {
   perfis         PerfilBusca[]
   matches        Match[]
   pipelineEtapas PipelineEtapa[]
+  visitas        Visita[]
 
   @@map("tenants")
 }
@@ -46,6 +47,7 @@ model User {
   tenant            Tenant           @relation(fields: [tenantId], references: [id])
   matchesAssociados Match[]          @relation("MatchCorretor")
   historico         MatchHistorico[]
+  visitas           Visita[]         @relation("VisitaCorretor")
 
   @@map("users")
 }
@@ -126,6 +128,7 @@ model Imovel {
   tenantId String
   tenant   Tenant  @relation(fields: [tenantId], references: [id])
   matches  Match[]
+  visitas  Visita[]
 
   @@index([tenantId, status])
   @@index([tenantId, finalidade, tipoId])
@@ -221,6 +224,7 @@ model Match {
   tenantId String
   tenant   Tenant           @relation(fields: [tenantId], references: [id])
   historico MatchHistorico[]
+  visitas   Visita[]
 
   @@unique([perfilId, imovelId])
   @@index([tenantId])
@@ -257,4 +261,41 @@ model MatchHistorico {
   @@index([matchId])
   @@index([tenantId])
   @@map("match_historico")
+}
+
+// ─────────────────────────────────────────
+// Agendamento de visitas
+// ─────────────────────────────────────────
+enum VisitaStatus {
+  AGENDADA
+  CONFIRMADA
+  REALIZADA
+  CANCELADA
+}
+
+model Visita {
+  id              String       @id @default(cuid())
+  tenantId        String
+  matchId         String?
+  imovelId        String
+  corretorId      String?
+  clienteNome     String
+  clienteEmail    String?
+  clienteWhatsapp String?
+  dataHora        DateTime
+  duracaoMin      Int          @default(60)
+  status          VisitaStatus @default(AGENDADA)
+  observacoes     String?      @db.Text
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenantId],   references: [id])
+  imovel   Imovel        @relation(fields: [imovelId],   references: [id])
+  corretor User?         @relation("VisitaCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
+  match    Match?        @relation(fields: [matchId],    references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, corretorId])
+  @@index([tenantId, dataHora])
+  @@map("visitas")
 }

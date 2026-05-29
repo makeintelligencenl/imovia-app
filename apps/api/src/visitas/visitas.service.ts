@@ -1,0 +1,134 @@
+import { Injectable, NotFoundException } from '@nestjs/common'
+import { PrismaService } from '../prisma/prisma.service'
+
+const IMOVEL_SELECT = {
+  id:     true,
+  titulo: true,
+  bairro: true,
+  cidade: { select: { nome: true } },
+} as const
+
+const CORRETOR_SELECT = { id: true, name: true, email: true } as const
+
+@Injectable()
+export class VisitasService {
+  constructor(private prisma: PrismaService) {}
+
+  // ─────────────────────────────────────────
+  // Criar visita
+  // ─────────────────────────────────────────
+  async criar(tenantId: string, userId: string, userRole: string, dto: any) {
+    // CORRETOR sempre cria visita para si mesmo
+    const corretorId = userRole === 'CORRETOR' ? userId : (dto.corretorId ?? null)
+
+    return this.prisma.visita.create({
+      data: {
+        tenantId,
+        imovelId:        dto.imovelId,
+        matchId:         dto.matchId         ?? null,
+        corretorId,
+        clienteNome:     dto.clienteNome,
+        clienteEmail:    dto.clienteEmail    ?? null,
+        clienteWhatsapp: dto.clienteWhatsapp ?? null,
+        dataHora:        new Date(dto.dataHora),
+        duracaoMin:      dto.duracaoMin      ?? 60,
+        status:          dto.status          ?? 'AGENDADA',
+        observacoes:     dto.observacoes     ?? null,
+      },
+      include: {
+        imovel:   { select: IMOVEL_SELECT },
+        corretor: { select: CORRETOR_SELECT },
+      },
+    })
+  }
+
+  // ─────────────────────────────────────────
+  // Listar visitas
+  // CORRETOR só vê as suas | filtra por mes opcional
+  // ─────────────────────────────────────────
+  async listar(
+    tenantId: string,
+    userId: string,
+    userRole: string,
+    mes?: string,
+    filtroCorretorId?: string,
+  ) {
+    const where: any = { tenantId }
+
+    if (userRole === 'CORRETOR') {
+      where.corretorId = userId
+    } else if (filtroCorretorId && filtroCorretorId !== '__todos__') {
+      where.corretorId = filtroCorretorId
+    }
+
+    if (mes) {
+      const [year, month] = mes.split('-').map(Number)
+      where.dataHora = {
+        gte: new Date(Date.UTC(year, month - 1, 1)),
+        lt:  new Date(Date.UTC(year, month,     1)),
+      }
+    }
+
+    return this.prisma.visita.findMany({
+      where,
+      include: {
+        imovel:   { select: IMOVEL_SELECT },
+        corretor: { select: CORRETOR_SELECT },
+      },
+      orderBy: { dataHora: 'asc' },
+    })
+  }
+
+  // ─────────────────────────────────────────
+  // Detalhe
+  // ─────────────────────────────────────────
+  async buscarPorId(tenantId: string, id: string) {
+    const visita = await this.prisma.visita.findFirst({
+      where: { id, tenantId },
+      include: {
+        imovel:   { select: IMOVEL_SELECT },
+        corretor: { select: CORRETOR_SELECT },
+      },
+    })
+    if (!visita) throw new NotFoundException('Visita nao encontrada')
+    return visita
+  }
+
+  // ─────────────────────────────────────────
+  // Atualizar
+  // ─────────────────────────────────────────
+  async atualizar(tenantId: string, id: string, dto: any) {
+    const visita = await this.prisma.visita.findFirst({ where: { id, tenantId } })
+    if (!visita) throw new NotFoundException('Visita nao encontrada')
+
+    const data: any = {}
+    if (dto.imovelId  !== undefined) data.imovelId        = dto.imovelId
+    if (dto.corretorId !== undefined) data.corretorId     = dto.corretorId ?? null
+    if (dto.clienteNome     !== undefined) data.clienteNome     = dto.clienteNome
+    if (dto.clienteEmail    !== undefined) data.clienteEmail    = dto.clienteEmail    ?? null
+    if (dto.clienteWhatsapp !== undefined) data.clienteWhatsapp = dto.clienteWhatsapp ?? null
+    if (dto.dataHora  !== undefined) data.dataHora        = new Date(dto.dataHora)
+    if (dto.duracaoMin !== undefined) data.duracaoMin     = dto.duracaoMin
+    if (dto.status    !== undefined) data.status          = dto.status
+    if (dto.observacoes !== undefined) data.observacoes   = dto.observacoes ?? null
+
+    return this.prisma.visita.update({
+      where: { id },
+      data,
+      include: {
+        imovel:   { select: IMOVEL_SELECT },
+        corretor: { select: CORRETOR_SELECT },
+      },
+    })
+  }
+
+  // ─────────────────────────────────────────
+  // Remover
+  // ─────────────────────────────────────────
+  async remover(tenantId: string, id: string) {
+    const visita = await this.prisma.visita.findFirst({ where: { id, tenantId } })
+    if (!visita) throw new NotFoundException('Visita nao encontrada')
+    await this.prisma.visita.delete({ where: { id } })
+    return { success: true }
+  }
+}
