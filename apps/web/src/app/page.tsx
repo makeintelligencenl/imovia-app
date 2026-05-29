@@ -951,9 +951,6 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="lg:w-2/5">
-              <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 rounded-full px-3 py-1 text-xs font-semibold mb-3 border border-blue-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Novo
-              </div>
               <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">Gestão de Clientes</p>
               <h2 className="text-3xl font-bold text-slate-900 mb-4">Toda a jornada do cliente em um único lugar</h2>
               <p className="text-slate-500 leading-relaxed mb-6">
@@ -1018,9 +1015,6 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
             <div className="lg:w-2/5">
-              <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 rounded-full px-3 py-1 text-xs font-semibold mb-3 border border-blue-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Novo
-              </div>
               <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">Agenda de Visitas</p>
               <h2 className="text-3xl font-bold text-slate-900 mb-4">Agenda integrada ao pipeline de vendas</h2>
               <p className="text-slate-500 leading-relaxed mb-6">
@@ -1136,7 +1130,6 @@ export default function LandingPage() {
             {[
               '✓ Sem trocar seu ERP',
               '✓ Atendimento 24h/dia',
-              '✓ Setup em dias, não meses',
               '✓ Corretor só entra no momento certo',
               '✓ CRM + Agenda integrados',
               '✓ Matching automático',
