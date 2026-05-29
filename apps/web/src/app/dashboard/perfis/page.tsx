@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Search, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Card, CardContent } from '@/components/ui/card'
 import { TablePagination } from '@/components/ui/table-pagination'
 import { api } from '@/lib/api'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatWhatsappLink } from '@/lib/utils'
 import { celebrateMatch } from '@/lib/match-celebration'
 import { MatchOverlay } from '@/components/ui/match-overlay'
 
@@ -84,7 +84,7 @@ export default function PerfisPage() {
 
   useEffect(() => { load() }, [])
 
-  // â”€â”€ Filtro client-side â”€â”€
+  // Filtro client-side
   const perfisFiltrados = perfis.filter((p) => {
     const texto = filtroTexto.toLowerCase()
     if (texto &&
@@ -111,7 +111,7 @@ export default function PerfisPage() {
 
   const perfisPaginados = perfisFiltrados.slice((page - 1) * pageSize, page * pageSize)
 
-  // â”€â”€ Abrir criar â”€â”€
+  // Abrir criar
   function abrirCriar() {
     setFormData({ ...BLANK_FORM })
     setTiposSel([])
@@ -119,7 +119,7 @@ export default function PerfisPage() {
     setFormMode('criar')
   }
 
-  // â”€â”€ Abrir editar â”€â”€
+  // Abrir editar
   function abrirEditar(p: Perfil) {
     setFormData({
       clienteNome:     p.clienteNome,
@@ -150,7 +150,7 @@ export default function PerfisPage() {
     }
   }
 
-  // â”€â”€ Salvar â”€â”€
+  // Salvar
   async function handleSalvar() {
     if (!formData.clienteNome || !formData.clienteEmail || !formData.finalidade ||
         !formData.precoMin || !formData.precoMax || !formData.areaMin || !formData.cidades) {
@@ -208,7 +208,7 @@ export default function PerfisPage() {
     }
   }
 
-  // â”€â”€ Excluir â”€â”€
+  // Excluir
   async function handleExcluir() {
     if (!deleteTarget) return
     setDeleting(true)
@@ -226,12 +226,12 @@ export default function PerfisPage() {
 
   return (
     <div className="space-y-4">
-      {/* â”€â”€ Overlay de Match â”€â”€ */}
+      {/* Overlay de Match */}
       {matchCount > 0 && (
         <MatchOverlay count={matchCount} href={matchHref} onClose={() => setMatchCount(0)} />
       )}
 
-      {/* â”€â”€ Cabeçalho â”€â”€ */}
+      {/* Cabecalho */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Perfis de Busca</h1>
@@ -244,7 +244,7 @@ export default function PerfisPage() {
         </Button>
       </div>
 
-      {/* â”€â”€ Filtros â”€â”€ */}
+      {/* Filtros */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
@@ -293,7 +293,7 @@ export default function PerfisPage() {
         </CardContent>
       </Card>
 
-      {/* â”€â”€ Tabela â”€â”€ */}
+      {/* Tabela */}
       <Card className="shadow-sm rounded-xl overflow-hidden">
         <CardContent className="p-0">
           <Table>
@@ -327,7 +327,19 @@ export default function PerfisPage() {
                       <p className="font-medium">{p.clienteNome}</p>
                       <p className="text-xs text-muted-foreground">{p.clienteEmail}</p>
                       {p.clienteWhatsapp && (
-                        <p className="text-xs text-muted-foreground">{p.clienteWhatsapp}</p>
+                        <a
+                          href={formatWhatsappLink(
+                            p.clienteWhatsapp,
+                            `Ola ${p.clienteNome}! Quero conversar sobre sua busca de imovel.`,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 hover:underline mt-0.5"
+                          title="Abrir WhatsApp"
+                        >
+                          <MessageCircle className="h-3 w-3 shrink-0" />
+                          {p.clienteWhatsapp}
+                        </a>
                       )}
                     </TableCell>
                     <TableCell>
@@ -378,7 +390,7 @@ export default function PerfisPage() {
         </CardContent>
       </Card>
 
-      {/* â”€â”€ Modal Criar / Editar â”€â”€ */}
+      {/* Modal Criar / Editar */}
       <Dialog open={formMode !== null} onOpenChange={(open) => !open && setFormMode(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -444,7 +456,7 @@ export default function PerfisPage() {
             </div>
             <div className="space-y-1">
               <Label>Bairros preferidos <span className="text-xs text-muted-foreground">(opcional)</span></Label>
-              <Input placeholder="Cidade Nobre, Bethânia" {...field('bairros')} />
+              <Input placeholder="Cidade Nobre, Bethania" {...field('bairros')} />
             </div>
           </div>
           <DialogFooter className="mt-2">
@@ -456,7 +468,7 @@ export default function PerfisPage() {
         </DialogContent>
       </Dialog>
 
-      {/* â”€â”€ Modal Confirmar Exclusão â”€â”€ */}
+      {/* Modal Confirmar Exclusao */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>

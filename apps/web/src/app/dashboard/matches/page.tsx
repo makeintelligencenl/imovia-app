@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { GitMerge, Search, X, Home, Users, LayoutList, Columns3 } from 'lucide-react'
+import { GitMerge, Search, X, Home, Users, LayoutList, Columns3, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext,
@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectTriggerBadge, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api } from '@/lib/api'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatWhatsappLink } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
 
 interface PipelineEtapa {
@@ -128,14 +128,31 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
           {formatCurrency(match.imovel.preco)}
         </p>
 
-        {/* 7. Corretor */}
-        {match.corretor ? (
-          <p className="text-[10px] text-blue-600 font-medium truncate">
-            {match.corretor.name}
-          </p>
-        ) : (
-          <p className="text-[10px] text-slate-300 italic">Sem corretor</p>
-        )}
+        {/* 6. Corretor + WhatsApp */}
+        <div className="flex items-center justify-between gap-1">
+          {match.corretor ? (
+            <p className="text-[10px] text-blue-600 font-medium truncate">{match.corretor.name}</p>
+          ) : (
+            <p className="text-[10px] text-slate-300 italic">Sem corretor</p>
+          )}
+
+          {match.perfil.clienteWhatsapp && (
+            <a
+              href={formatWhatsappLink(
+                match.perfil.clienteWhatsapp,
+                `Ola ${match.perfil.clienteNome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`WhatsApp: ${match.perfil.clienteWhatsapp}`}
+              className="shrink-0 flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MessageCircle className="h-3 w-3" />
+            </a>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -585,7 +602,19 @@ function MatchesContent() {
                       <TableCell>
                         <p className="text-xs text-muted-foreground">{match.perfil.clienteEmail}</p>
                         {match.perfil.clienteWhatsapp && (
-                          <p className="text-xs text-muted-foreground">{match.perfil.clienteWhatsapp}</p>
+                          <a
+                            href={formatWhatsappLink(
+                              match.perfil.clienteWhatsapp,
+                              `Ola ${match.perfil.clienteNome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 hover:underline mt-0.5"
+                            title="Abrir WhatsApp"
+                          >
+                            <MessageCircle className="h-3 w-3 shrink-0" />
+                            {match.perfil.clienteWhatsapp}
+                          </a>
                         )}
                       </TableCell>
                       <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
