@@ -97,10 +97,28 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
       className={`bg-white rounded-lg shadow-sm border-l-[3px] p-2.5 space-y-1.5 ${isDragging ? 'opacity-50' : ''}`}
       style={{ borderLeftColor: cor }}
     >
-      {/* 1. Nome do cliente */}
-      <p className="text-[13px] font-bold text-slate-800 leading-tight truncate">
-        {match.perfil.clienteNome}
-      </p>
+      {/* 1. Nome do cliente + WhatsApp */}
+      <div className="flex items-center justify-between gap-1">
+        <p className="text-[13px] font-bold text-slate-800 leading-tight truncate">
+          {match.perfil.clienteNome}
+        </p>
+        {match.perfil.clienteWhatsapp && (
+          <a
+            href={formatWhatsappLink(
+              match.perfil.clienteWhatsapp,
+              `Ola ${match.perfil.clienteNome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`WhatsApp: ${match.perfil.clienteWhatsapp}`}
+            className="shrink-0 flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MessageCircle className="h-3 w-3" />
+          </a>
+        )}
+      </div>
 
       {/* 2. Tipo (Venda/Aluguel) + Tipo do imóvel — mesma linha */}
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -128,31 +146,12 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
           {formatCurrency(match.imovel.preco)}
         </p>
 
-        {/* 6. Corretor + WhatsApp */}
-        <div className="flex items-center justify-between gap-1">
-          {match.corretor ? (
-            <p className="text-[10px] text-blue-600 font-medium truncate">{match.corretor.name}</p>
-          ) : (
-            <p className="text-[10px] text-slate-300 italic">Sem corretor</p>
-          )}
-
-          {match.perfil.clienteWhatsapp && (
-            <a
-              href={formatWhatsappLink(
-                match.perfil.clienteWhatsapp,
-                `Ola ${match.perfil.clienteNome}! Encontramos um imovel que pode te interessar: ${match.imovel.titulo}. Posso te passar mais detalhes?`,
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`WhatsApp: ${match.perfil.clienteWhatsapp}`}
-              className="shrink-0 flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MessageCircle className="h-3 w-3" />
-            </a>
-          )}
-        </div>
+        {/* 6. Corretor */}
+        {match.corretor ? (
+          <p className="text-[10px] text-blue-600 font-medium truncate">{match.corretor.name}</p>
+        ) : (
+          <p className="text-[10px] text-slate-300 italic">Sem corretor</p>
+        )}
       </div>
     </div>
   )
@@ -303,6 +302,7 @@ function MatchesContent() {
   const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
+  const [filtroTipo,       setFiltroTipo]       = useState('__todos__')
   // Filtro de data: inicializa do URL param quando vindo do dashboard
   const [filtroData, setFiltroData] = useState<'__todos__' | 'hoje' | '7dias' | '30dias'>(
     urlRecentes === 'hoje' ? 'hoje'
@@ -378,8 +378,9 @@ function MatchesContent() {
       !m.imovel.cidade.nome.toLowerCase().includes(texto) &&
       !m.perfil.clienteEmail.toLowerCase().includes(texto)
     ) return false
-    if (filtroEtapa      !== '__todos__' && m.etapaId          !== filtroEtapa)      return false
-    if (filtroFinalidade !== '__todas__' && m.imovel.finalidade !== filtroFinalidade) return false
+    if (filtroEtapa      !== '__todos__' && m.etapaId               !== filtroEtapa)      return false
+    if (filtroFinalidade !== '__todas__' && m.imovel.finalidade      !== filtroFinalidade) return false
+    if (filtroTipo       !== '__todos__' && m.imovel.tipo?.nome      !== filtroTipo)       return false
     // Filtro de data
     if (filtroData !== '__todos__') {
       const criado = new Date(m.createdAt)
@@ -395,10 +396,15 @@ function MatchesContent() {
     return true
   })
 
-  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '__todos__'
+  // Tipos disponíveis derivados dos matches carregados (sem chamada extra)
+  const tiposDisponiveis = Array.from(
+    new Map(matches.map((m) => [m.imovel.tipo?.nome, m.imovel.tipo?.nome]).filter(([k]) => k)).values(),
+  ).sort()
+
+  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '__todos__' || filtroTipo !== '__todos__'
 
   function limparFiltros() {
-    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('__todos__'); setPage(1)
+    setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('__todos__'); setFiltroTipo('__todos__'); setPage(1)
     // Remove params de URL
     router.replace('/dashboard/matches')
   }
@@ -470,7 +476,7 @@ function MatchesContent() {
       {/* ── Filtros ── */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div className="lg:col-span-2 space-y-1">
               <Label className="text-xs">Buscar</Label>
               <div className="relative">
@@ -491,6 +497,18 @@ function MatchesContent() {
                   <SelectItem value="__todas__">Todas</SelectItem>
                   <SelectItem value="VENDA">Venda</SelectItem>
                   <SelectItem value="ALUGUEL">Aluguel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Tipo de imóvel</Label>
+              <Select value={filtroTipo} onValueChange={(v) => { setFiltroTipo(v); setPage(1) }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__todos__">Todos</SelectItem>
+                  {tiposDisponiveis.map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
