@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { api } from '@/lib/api'
 import { formatCurrency, formatWhatsappLink } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
+import { LeadScore } from '@/components/ui/lead-score'
 
 interface PipelineEtapa {
   id: string
@@ -49,6 +50,7 @@ interface Match {
   etapa: PipelineEtapa
   corretorId: string | null
   corretor: Corretor | null
+  leadScore: number
   createdAt: string
   imovel: {
     id: string
@@ -567,12 +569,15 @@ function MatchCard({
           )}
         </div>
 
-        {/* 6. Corretor */}
-        {match.corretor ? (
-          <p className="text-[10px] text-blue-600 font-medium truncate mt-0.5">{match.corretor.name}</p>
-        ) : (
-          <p className="text-[10px] text-slate-300 italic mt-0.5">Sem corretor</p>
-        )}
+        {/* 6. Lead Score + Corretor */}
+        <div className="flex items-center justify-between mt-0.5">
+          <LeadScore score={match.leadScore} size="sm" showBar={false} />
+          {match.corretor ? (
+            <p className="text-[10px] text-blue-600 font-medium truncate max-w-[80px]">{match.corretor.name}</p>
+          ) : (
+            <p className="text-[10px] text-slate-300 italic">Sem corretor</p>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -1090,6 +1095,7 @@ function MatchesContent() {
                   <TableHead>Contato</TableHead>
                   <TableHead className="text-center">Data</TableHead>
                   <TableHead>Etapa</TableHead>
+                  <TableHead>Lead Score</TableHead>
                   <TableHead>Corretor</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
@@ -1097,13 +1103,13 @@ function MatchesContent() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : matchesFiltrados.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-16 text-center">
+                    <TableCell colSpan={10} className="py-16 text-center">
                       <GitMerge className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
                       <p className="text-sm text-muted-foreground">
                         {filtrosAtivos
@@ -1193,6 +1199,9 @@ function MatchesContent() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <LeadScore score={match.leadScore} size="sm" showBar={false} />
                       </TableCell>
                       <TableCell>
                         {userIsAdmin ? (

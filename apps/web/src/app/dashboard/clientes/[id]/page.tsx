@@ -15,7 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api } from '@/lib/api'
 import { formatWhatsappLink } from '@/lib/utils'
-import { LeadScore } from '@/components/ui/lead-score'
 import Link from 'next/link'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -48,7 +47,6 @@ interface Cliente {
   corretor?: CorretorResumido
   ativo: boolean
   createdAt: string
-  leadScore: number
   perfis: Perfil[]
   _count: { perfis: number }
 }
@@ -385,9 +383,8 @@ export default function ClienteDetalhePage() {
             </div>
           </div>
 
-          {/* Score + Status + data — direita */}
+          {/* Status + data — direita */}
           <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
-            <LeadScore score={cliente.leadScore} size="lg" />
             <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-base ${cliente.ativo ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-300' : 'bg-red-50 text-red-600 ring-1 ring-red-200'}`}>
               <span className={`w-2.5 h-2.5 rounded-full ${cliente.ativo ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(34,197,94,0.2)]' : 'bg-red-500'}`} />
               {cliente.ativo ? 'Ativo' : 'Inativo'}

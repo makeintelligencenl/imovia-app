@@ -131,6 +131,47 @@ export class MatchingService {
   }
 
   // ─────────────────────────────────────────
+  // Lead Score por match (50–100)
+  //
+  // Base:       50 pts
+  // Etapa:      round(ordem/total × 30)   até +30
+  // Contato:    WhatsApp (+7) Fone (+3)   até +10
+  // Perfil:     Bairros (+5) Quartos (+3)
+  //             Multi-tipos (+2)           até +10
+  // ─────────────────────────────────── total 100
+  // ─────────────────────────────────────────
+  private computeLeadScore(
+    match: {
+      etapa: { ordem: number }
+      perfil: {
+        bairros:    string[]
+        quartosMin: number | null
+        tipos:      unknown[]
+        cliente: { whatsapp?: string | null; telefone?: string | null }
+      }
+    },
+    totalEtapas: number,
+  ): number {
+    let score = 50
+
+    // Etapa no pipeline (até +30)
+    if (totalEtapas > 0) {
+      score += Math.round((match.etapa.ordem / totalEtapas) * 30)
+    }
+
+    // Contato do cliente (até +10)
+    if (match.perfil.cliente.whatsapp) score += 7
+    if (match.perfil.cliente.telefone) score += 3
+
+    // Especificidade do perfil de busca (até +10)
+    if (match.perfil.bairros.length > 0)   score += 5
+    if (match.perfil.quartosMin != null)    score += 3
+    if (match.perfil.tipos.length >= 2)     score += 2
+
+    return Math.min(100, score)
+  }
+
+  // ─────────────────────────────────────────
   // Listagem com filtro de role
   // CORRETOR só vê matches atribuídos a ele
   // ─────────────────────────────────────────
@@ -147,16 +188,24 @@ export class MatchingService {
     if (createdAfter) where.createdAt = { gte: new Date(createdAfter) }
     if (userRole === 'CORRETOR') where.corretorId = userId
 
-    return this.prisma.match.findMany({
-      where,
-      include: {
-        imovel:   { include: { tipo: true, cidade: true } },
-        perfil:   { include: { tipos: true, cliente: true } },
-        etapa:    true,
-        corretor: { select: CORRETOR_SELECT },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const [matches, totalEtapas] = await Promise.all([
+      this.prisma.match.findMany({
+        where,
+        include: {
+          imovel:   { include: { tipo: true, cidade: true } },
+          perfil:   { include: { tipos: true, cliente: true } },
+          etapa:    true,
+          corretor: { select: CORRETOR_SELECT },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.pipelineEtapa.count({ where: { tenantId, ativo: true } }),
+    ])
+
+    return matches.map(m => ({
+      ...m,
+      leadScore: this.computeLeadScore(m, totalEtapas),
+    }))
   }
 
   // ─────────────────────────────────────────
