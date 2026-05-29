@@ -238,8 +238,12 @@ export default function ClienteDetalhePage() {
     try {
       const data = await api.get<Match[]>(`/matches?perfilId=${pid}`)
       setMatches(data)
-    } catch {}
-    finally { setLoadingMatches(false) }
+    } catch (e) {
+      console.error('[loadMatches] erro:', e)
+      toast.error('Erro ao carregar matches do perfil')
+    } finally {
+      setLoadingMatches(false)
+    }
   }
 
   useEffect(() => {

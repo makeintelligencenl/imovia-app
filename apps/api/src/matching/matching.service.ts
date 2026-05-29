@@ -207,14 +207,18 @@ export class MatchingService {
     userRole: string,
     filters?: { imovelId?: string; perfilId?: string; clienteId?: string; createdAfter?: string },
   ) {
-    const { clienteId, createdAfter, ...rest } = filters ?? {}
-    const where: any = { tenantId, ...rest }
+    const { imovelId, perfilId, clienteId, createdAfter } = filters ?? {}
 
-    if (clienteId)    where.perfil    = { clienteId }
-    if (createdAfter) where.createdAt = { gte: new Date(createdAfter) }
-    // No detalhe de um cliente específico mostramos todos os matches;
-    // o filtro de CORRETOR só se aplica na listagem global
-    if (userRole === 'CORRETOR' && !clienteId) where.corretorId = userId
+    // Monta o where explicitamente — nunca espalha undefined no objeto
+    const where: any = { tenantId }
+    if (imovelId)     where.imovelId   = imovelId
+    if (perfilId)     where.perfilId   = perfilId
+    if (clienteId)    where.perfil     = { clienteId }
+    if (createdAfter) where.createdAt  = { gte: new Date(createdAfter) }
+
+    // Filtro de CORRETOR apenas na listagem global (sem contexto de imóvel/perfil/cliente)
+    const isContextual = !!(imovelId || perfilId || clienteId)
+    if (userRole === 'CORRETOR' && !isContextual) where.corretorId = userId
 
     const matches = await this.prisma.match.findMany({
       where,
