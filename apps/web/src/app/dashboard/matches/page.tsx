@@ -741,6 +741,7 @@ function MatchesContent() {
 
   const [historicoMatchId, setHistoricoMatchId] = useState<string | null>(null)
   const [visitaRapida,    setVisitaRapida]    = useState<VisitaRapidaData | null>(null)
+  const [visitaLoading,   setVisitaLoading]   = useState(false)
 
   const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
@@ -779,13 +780,21 @@ function MatchesContent() {
     if (!oldMatch) return
     const etapa = etapas.find((e) => e.id === etapaId)
     if (!etapa) return
+
+    const isVisitaEtapa = etapa.nome.toLowerCase().includes('visita')
+
     setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, etapaId, etapa } : m))
+
+    // Sinaliza imediatamente que a agenda sera aberta
+    if (isVisitaEtapa) setVisitaLoading(true)
+
     try {
       await api.patch(`/matches/${matchId}/etapa`, { etapaId })
       toast.success('Etapa atualizada')
-      // Se a nova etapa contiver "visita" no nome, abre o modal de agendamento
-      if (etapa.nome.toLowerCase().includes('visita')) {
+
+      if (isVisitaEtapa) {
         const match = matches.find(m => m.id === matchId)
+        setVisitaLoading(false)
         if (match) {
           setVisitaRapida({
             matchId:         match.id,
@@ -800,6 +809,7 @@ function MatchesContent() {
         }
       }
     } catch {
+      if (isVisitaEtapa) setVisitaLoading(false)
       setMatches((prev) =>
         prev.map((m) => m.id === matchId ? { ...m, etapaId: oldMatch.etapaId, etapa: oldMatch.etapa } : m),
       )
@@ -874,6 +884,14 @@ function MatchesContent() {
           matchId={historicoMatchId}
           onClose={() => setHistoricoMatchId(null)}
         />
+      )}
+
+      {/* Banner: aguarde enquanto abre o modal de visita */}
+      {visitaLoading && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3.5 bg-slate-900 text-white rounded-2xl shadow-2xl text-sm font-medium pointer-events-none select-none">
+          <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin shrink-0" />
+          Aguarde, abrindo agenda para agendar a visita...
+        </div>
       )}
 
       {/* Modal agendamento rapido de visita */}
