@@ -1095,7 +1095,6 @@ function MatchesContent() {
                   <TableHead>Contato</TableHead>
                   <TableHead className="text-center">Data</TableHead>
                   <TableHead>Etapa</TableHead>
-                  <TableHead>Lead Score</TableHead>
                   <TableHead>Corretor</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
@@ -1103,13 +1102,13 @@ function MatchesContent() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : matchesFiltrados.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-16 text-center">
+                    <TableCell colSpan={9} className="py-16 text-center">
                       <GitMerge className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
                       <p className="text-sm text-muted-foreground">
                         {filtrosAtivos
@@ -1199,9 +1198,6 @@ function MatchesContent() {
                             ))}
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell>
-                        <LeadScore score={match.leadScore} size="sm" showBar={false} />
                       </TableCell>
                       <TableCell>
                         {userIsAdmin ? (
