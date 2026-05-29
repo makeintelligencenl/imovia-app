@@ -1,7 +1,10 @@
 'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { GitMerge, Search, X, Home, Users, LayoutList, Columns3, MessageCircle } from 'lucide-react'
+import {
+  GitMerge, Search, X, Home, Users, LayoutList, Columns3,
+  MessageCircle, Clock, Link2, ArrowRight, UserCheck, UserMinus,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext,
@@ -63,21 +66,51 @@ interface Match {
   }
 }
 
+interface MatchHistoricoItem {
+  id: string
+  tipo: 'MATCH_CRIADO' | 'ETAPA_ALTERADA' | 'CORRETOR_ATRIBUIDO' | 'CORRETOR_REMOVIDO'
+  etapaOrigem:  { id: string; nome: string; cor: string } | null
+  etapaDestino: { id: string; nome: string; cor: string } | null
+  usuario: { id: string; name: string } | null
+  createdAt: string
+}
+
 const FINALIDADE_BADGE: Record<string, string> = {
   VENDA:   'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
   ALUGUEL: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
+}
+
+const HISTORICO_CONFIG: Record<MatchHistoricoItem['tipo'], {
+  icon: React.ElementType
+  color: string
+  bg: string
+  label: string
+}> = {
+  MATCH_CRIADO:       { icon: Link2,      color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Match criado'      },
+  ETAPA_ALTERADA:     { icon: ArrowRight, color: 'text-blue-600',    bg: 'bg-blue-50',    label: 'Etapa alterada'    },
+  CORRETOR_ATRIBUIDO: { icon: UserCheck,  color: 'text-violet-600',  bg: 'bg-violet-50',  label: 'Corretor atribuido' },
+  CORRETOR_REMOVIDO:  { icon: UserMinus,  color: 'text-red-600',     bg: 'bg-red-50',     label: 'Corretor removido' },
 }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+function formatFull(iso: string) {
+  const d = new Date(iso)
+  return (
+    d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
+    ' ' +
+    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  )
+}
+
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime()
   const h = Math.floor(diff / 3600000)
-  if (h < 24) return `há ${h}h`
+  if (h < 24) return `ha ${h}h`
   const d = Math.floor(h / 24)
-  return `há ${d}d`
+  return `ha ${d}d`
 }
 
 /** Retorna branco ou escuro dependendo do fundo hex */
@@ -89,8 +122,167 @@ function textColorForBg(hex: string): string {
   return lum > 0.55 ? '#1e293b' : '#ffffff'
 }
 
+// ─── Modal de Histórico ───────────────────────────────────────────────────────
+function HistoricoModal({ matchId, onClose }: { matchId: string; onClose: () => void }) {
+  const [historico, setHistorico] = useState<MatchHistoricoItem[]>([])
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    api.get<MatchHistoricoItem[]>(`/matches/${matchId}/historico`)
+      .then(setHistorico)
+      .catch(() => toast.error('Erro ao carregar historico'))
+      .finally(() => setLoading(false))
+  }, [matchId])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Historico do Match</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-5 py-4">
+          {loading ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Carregando...</p>
+          ) : historico.length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+              <p className="text-sm text-muted-foreground">Sem eventos registrados</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                O historico e gravado a partir da ativacao da funcionalidade.
+              </p>
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Linha vertical */}
+              <div className="absolute left-[13px] top-2 bottom-2 w-px bg-slate-200" />
+              <div className="space-y-5">
+                {historico.map((item) => {
+                  const cfg  = HISTORICO_CONFIG[item.tipo]
+                  const Icon = cfg.icon
+                  return (
+                    <div key={item.id} className="flex gap-3">
+                      {/* Ícone */}
+                      <div
+                        className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-full ${cfg.bg} ${cfg.color} ring-2 ring-white z-10`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+
+                      {/* Conteúdo */}
+                      <div className="flex-1 min-w-0 pb-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</p>
+                          <p className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                            {formatFull(item.createdAt)}
+                          </p>
+                        </div>
+
+                        {item.tipo === 'MATCH_CRIADO' && (
+                          <div className="mt-0.5 space-y-0.5">
+                            <p className="text-xs text-slate-500">Imovel vinculado ao perfil do cliente</p>
+                            {item.etapaDestino && (
+                              <p className="text-xs text-slate-400">
+                                Etapa inicial:{' '}
+                                <span
+                                  className="font-medium"
+                                  style={{ color: item.etapaDestino.cor }}
+                                >
+                                  {item.etapaDestino.nome}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {item.tipo === 'ETAPA_ALTERADA' && (
+                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                            {item.etapaOrigem && (
+                              <span
+                                className="text-[11px] px-2 py-0.5 rounded-full font-medium"
+                                style={{
+                                  backgroundColor: item.etapaOrigem.cor + '20',
+                                  color: item.etapaOrigem.cor,
+                                }}
+                              >
+                                {item.etapaOrigem.nome}
+                              </span>
+                            )}
+                            <ArrowRight className="h-3 w-3 text-slate-400 shrink-0" />
+                            {item.etapaDestino && (
+                              <span
+                                className="text-[11px] px-2 py-0.5 rounded-full font-medium"
+                                style={{
+                                  backgroundColor: item.etapaDestino.cor + '20',
+                                  color: item.etapaDestino.cor,
+                                }}
+                              >
+                                {item.etapaDestino.nome}
+                              </span>
+                            )}
+                            {item.usuario && (
+                              <span className="text-[11px] text-slate-400">
+                                por {item.usuario.name}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {item.tipo === 'CORRETOR_ATRIBUIDO' && (
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {item.usuario
+                              ? <>Atribuido a: <span className="font-medium text-slate-700">{item.usuario.name}</span></>
+                              : 'Corretor atribuido'}
+                          </p>
+                        )}
+
+                        {item.tipo === 'CORRETOR_REMOVIDO' && (
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {item.usuario
+                              ? <>Removido: <span className="font-medium text-slate-700">{item.usuario.name}</span></>
+                              : 'Corretor removido'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Card de Match ─────────────────────────────────────────────────────────────
-function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: boolean }) {
+function MatchCard({
+  match,
+  isDragging = false,
+  onShowHistorico,
+}: {
+  match: Match
+  isDragging?: boolean
+  onShowHistorico?: () => void
+}) {
   const cor = match.etapa?.cor ?? '#6B7280'
   return (
     <div
@@ -120,7 +312,7 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
         )}
       </div>
 
-      {/* 2. Tipo (Venda/Aluguel) + Tipo do imóvel — mesma linha */}
+      {/* 2. Tipo (Venda/Aluguel) + Tipo do imovel */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${FINALIDADE_BADGE[match.imovel.finalidade] ?? ''}`}>
           {match.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
@@ -130,35 +322,53 @@ function MatchCard({ match, isDragging = false }: { match: Match; isDragging?: b
         </span>
       </div>
 
-      {/* 3. Descrição do imóvel */}
+      {/* 3. Descricao do imovel */}
       <p className="text-[11px] text-slate-600 leading-tight line-clamp-2">
         {match.imovel.titulo}
       </p>
 
-      {/* 4. Localização */}
+      {/* 4. Localizacao */}
       <p className="text-[11px] text-muted-foreground leading-tight">
         {match.imovel.bairro}, {match.imovel.cidade.nome}
       </p>
 
-      <div className="border-t border-slate-100 pt-1.5 space-y-1">
-        {/* 5. Valor */}
-        <p className="text-[12px] font-bold text-slate-700 tabular-nums">
-          {formatCurrency(match.imovel.preco)}
-        </p>
+      <div className="border-t border-slate-100 pt-1.5">
+        {/* 5. Valor + botao historico */}
+        <div className="flex items-center justify-between gap-1">
+          <p className="text-[12px] font-bold text-slate-700 tabular-nums">
+            {formatCurrency(match.imovel.preco)}
+          </p>
+          {onShowHistorico && (
+            <button
+              className="shrink-0 flex items-center justify-center h-5 w-5 rounded-full bg-slate-50 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onShowHistorico() }}
+              title="Ver historico"
+            >
+              <Clock className="h-3 w-3" />
+            </button>
+          )}
+        </div>
 
         {/* 6. Corretor */}
         {match.corretor ? (
-          <p className="text-[10px] text-blue-600 font-medium truncate">{match.corretor.name}</p>
+          <p className="text-[10px] text-blue-600 font-medium truncate mt-0.5">{match.corretor.name}</p>
         ) : (
-          <p className="text-[10px] text-slate-300 italic">Sem corretor</p>
+          <p className="text-[10px] text-slate-300 italic mt-0.5">Sem corretor</p>
         )}
       </div>
     </div>
   )
 }
 
-// ─── Card arrastável ──────────────────────────────────────────────────────────
-function DraggableCard({ match }: { match: Match }) {
+// ─── Card arrastavel ──────────────────────────────────────────────────────────
+function DraggableCard({
+  match,
+  onShowHistorico,
+}: {
+  match: Match
+  onShowHistorico?: () => void
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: match.id,
     data: { etapaId: match.etapaId },
@@ -173,13 +383,21 @@ function DraggableCard({ match }: { match: Match }) {
 
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <MatchCard match={match} />
+      <MatchCard match={match} onShowHistorico={onShowHistorico} />
     </div>
   )
 }
 
 // ─── Coluna Droppable ─────────────────────────────────────────────────────────
-function DroppableColumn({ etapa, matches }: { etapa: PipelineEtapa; matches: Match[] }) {
+function DroppableColumn({
+  etapa,
+  matches,
+  onShowHistorico,
+}: {
+  etapa: PipelineEtapa
+  matches: Match[]
+  onShowHistorico?: (matchId: string) => void
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: etapa.id })
   const textColor = textColorForBg(etapa.cor)
 
@@ -219,7 +437,11 @@ function DroppableColumn({ etapa, matches }: { etapa: PipelineEtapa; matches: Ma
           <p className="text-[11px] text-muted-foreground text-center py-6 opacity-50">Solte aqui</p>
         )}
         {matches.map((m) => (
-          <DraggableCard key={m.id} match={m} />
+          <DraggableCard
+            key={m.id}
+            match={m}
+            onShowHistorico={onShowHistorico ? () => onShowHistorico(m.id) : undefined}
+          />
         ))}
       </div>
     </div>
@@ -231,10 +453,12 @@ function KanbanView({
   matches,
   etapas,
   onEtapaChange,
+  onShowHistorico,
 }: {
   matches: Match[]
   etapas: PipelineEtapa[]
   onEtapaChange: (matchId: string, etapaId: string) => void
+  onShowHistorico?: (matchId: string) => void
 }) {
   const [activeMatch, setActiveMatch] = useState<Match | null>(null)
 
@@ -266,6 +490,7 @@ function KanbanView({
             key={etapa.id}
             etapa={etapa}
             matches={matches.filter((m) => m.etapaId === etapa.id)}
+            onShowHistorico={onShowHistorico}
           />
         ))}
       </div>
@@ -291,7 +516,7 @@ function MatchesContent() {
   const urlImovelId  = searchParams.get('imovelId') ?? ''
   const urlPerfilId  = searchParams.get('perfilId') ?? ''
   const urlLabel     = searchParams.get('label') ?? ''
-  const urlRecentes  = searchParams.get('recentes') ?? ''   // '7' | '30' | 'hoje'
+  const urlRecentes  = searchParams.get('recentes') ?? ''
 
   const [matches,    setMatches]    = useState<Match[]>([])
   const [etapas,     setEtapas]     = useState<PipelineEtapa[]>([])
@@ -299,11 +524,12 @@ function MatchesContent() {
   const [loading,    setLoading]    = useState(true)
   const [viewMode,   setViewMode]   = useState<'table' | 'kanban'>('table')
 
+  const [historicoMatchId, setHistoricoMatchId] = useState<string | null>(null)
+
   const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
   const [filtroTipo,       setFiltroTipo]       = useState('__todos__')
-  // Filtro de data: inicializa do URL param quando vindo do dashboard
   const [filtroData, setFiltroData] = useState<'__todos__' | 'hoje' | '7dias' | '30dias'>(
     urlRecentes === 'hoje' ? 'hoje'
     : urlRecentes === '7'  ? '7dias'
@@ -318,7 +544,6 @@ function MatchesContent() {
       api.get<Match[]>('/matches'),
       api.get<PipelineEtapa[]>('/pipeline/etapas'),
     ]
-    // Admin carrega lista de corretores para o seletor de atribuição
     if (userIsAdmin) {
       requests.push(
         api.get<{ id: string; name: string; email: string; role: string }[]>('/users').then(
@@ -358,7 +583,7 @@ function MatchesContent() {
     setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, corretorId: value, corretor } : m))
     try {
       await api.patch(`/matches/${matchId}/corretor`, { corretorId: value })
-      toast.success(value ? 'Corretor atribuído' : 'Corretor removido')
+      toast.success(value ? 'Corretor atribuido' : 'Corretor removido')
     } catch {
       setMatches((prev) =>
         prev.map((m) => m.id === matchId ? { ...m, corretorId: oldMatch.corretorId, corretor: oldMatch.corretor } : m),
@@ -381,7 +606,6 @@ function MatchesContent() {
     if (filtroEtapa      !== '__todos__' && m.etapaId               !== filtroEtapa)      return false
     if (filtroFinalidade !== '__todas__' && m.imovel.finalidade      !== filtroFinalidade) return false
     if (filtroTipo       !== '__todos__' && m.imovel.tipo?.nome      !== filtroTipo)       return false
-    // Filtro de data
     if (filtroData !== '__todos__') {
       const criado = new Date(m.createdAt)
       const agora  = Date.now()
@@ -396,7 +620,6 @@ function MatchesContent() {
     return true
   })
 
-  // Tipos disponíveis derivados dos matches carregados (sem chamada extra)
   const tiposDisponiveis = Array.from(
     new Set(matches.map((m) => m.imovel.tipo?.nome).filter((n): n is string => !!n)),
   ).sort()
@@ -405,7 +628,6 @@ function MatchesContent() {
 
   function limparFiltros() {
     setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('__todos__'); setFiltroTipo('__todos__'); setPage(1)
-    // Remove params de URL
     router.replace('/dashboard/matches')
   }
 
@@ -414,7 +636,15 @@ function MatchesContent() {
   return (
     <div className="space-y-4">
 
-      {/* ── Cabeçalho ── */}
+      {/* Modal historico */}
+      {historicoMatchId && (
+        <HistoricoModal
+          matchId={historicoMatchId}
+          onClose={() => setHistoricoMatchId(null)}
+        />
+      )}
+
+      {/* Cabecalho */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Matches</h1>
@@ -444,13 +674,14 @@ function MatchesContent() {
         </div>
       </div>
 
-      {/* ── Banner: vindo de "Últimos matches" no Dashboard ── */}
+      {/* Banner: vindo de "Ultimos matches" no Dashboard */}
       {urlRecentes && !urlImovelId && !urlPerfilId && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
           <Search className="h-4 w-4 shrink-0" />
           <span className="flex-1">
-            Mostrando matches dos <strong>
-              {filtroData === 'hoje' ? 'últimas 24h' : filtroData === '7dias' ? 'últimos 7 dias' : 'últimos 30 dias'}
+            Mostrando matches dos{' '}
+            <strong>
+              {filtroData === 'hoje' ? 'ultimas 24h' : filtroData === '7dias' ? 'ultimos 7 dias' : 'ultimos 30 dias'}
             </strong>
           </span>
           <button onClick={() => { setFiltroData('__todos__'); router.replace('/dashboard/matches') }} className="ml-auto p-0.5 rounded hover:bg-blue-100">
@@ -459,12 +690,12 @@ function MatchesContent() {
         </div>
       )}
 
-      {/* ── Banner de contexto ── */}
+      {/* Banner de contexto */}
       {(urlImovelId || urlPerfilId) && urlLabel && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
           {urlImovelId ? <Home className="h-4 w-4 shrink-0" /> : <Users className="h-4 w-4 shrink-0" />}
           <span className="flex-1">
-            {urlImovelId ? 'Imóvel: ' : 'Cliente: '}
+            {urlImovelId ? 'Imovel: ' : 'Cliente: '}
             <span className="font-semibold">{urlLabel}</span>
           </span>
           <button onClick={() => router.replace('/dashboard/matches')} className="ml-auto p-0.5 rounded hover:bg-blue-100">
@@ -473,7 +704,7 @@ function MatchesContent() {
         </div>
       )}
 
-      {/* ── Filtros ── */}
+      {/* Filtros */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
@@ -483,7 +714,7 @@ function MatchesContent() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
-                  placeholder="Imóvel, cliente ou cidade..."
+                  placeholder="Imovel, cliente ou cidade..."
                   value={filtroTexto}
                   onChange={(e) => { setFiltroTexto(e.target.value); setPage(1) }}
                 />
@@ -501,7 +732,7 @@ function MatchesContent() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Tipo de imóvel</Label>
+              <Label className="text-xs">Tipo de imovel</Label>
               <Select value={filtroTipo} onValueChange={(v) => { setFiltroTipo(v); setPage(1) }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -533,14 +764,14 @@ function MatchesContent() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Período</Label>
+              <Label className="text-xs">Periodo</Label>
               <Select value={filtroData} onValueChange={(v: any) => { setFiltroData(v); setPage(1) }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__todos__">Todos</SelectItem>
                   <SelectItem value="hoje">Hoje</SelectItem>
-                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                  <SelectItem value="7dias">Ultimos 7 dias</SelectItem>
+                  <SelectItem value="30dias">Ultimos 30 dias</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -553,38 +784,39 @@ function MatchesContent() {
         </CardContent>
       </Card>
 
-      {/* ── VIEW: TABELA ── */}
+      {/* VIEW: TABELA */}
       {viewMode === 'table' && (
         <Card className="shadow-sm rounded-xl overflow-hidden">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Imóvel</TableHead>
+                  <TableHead>Imovel</TableHead>
                   <TableHead>Tipo / Finalidade</TableHead>
-                  <TableHead className="text-right">Preço</TableHead>
+                  <TableHead className="text-right">Preco</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead className="text-center">Data</TableHead>
                   <TableHead>Etapa</TableHead>
                   <TableHead>Corretor</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : matchesFiltrados.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-16 text-center">
+                    <TableCell colSpan={9} className="py-16 text-center">
                       <GitMerge className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
                       <p className="text-sm text-muted-foreground">
                         {filtrosAtivos
                           ? 'Nenhum match com esses filtros.'
-                          : 'Nenhum match ainda. Cadastre imóveis para o motor rodar.'}
+                          : 'Nenhum match ainda. Cadastre imoveis para o motor rodar.'}
                       </p>
                     </TableCell>
                   </TableRow>
@@ -692,6 +924,16 @@ function MatchesContent() {
                           </span>
                         )}
                       </TableCell>
+                      {/* Botao historico */}
+                      <TableCell>
+                        <button
+                          onClick={() => setHistoricoMatchId(match.id)}
+                          title="Ver historico"
+                          className="flex items-center justify-center h-7 w-7 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                        >
+                          <Clock className="h-3.5 w-3.5" />
+                        </button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -708,7 +950,7 @@ function MatchesContent() {
         </Card>
       )}
 
-      {/* ── VIEW: KANBAN ── */}
+      {/* VIEW: KANBAN */}
       {viewMode === 'kanban' && (
         loading
           ? <p className="text-sm text-muted-foreground py-10 text-center">Carregando...</p>
@@ -717,6 +959,7 @@ function MatchesContent() {
               matches={matchesFiltrados}
               etapas={etapas}
               onEtapaChange={handleEtapaChange}
+              onShowHistorico={setHistoricoMatchId}
             />
           )
       )}

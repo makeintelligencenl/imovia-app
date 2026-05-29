@@ -43,8 +43,9 @@ model User {
   updatedAt    DateTime @updatedAt
 
   tenantId          String
-  tenant            Tenant  @relation(fields: [tenantId], references: [id])
-  matchesAssociados Match[] @relation("MatchCorretor")
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  matchesAssociados Match[]          @relation("MatchCorretor")
+  historico         MatchHistorico[]
 
   @@map("users")
 }
@@ -187,8 +188,10 @@ model PipelineEtapa {
   updatedAt DateTime @updatedAt
 
   tenantId String
-  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
   matches  Match[]
+  historicoOrigem  MatchHistorico[] @relation("HistoricoOrigem")
+  historicoDestino MatchHistorico[] @relation("HistoricoDestino")
 
   @@unique([tenantId, nome])
   @@index([tenantId, ordem])
@@ -216,11 +219,42 @@ model Match {
   corretor   User?   @relation("MatchCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
 
   tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  historico MatchHistorico[]
 
   @@unique([perfilId, imovelId])
   @@index([tenantId])
   @@index([tenantId, etapaId])
   @@index([tenantId, corretorId])
   @@map("matches")
+}
+
+// ─────────────────────────────────────────
+// Histórico de movimentação do pipeline
+// ─────────────────────────────────────────
+enum MatchHistoricoTipo {
+  MATCH_CRIADO
+  ETAPA_ALTERADA
+  CORRETOR_ATRIBUIDO
+  CORRETOR_REMOVIDO
+}
+
+model MatchHistorico {
+  id              String             @id @default(cuid())
+  matchId         String
+  tenantId        String
+  tipo            MatchHistoricoTipo
+  etapaOrigemId   String?
+  etapaDestinoId  String?
+  userId          String?            // corretor atribuído/removido  OU  quem moveu a etapa
+  createdAt       DateTime           @default(now())
+
+  match        Match          @relation(fields: [matchId],        references: [id], onDelete: Cascade)
+  etapaOrigem  PipelineEtapa? @relation("HistoricoOrigem",  fields: [etapaOrigemId],  references: [id], onDelete: SetNull)
+  etapaDestino PipelineEtapa? @relation("HistoricoDestino", fields: [etapaDestinoId], references: [id], onDelete: SetNull)
+  usuario      User?          @relation(fields: [userId],         references: [id], onDelete: SetNull)
+
+  @@index([matchId])
+  @@index([tenantId])
+  @@map("match_historico")
 }

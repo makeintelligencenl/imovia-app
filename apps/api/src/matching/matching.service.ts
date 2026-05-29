@@ -106,12 +106,22 @@ export class MatchingService {
 
     const primeiraEtapa = await this.pipelineService.primeiraEtapa(tenantId)
 
-    await this.prisma.match.create({
+    const match = await this.prisma.match.create({
       data: {
         perfilId: perfil.id,
         imovelId: imovel.id,
         tenantId,
         etapaId: primeiraEtapa.id,
+      },
+    })
+
+    // Registra evento de criação no histórico
+    await this.prisma.matchHistorico.create({
+      data: {
+        matchId:       match.id,
+        tenantId,
+        tipo:          'MATCH_CRIADO',
+        etapaDestinoId: primeiraEtapa.id,
       },
     })
 
@@ -151,21 +161,38 @@ export class MatchingService {
   // ─────────────────────────────────────────
   // Mover match para outra etapa
   // ─────────────────────────────────────────
-  async moverEtapa(tenantId: string, matchId: string, etapaId: string) {
+  async moverEtapa(tenantId: string, matchId: string, etapaId: string, userId?: string) {
     const match = await this.prisma.match.findFirst({ where: { id: matchId, tenantId } })
     if (!match) throw new NotFoundException('Match não encontrado')
 
     const etapa = await this.prisma.pipelineEtapa.findFirst({ where: { id: etapaId, tenantId, ativo: true } })
     if (!etapa) throw new NotFoundException('Etapa não encontrada')
 
-    return this.prisma.match.update({
-      where: { id: matchId },
-      data:  { etapaId },
-      include: {
-        etapa:    true,
-        corretor: { select: CORRETOR_SELECT },
-      },
+    const etapaOrigemId = match.etapaId
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.match.update({
+        where: { id: matchId },
+        data:  { etapaId },
+        include: {
+          etapa:    true,
+          corretor: { select: CORRETOR_SELECT },
+        },
+      })
+      await tx.matchHistorico.create({
+        data: {
+          matchId,
+          tenantId,
+          tipo:          'ETAPA_ALTERADA',
+          etapaOrigemId,
+          etapaDestinoId: etapaId,
+          userId:         userId ?? null,
+        },
+      })
+      return result
     })
+
+    return updated
   }
 
   // ─────────────────────────────────────────
@@ -182,13 +209,47 @@ export class MatchingService {
       if (!corretor) throw new BadRequestException('Corretor não encontrado neste tenant')
     }
 
-    return this.prisma.match.update({
-      where: { id: matchId },
-      data:  { corretorId },
+    // userId no histórico aponta para o corretor sendo atribuído/removido
+    const historicoUserId = corretorId ?? match.corretorId
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.match.update({
+        where: { id: matchId },
+        data:  { corretorId },
+        include: {
+          etapa:    true,
+          corretor: { select: CORRETOR_SELECT },
+        },
+      })
+      await tx.matchHistorico.create({
+        data: {
+          matchId,
+          tenantId,
+          tipo:   corretorId ? 'CORRETOR_ATRIBUIDO' : 'CORRETOR_REMOVIDO',
+          userId: historicoUserId ?? null,
+        },
+      })
+      return result
+    })
+
+    return updated
+  }
+
+  // ─────────────────────────────────────────
+  // Histórico de movimentação de um match
+  // ─────────────────────────────────────────
+  async listarHistorico(tenantId: string, matchId: string) {
+    const match = await this.prisma.match.findFirst({ where: { id: matchId, tenantId } })
+    if (!match) throw new NotFoundException('Match não encontrado')
+
+    return this.prisma.matchHistorico.findMany({
+      where: { matchId },
       include: {
-        etapa:    true,
-        corretor: { select: CORRETOR_SELECT },
+        etapaOrigem:  { select: { id: true, nome: true, cor: true } },
+        etapaDestino: { select: { id: true, nome: true, cor: true } },
+        usuario:      { select: { id: true, name: true } },
       },
+      orderBy: { createdAt: 'asc' },
     })
   }
 }

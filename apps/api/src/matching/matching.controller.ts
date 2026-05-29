@@ -33,7 +33,7 @@ export class MatchingController {
     @Param('id') id: string,
     @Body('etapaId') etapaId: string,
   ) {
-    return this.matchingService.moverEtapa(req.user.tenantId, id, etapaId)
+    return this.matchingService.moverEtapa(req.user.tenantId, id, etapaId, req.user.id)
   }
 
   @Patch(':id/corretor')
@@ -46,5 +46,14 @@ export class MatchingController {
     @Body('corretorId') corretorId: string | null,
   ) {
     return this.matchingService.associarCorretor(req.user.tenantId, id, corretorId ?? null)
+  }
+
+  @Get(':id/historico')
+  @ApiOperation({ summary: 'Retorna o histórico de movimentação de um match' })
+  historico(
+    @Request() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.matchingService.listarHistorico(req.user.tenantId, id)
   }
 }
