@@ -62,9 +62,27 @@ interface Etapa {
 interface Match {
   id: string
   leadScore: number
-  imovel: { id: string; titulo: string; finalidade: string; preco: string; cidade: { nome: string } }
+  imovel: {
+    id: string
+    titulo: string
+    finalidade: string
+    preco: string | number
+    bairro: string
+    areaM2: number
+    quartos: number | null
+    cidade: { nome: string }
+    tipo:   { nome: string }
+  }
   etapa:  { id: string; nome: string; cor: string }
-  perfil: { id: string }
+  perfil: {
+    id: string
+    precoMin:   number | string
+    precoMax:   number | string
+    areaMin:    number | string
+    quartosMin: number | null
+    cidades:    string[]
+    bairros:    string[]
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -95,6 +113,68 @@ function etapaStyle(cor: string) {
   return { background: cor + '22', color: cor, border: `1px solid ${cor}55` }
 }
 
+// ─── Detalhamento do Lead Score ───────────────────────────────────────────────
+interface ScoreItem { label: string; pts: number; max: number; detalhe: string }
+
+function computeLeadScoreDetail(m: Match): ScoreItem[] {
+  const preco    = Number(m.imovel.preco)
+  const precoMin = Number(m.perfil.precoMin)
+  const precoMax = Number(m.perfil.precoMax)
+  const areaM2   = Number(m.imovel.areaM2)
+  const areaMin  = Number(m.perfil.areaMin)
+
+  // 1. Preço
+  const range = precoMax - precoMin
+  let precoPts = 0, precoDetalhe = 'Borda do range'
+  if (range > 0) {
+    const d = Math.abs(preco - (precoMin + precoMax) / 2) / (range / 2)
+    if      (d <= 0.1) { precoPts = 20; precoDetalhe = 'Centro do range (±10%)' }
+    else if (d <= 0.3) { precoPts = 10; precoDetalhe = 'Lateral do range (±30%)' }
+  } else { precoPts = 20; precoDetalhe = 'Preço exato' }
+
+  // 2. Cidade
+  const nc = m.perfil.cidades.length
+  let cidadePts = 0, cidadeDetalhe = '4 ou mais cidades aceitas'
+  if      (nc === 1) { cidadePts = 5; cidadeDetalhe = 'Perfil com cidade única (match preciso)' }
+  else if (nc <= 3)  { cidadePts = 3; cidadeDetalhe = `Perfil com ${nc} cidades aceitas` }
+
+  // 3. Bairro
+  const bairros   = m.perfil.bairros as string[]
+  const temBairro = bairros.length > 0 && bairros.includes(m.imovel.bairro)
+  const bairroPts = temBairro ? 10 : 0
+  const bairroDetalhe = temBairro
+    ? `Imóvel em ${m.imovel.bairro} ✓ (bairro preferido)`
+    : bairros.length > 0
+      ? `Imóvel em ${m.imovel.bairro} (fora dos bairros preferidos)`
+      : 'Perfil sem preferência de bairro'
+
+  // 4. Quartos
+  const qMin = m.perfil.quartosMin
+  const q    = m.imovel.quartos
+  let quartosPts = 0, quartosDetalhe = 'Sem preferência de quartos no perfil'
+  if (qMin != null && q != null) {
+    if      (q > qMin)  { quartosPts = 8; quartosDetalhe = `${q} quartos (acima do mínimo de ${qMin})` }
+    else if (q === qMin) { quartosPts = 4; quartosDetalhe = `${q} quartos (exatamente o mínimo)` }
+  }
+
+  // 5. Área
+  let areaPts = 0, areaDetalhe = `${areaM2}m² (no limite de ${areaMin}m²)`
+  if (areaMin > 0) {
+    const exc = (areaM2 - areaMin) / areaMin
+    if      (exc >= 0.20) { areaPts = 7; areaDetalhe = `${areaM2}m² (+${Math.round(exc * 100)}% acima do mínimo)` }
+    else if (exc >= 0.10) { areaPts = 4; areaDetalhe = `${areaM2}m² (+${Math.round(exc * 100)}% acima do mínimo)` }
+  }
+
+  return [
+    { label: 'Base (passou o filtro)',    pts: 50,        max: 50, detalhe: 'Imóvel atende todos os critérios do perfil' },
+    { label: 'Centralidade do preço',     pts: precoPts,  max: 20, detalhe: precoDetalhe },
+    { label: 'Especificidade da cidade',  pts: cidadePts, max: 5,  detalhe: cidadeDetalhe },
+    { label: 'Bairro preferido',          pts: bairroPts, max: 10, detalhe: bairroDetalhe },
+    { label: 'Quartos',                   pts: quartosPts,max: 8,  detalhe: quartosDetalhe },
+    { label: 'Área',                      pts: areaPts,   max: 7,  detalhe: areaDetalhe },
+  ]
+}
+
 // ─── Blank form perfil ─────────────────────────────────────────────────────────
 const BLANK_PERFIL = {
   finalidade: 'VENDA' as 'VENDA' | 'ALUGUEL',
@@ -118,9 +198,10 @@ export default function ClienteDetalhePage() {
   const [tipos,           setTipos]           = useState<Tipo[]>([])
   const [etapas,          setEtapas]          = useState<Etapa[]>([])
   const [corretores,      setCorretores]      = useState<CorretorResumido[]>([])
-  const [loading,         setLoading]         = useState(true)
-  const [selectedPerfil,  setSelectedPerfil]  = useState<string | null>(null)
-  const [movingMatch,     setMovingMatch]     = useState<string | null>(null)
+  const [loading,          setLoading]          = useState(true)
+  const [selectedPerfil,   setSelectedPerfil]   = useState<string | null>(null)
+  const [movingMatch,      setMovingMatch]      = useState<string | null>(null)
+  const [scoreDetailMatch, setScoreDetailMatch] = useState<Match | null>(null)
 
   // Modal editar cliente
   const [editOpen,   setEditOpen]   = useState(false)
@@ -571,44 +652,80 @@ export default function ClienteDetalhePage() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {matchesFiltrados.map(m => (
-                    <div key={m.id} className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 hover:shadow-sm transition-all">
-                      {/* Ícone + título + Lead Score */}
-                      <div className="flex items-start gap-2 mb-3">
-                        <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="h-3.5 w-3.5 text-indigo-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    <div key={m.id} className="border border-slate-200 rounded-xl overflow-hidden hover:border-slate-300 hover:shadow-sm transition-all flex flex-col">
+
+                      {/* Corpo */}
+                      <div className="p-4 flex flex-col gap-2.5 flex-1">
+                        {/* Título + localização */}
+                        <div className="flex items-start gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg className="h-3.5 w-3.5 text-indigo-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 leading-snug line-clamp-2">{m.imovel.titulo}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                              {m.imovel.bairro} · {m.imovel.cidade.nome}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-slate-800 leading-tight truncate">{m.imovel.titulo}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            R$ {Number(m.imovel.preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} · {m.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
-                          </p>
+
+                        {/* Chips de atributos */}
+                        <div className="flex flex-wrap gap-1">
+                          <span className="text-[10px] font-medium bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">{m.imovel.tipo?.nome ?? '—'}</span>
+                          {m.imovel.quartos != null && (
+                            <span className="text-[10px] font-medium bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">🛏 {m.imovel.quartos} qts</span>
+                          )}
+                          <span className="text-[10px] font-medium bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">📐 {m.imovel.areaM2}m²</span>
+                          <span className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${FINALIDADE_CLASS[m.imovel.finalidade]}`}>
+                            {m.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
+                          </span>
                         </div>
-                        <LeadScore score={m.leadScore} size="sm" showBar={false} className="flex-shrink-0 mt-0.5" />
+
+                        {/* Preço */}
+                        <p className="text-sm font-bold text-slate-700 tabular-nums">
+                          R$ {Number(m.imovel.preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </p>
+
+                        {/* Dropdown etapa */}
+                        <Select
+                          value={m.etapa.id}
+                          disabled={movingMatch === m.id}
+                          onValueChange={(etapaId) => handleMoverEtapa(m.id, etapaId)}
+                        >
+                          <SelectTrigger
+                            className="h-7 text-[11px] font-semibold border-0 px-2 py-0 rounded-full w-full"
+                            style={etapaStyle(m.etapa.cor)}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {etapas.map(e => (
+                              <SelectItem key={e.id} value={e.id}>
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.cor }} />
+                                  {e.nome}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
-                      {/* Dropdown etapa */}
-                      <Select
-                        value={m.etapa.id}
-                        disabled={movingMatch === m.id}
-                        onValueChange={(etapaId) => handleMoverEtapa(m.id, etapaId)}
+                      {/* Lead Score — destaque clicável */}
+                      <button
+                        onClick={() => setScoreDetailMatch(m)}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-slate-50 border-t border-slate-100 hover:bg-slate-100 transition-colors group"
+                        title="Ver detalhamento do Lead Score"
                       >
-                        <SelectTrigger
-                          className="h-7 text-[11px] font-semibold border-0 px-2 py-0 rounded-full w-full"
-                          style={etapaStyle(m.etapa.cor)}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {etapas.map(e => (
-                            <SelectItem key={e.id} value={e.id}>
-                              <span className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.cor }} />
-                                {e.nome}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <div className="flex flex-col gap-0.5 text-left">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Lead Score</p>
+                          <LeadScore score={m.leadScore} size="md" showBar={true} />
+                        </div>
+                        <svg className="h-4 w-4 text-slate-300 group-hover:text-slate-500 flex-shrink-0 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+                        </svg>
+                      </button>
+
                     </div>
                   ))}
                 </div>
@@ -762,6 +879,85 @@ export default function ClienteDetalhePage() {
               {perfilSaving ? 'Salvando...' : perfilMode === 'criar' ? 'Criar perfil' : 'Salvar alterações'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal Lead Score Detalhamento ── */}
+      <Dialog open={!!scoreDetailMatch} onOpenChange={o => !o && setScoreDetailMatch(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <svg className="h-4 w-4 text-indigo-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              Detalhamento do Lead Score
+            </DialogTitle>
+            {scoreDetailMatch && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{scoreDetailMatch.imovel.titulo}</p>
+            )}
+          </DialogHeader>
+
+          {scoreDetailMatch && (() => {
+            const items = computeLeadScoreDetail(scoreDetailMatch)
+            const total = Math.min(100, items.reduce((s, i) => s + i.pts, 0))
+            const temColor = total >= 80 ? 'text-emerald-600' : total >= 65 ? 'text-blue-600' : total >= 55 ? 'text-amber-600' : 'text-slate-500'
+            const temLabel = total >= 80 ? 'Quente' : total >= 65 ? 'Morno' : total >= 55 ? 'Frio' : 'Novo'
+            const barColor = total >= 80 ? 'bg-emerald-500' : total >= 65 ? 'bg-blue-500' : total >= 55 ? 'bg-amber-400' : 'bg-slate-300'
+
+            return (
+              <div className="space-y-4">
+                {/* Score total em destaque */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5">Pontuação total</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-3xl font-extrabold tabular-nums ${temColor}`}>{total}</span>
+                      <span className="text-sm text-slate-400 font-medium">/ 100</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ring-1 ${
+                        total >= 80 ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                        : total >= 65 ? 'bg-blue-50 text-blue-700 ring-blue-200'
+                        : total >= 55 ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                        : 'bg-slate-50 text-slate-500 ring-slate-200'
+                      }`}>{temLabel}</span>
+                    </div>
+                  </div>
+                  <div className="w-16 h-16 relative flex items-center justify-center">
+                    <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
+                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e2e8f0" strokeWidth="3.2"/>
+                      <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3.2"
+                        stroke={total >= 80 ? '#10b981' : total >= 65 ? '#3b82f6' : total >= 55 ? '#f59e0b' : '#94a3b8'}
+                        strokeDasharray={`${total} 100`} strokeLinecap="round"/>
+                    </svg>
+                    <span className={`absolute text-[11px] font-bold ${temColor}`}>{total}%</span>
+                  </div>
+                </div>
+
+                {/* Componentes */}
+                <div className="space-y-2">
+                  {items.map((item) => {
+                    const pct = item.max > 0 ? Math.round((item.pts / item.max) * 100) : 100
+                    const full = item.pts === item.max
+                    const none = item.pts === 0
+                    return (
+                      <div key={item.label} className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-slate-700">{item.label}</span>
+                          <span className={`text-xs font-bold tabular-nums ${full ? 'text-emerald-600' : none ? 'text-slate-400' : 'text-blue-600'}`}>
+                            +{item.pts} <span className="text-slate-300 font-normal">/ {item.max}</span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${full ? 'bg-emerald-500' : none ? 'bg-slate-200' : 'bg-blue-400'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-snug">{item.detalhe}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 

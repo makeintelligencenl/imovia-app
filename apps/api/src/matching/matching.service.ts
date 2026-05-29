@@ -167,14 +167,14 @@ export class MatchingService {
     }
 
     // 2. Especificidade da cidade (até +5)
-    const numCidades = (match.perfil.cidades as string[]).length
+    const numCidades = ((match.perfil.cidades ?? []) as string[]).length
     if      (numCidades === 1) score += 5
     else if (numCidades <= 3)  score += 3
     // 4+ cidades: +0
 
     // 3. Bairro preferido (até +10)
-    const bairros = match.perfil.bairros as string[]
-    if (bairros.length > 0 && bairros.includes(match.imovel.bairro)) {
+    const bairros = ((match.perfil.bairros ?? []) as string[])
+    if (bairros.length > 0 && match.imovel.bairro && bairros.includes(match.imovel.bairro)) {
       score += 10
     }
 
@@ -212,7 +212,9 @@ export class MatchingService {
 
     if (clienteId)    where.perfil    = { clienteId }
     if (createdAfter) where.createdAt = { gte: new Date(createdAfter) }
-    if (userRole === 'CORRETOR') where.corretorId = userId
+    // No detalhe de um cliente específico mostramos todos os matches;
+    // o filtro de CORRETOR só se aplica na listagem global
+    if (userRole === 'CORRETOR' && !clienteId) where.corretorId = userId
 
     const matches = await this.prisma.match.findMany({
       where,
@@ -225,10 +227,13 @@ export class MatchingService {
       orderBy: { createdAt: 'desc' },
     })
 
-    return matches.map(m => ({
-      ...m,
-      leadScore: this.computeLeadScore(m),
-    }))
+    return matches.map(m => {
+      let leadScore = 50
+      try { leadScore = this.computeLeadScore(m) } catch (e) {
+        this.logger.warn(`computeLeadScore falhou para match ${m.id}: ${e}`)
+      }
+      return { ...m, leadScore }
+    })
   }
 
   // ─────────────────────────────────────────
