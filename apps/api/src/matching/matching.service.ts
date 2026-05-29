@@ -133,40 +133,66 @@ export class MatchingService {
   // ─────────────────────────────────────────
   // Lead Score por match (50–100)
   //
-  // Base:       50 pts
-  // Etapa:      round(ordem/total × 30)   até +30
-  // Contato:    WhatsApp (+7) Fone (+3)   até +10
-  // Perfil:     Bairros (+5) Quartos (+3)
-  //             Multi-tipos (+2)           até +10
-  // ─────────────────────────────────── total 100
+  // Mede a aderência do imóvel ao perfil do cliente,
+  // ranqueando matches do mais ao menos compatível.
+  //
+  // Base:         50 pts  (passou o filtro)
+  // Preço:        centralidade no range        até +20
+  // Cidade:       especificidade (1→+5, ≤3→+3) até  +5
+  // Bairro:       imóvel no bairro preferido   até +10
+  // Quartos:      acima (+8) / no mínimo (+4)  até  +8
+  // Área:         ≥20% acima (+7) / ≥10% (+4)  até  +7
+  // ──────────────────────────────────── total  100
   // ─────────────────────────────────────────
-  private computeLeadScore(
-    match: {
-      etapa: { ordem: number }
-      perfil: {
-        bairros:    string[]
-        quartosMin: number | null
-        tipos:      unknown[]
-        cliente: { whatsapp?: string | null; telefone?: string | null }
-      }
-    },
-    totalEtapas: number,
-  ): number {
+  private computeLeadScore(match: any): number {
     let score = 50
 
-    // Etapa no pipeline (até +30)
-    if (totalEtapas > 0) {
-      score += Math.round((match.etapa.ordem / totalEtapas) * 30)
+    // Converte Decimal do Prisma para number
+    const preco    = Number(match.imovel.preco)
+    const precoMin = Number(match.perfil.precoMin)
+    const precoMax = Number(match.perfil.precoMax)
+    const areaM2   = Number(match.imovel.areaM2)
+    const areaMin  = Number(match.perfil.areaMin)
+
+    // 1. Centralidade do preço (até +20)
+    const range = precoMax - precoMin
+    if (range > 0) {
+      const centro    = (precoMin + precoMax) / 2
+      const distancia = Math.abs(preco - centro) / (range / 2) // 0=centro, 1=borda
+      if      (distancia <= 0.1) score += 20
+      else if (distancia <= 0.3) score += 10
+      // borda: +0
+    } else {
+      score += 20 // preço exato (range = 0)
     }
 
-    // Contato do cliente (até +10)
-    if (match.perfil.cliente.whatsapp) score += 7
-    if (match.perfil.cliente.telefone) score += 3
+    // 2. Especificidade da cidade (até +5)
+    const numCidades = (match.perfil.cidades as string[]).length
+    if      (numCidades === 1) score += 5
+    else if (numCidades <= 3)  score += 3
+    // 4+ cidades: +0
 
-    // Especificidade do perfil de busca (até +10)
-    if (match.perfil.bairros.length > 0)   score += 5
-    if (match.perfil.quartosMin != null)    score += 3
-    if (match.perfil.tipos.length >= 2)     score += 2
+    // 3. Bairro preferido (até +10)
+    const bairros = match.perfil.bairros as string[]
+    if (bairros.length > 0 && bairros.includes(match.imovel.bairro)) {
+      score += 10
+    }
+
+    // 4. Quartos (até +8)
+    const quartosMin: number | null = match.perfil.quartosMin
+    const quartos:    number | null = match.imovel.quartos
+    if (quartosMin != null && quartos != null) {
+      if      (quartos > quartosMin)  score += 8
+      else if (quartos === quartosMin) score += 4
+    }
+
+    // 5. Área acima do mínimo (até +7)
+    if (areaMin > 0) {
+      const excedente = (areaM2 - areaMin) / areaMin
+      if      (excedente >= 0.20) score += 7
+      else if (excedente >= 0.10) score += 4
+      // no limite: +0
+    }
 
     return Math.min(100, score)
   }
@@ -188,23 +214,20 @@ export class MatchingService {
     if (createdAfter) where.createdAt = { gte: new Date(createdAfter) }
     if (userRole === 'CORRETOR') where.corretorId = userId
 
-    const [matches, totalEtapas] = await Promise.all([
-      this.prisma.match.findMany({
-        where,
-        include: {
-          imovel:   { include: { tipo: true, cidade: true } },
-          perfil:   { include: { tipos: true, cliente: true } },
-          etapa:    true,
-          corretor: { select: CORRETOR_SELECT },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.pipelineEtapa.count({ where: { tenantId, ativo: true } }),
-    ])
+    const matches = await this.prisma.match.findMany({
+      where,
+      include: {
+        imovel:   { include: { tipo: true, cidade: true } },
+        perfil:   { include: { tipos: true, cliente: true } },
+        etapa:    true,
+        corretor: { select: CORRETOR_SELECT },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
 
     return matches.map(m => ({
       ...m,
-      leadScore: this.computeLeadScore(m, totalEtapas),
+      leadScore: this.computeLeadScore(m),
     }))
   }
 
