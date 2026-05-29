@@ -199,6 +199,7 @@ export default function ClienteDetalhePage() {
   const [etapas,          setEtapas]          = useState<Etapa[]>([])
   const [corretores,      setCorretores]      = useState<CorretorResumido[]>([])
   const [loading,          setLoading]          = useState(true)
+  const [loadingMatches,   setLoadingMatches]   = useState(false)
   const [selectedPerfil,   setSelectedPerfil]   = useState<string | null>(null)
   const [movingMatch,      setMovingMatch]      = useState<string | null>(null)
   const [scoreDetailMatch, setScoreDetailMatch] = useState<Match | null>(null)
@@ -230,16 +231,19 @@ export default function ClienteDetalhePage() {
     setLoading(false)
   }
 
-  async function loadMatches() {
+  async function loadMatches(perfilId?: string) {
+    const pid = perfilId ?? selectedPerfil
+    if (!pid) return
+    setLoadingMatches(true)
     try {
-      const data = await api.get<Match[]>(`/matches?clienteId=${id}`)
+      const data = await api.get<Match[]>(`/matches?perfilId=${pid}`)
       setMatches(data)
     } catch {}
+    finally { setLoadingMatches(false) }
   }
 
   useEffect(() => {
     loadCliente()
-    loadMatches()
     api.get<Tipo[]>('/tipos').then(setTipos).catch(() => {})
     api.get<Etapa[]>('/pipeline/etapas').then(setEtapas).catch(() => {})
     api.get<CorretorResumido[]>('/users').then(setCorretores).catch(() => {})
@@ -352,8 +356,9 @@ export default function ClienteDetalhePage() {
         toast.success('Perfil atualizado.')
       }
       setPerfilMode(null)
+      setSelectedPerfil(null)
+      setMatches([])
       loadCliente()
-      loadMatches()
     } catch { toast.error('Erro ao salvar perfil') }
     finally  { setPerfilSaving(false) }
   }
@@ -365,8 +370,9 @@ export default function ClienteDetalhePage() {
       await api.delete(`/perfis/${removePerfilId}`)
       toast.success('Perfil removido.')
       setRemovePerfilId(null)
+      setSelectedPerfil(null)
+      setMatches([])
       loadCliente()
-      loadMatches()
     } catch { toast.error('Erro ao remover perfil') }
     finally  { setRemovingPerfil(false) }
   }
@@ -546,7 +552,12 @@ export default function ClienteDetalhePage() {
               {cliente.perfis.map(p => (
                 <div
                   key={p.id}
-                  onClick={() => setSelectedPerfil(prev => prev === p.id ? null : p.id)}
+                  onClick={() => {
+                    const next = selectedPerfil === p.id ? null : p.id
+                    setSelectedPerfil(next)
+                    if (next) { setMatches([]); loadMatches(next) }
+                    else setMatches([])
+                  }}
                   className={`border rounded-xl p-4 cursor-pointer transition-all ${
                     selectedPerfil === p.id
                       ? 'border-indigo-400 ring-2 ring-indigo-100 shadow-sm bg-indigo-50/30'
@@ -620,9 +631,7 @@ export default function ClienteDetalhePage() {
 
       {/* ── Matches ── */}
       {(() => {
-        const matchesFiltrados = selectedPerfil
-          ? matches.filter(m => m.perfil.id === selectedPerfil)
-          : []
+        const matchesFiltrados = matches   // já carregados por perfilId
         const perfilSelecionado = selectedPerfil
           ? cliente.perfis.find(p => p.id === selectedPerfil)
           : null
@@ -646,6 +655,11 @@ export default function ClienteDetalhePage() {
                 <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                   <GitMerge className="h-8 w-8 text-slate-200" />
                   <p className="text-sm">Selecione um perfil de busca para ver os matches.</p>
+                </div>
+              ) : loadingMatches ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+                  <div className="h-4 w-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
+                  <p className="text-sm">Carregando matches...</p>
                 </div>
               ) : matchesFiltrados.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhum match encontrado para este perfil.</p>
