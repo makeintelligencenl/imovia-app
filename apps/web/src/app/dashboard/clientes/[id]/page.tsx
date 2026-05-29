@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   ChevronLeft, Pencil, Trash2, Plus, MessageCircle,
-  Search, GitMerge, X, ExternalLink,
+  Search, GitMerge,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -104,11 +104,12 @@ export default function ClienteDetalhePage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
 
-  const [cliente,    setCliente]    = useState<Cliente | null>(null)
-  const [matches,    setMatches]    = useState<Match[]>([])
-  const [tipos,      setTipos]      = useState<Tipo[]>([])
-  const [corretores, setCorretores] = useState<CorretorResumido[]>([])
-  const [loading,    setLoading]    = useState(true)
+  const [cliente,         setCliente]         = useState<Cliente | null>(null)
+  const [matches,         setMatches]         = useState<Match[]>([])
+  const [tipos,           setTipos]           = useState<Tipo[]>([])
+  const [corretores,      setCorretores]      = useState<CorretorResumido[]>([])
+  const [loading,         setLoading]         = useState(true)
+  const [selectedPerfil,  setSelectedPerfil]  = useState<string | null>(null)
 
   // Modal editar cliente
   const [editOpen,   setEditOpen]   = useState(false)
@@ -298,8 +299,6 @@ export default function ClienteDetalhePage() {
     )
   }
 
-  const totalMatches = matches.length
-
   return (
     <div className="space-y-5">
 
@@ -347,7 +346,7 @@ export default function ClienteDetalhePage() {
               </span>
               <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200">
                 <GitMerge className="h-3 w-3" />
-                {totalMatches} {totalMatches === 1 ? 'match' : 'matches'}
+                {matches.length} {matches.length === 1 ? 'match' : 'matches'}
               </span>
             </div>
           </div>
@@ -430,7 +429,15 @@ export default function ClienteDetalhePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {cliente.perfis.map(p => (
-                <div key={p.id} className="border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
+                <div
+                  key={p.id}
+                  onClick={() => setSelectedPerfil(prev => prev === p.id ? null : p.id)}
+                  className={`border rounded-xl p-4 cursor-pointer transition-all ${
+                    selectedPerfil === p.id
+                      ? 'border-indigo-400 ring-2 ring-indigo-100 shadow-sm bg-indigo-50/30'
+                      : 'border-slate-200 hover:border-indigo-200 hover:shadow-sm'
+                  }`}
+                >
                   {/* Header */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${FINALIDADE_CLASS[p.finalidade]}`}>
@@ -438,10 +445,10 @@ export default function ClienteDetalhePage() {
                     </span>
                     <span className="text-xs text-muted-foreground">{p.tipos.map(t => t.nome).join(', ')}</span>
                     <div className="ml-auto flex gap-1">
-                      <button className="p-1 rounded-md text-muted-foreground hover:bg-slate-100 hover:text-slate-700 transition-colors" onClick={() => abrirEditarPerfil(p)}>
+                      <button className="p-1 rounded-md text-muted-foreground hover:bg-slate-100 hover:text-slate-700 transition-colors" onClick={e => { e.stopPropagation(); abrirEditarPerfil(p) }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
-                      <button className="p-1 rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-colors" onClick={() => setRemovePerfilId(p.id)}>
+                      <button className="p-1 rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-colors" onClick={e => { e.stopPropagation(); setRemovePerfilId(p.id) }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -467,14 +474,18 @@ export default function ClienteDetalhePage() {
                   </div>
                   {/* Footer */}
                   <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
+                    <span className={`text-xs font-medium ${selectedPerfil === p.id ? 'text-indigo-600' : 'text-muted-foreground'}`}>
                       <span className="font-semibold text-indigo-600">{p._count.matches}</span> {p._count.matches === 1 ? 'match' : 'matches'}
                     </span>
-                    <Link href={`/dashboard/matches?perfilId=${p.id}`}>
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 hover:underline transition-colors">
-                        <GitMerge className="h-3 w-3" /> Ver matches
+                    {selectedPerfil === p.id ? (
+                      <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">
+                        Selecionado
                       </span>
-                    </Link>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">
+                        Clique para ver matches
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -493,59 +504,63 @@ export default function ClienteDetalhePage() {
       </Card>
 
       {/* ── Matches ── */}
-      <Card className="shadow-sm rounded-xl">
-        <CardHeader className="pb-3 pt-5 px-5 flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <GitMerge className="h-4 w-4 text-indigo-500" />
-            Matches do cliente
-            {totalMatches > 0 && (
-              <span className="text-xs font-normal text-muted-foreground">({totalMatches})</span>
-            )}
-          </CardTitle>
-          {totalMatches > 0 && (
-            <Link href={`/dashboard/matches?label=${encodeURIComponent(cliente.nome)}`}>
-              <Button size="sm" variant="outline" className="gap-1.5 text-xs">
-                <ExternalLink className="h-3 w-3" /> Ver no kanban
-              </Button>
-            </Link>
-          )}
-        </CardHeader>
-        <CardContent className="px-5 pb-5">
-          {totalMatches === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhum match gerado ainda.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {matches.slice(0, 9).map(m => (
-                <div key={m.id} className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 hover:shadow-sm transition-all">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                      <svg className="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-                    </div>
-                    <span
-                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                      style={etapaStyle(m.etapa.cor)}
-                    >
-                      {m.etapa.nome}
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-slate-800 leading-tight">{m.imovel.titulo}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    R$ {Number(m.imovel.preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} · {m.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
-                  </p>
+      {(() => {
+        const matchesFiltrados = selectedPerfil
+          ? matches.filter(m => m.perfil.id === selectedPerfil)
+          : []
+        const perfilSelecionado = selectedPerfil
+          ? cliente.perfis.find(p => p.id === selectedPerfil)
+          : null
+
+        return (
+          <Card className="shadow-sm rounded-xl">
+            <CardHeader className="pb-3 pt-5 px-5 flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <GitMerge className="h-4 w-4 text-indigo-500" />
+                Matches
+                {perfilSelecionado && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    — {FINALIDADE_LABEL[perfilSelecionado.finalidade]} · {perfilSelecionado.tipos.map(t => t.nome).join(', ')}
+                    <span className="ml-1.5 text-indigo-600 font-semibold">({matchesFiltrados.length})</span>
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-5">
+              {!selectedPerfil ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
+                  <GitMerge className="h-8 w-8 text-slate-200" />
+                  <p className="text-sm">Selecione um perfil de busca para ver os matches.</p>
                 </div>
-              ))}
-              {totalMatches > 9 && (
-                <Link href={`/dashboard/matches?label=${encodeURIComponent(cliente.nome)}`}>
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center gap-1 text-sm text-muted-foreground hover:border-indigo-300 hover:text-indigo-500 transition-all min-h-[100px] cursor-pointer">
-                    <span className="font-semibold">+{totalMatches - 9}</span>
-                    <span className="text-xs">Ver todos</span>
-                  </div>
-                </Link>
+              ) : matchesFiltrados.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum match encontrado para este perfil.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {matchesFiltrados.map(m => (
+                    <div key={m.id} className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 hover:shadow-sm transition-all">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                          <svg className="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                        </div>
+                        <span
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={etapaStyle(m.etapa.cor)}
+                        >
+                          {m.etapa.nome}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 leading-tight">{m.imovel.titulo}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        R$ {Number(m.imovel.preco).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} · {m.imovel.finalidade === 'VENDA' ? 'Venda' : 'Aluguel'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* ── Modal Editar Cliente ── */}
       <Dialog open={editOpen} onOpenChange={o => !o && setEditOpen(false)}>
