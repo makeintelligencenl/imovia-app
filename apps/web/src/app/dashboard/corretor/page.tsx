@@ -1,156 +1,435 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { GitMerge, TrendingUp, CheckCircle2, BarChart3, ArrowRight, Clock } from 'lucide-react'
+import {
+  CalendarDays, ChevronLeft, ChevronRight,
+  GitMerge, CheckCircle2, Clock, Plus, Star, ArrowRight, TrendingUp,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList, Cell,
-} from 'recharts'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface PipelineEtapa { id: string; nome: string; cor: string; ordem: number }
+
+interface Visita {
+  id: string
+  imovelId: string
+  imovel: { id: string; titulo: string; bairro: string; cidade: { nome: string } }
+  clienteId: string
+  cliente: { id: string; nome: string; email: string; whatsapp?: string }
+  corretorId: string | null
+  dataHora: string
+  duracaoMin: number
+  status: 'AGENDADA' | 'REALIZADA' | 'CANCELADA'
+  observacoes: string | null
+}
+
 interface Match {
-  id: string; etapaId: string; etapa: PipelineEtapa; createdAt: string
-  imovel: { id: string; titulo: string; preco: number; cidade: { nome: string } }
-  perfil: { clienteNome: string }
+  id: string
+  leadScore: number
+  etapaId: string
+  etapa: PipelineEtapa
+  corretorId: string | null
+  createdAt: string
+  imovel: { id: string; titulo: string; preco: number; bairro: string; cidade: { nome: string } }
+  perfil: { id: string; cliente: { id: string; nome: string } }
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const HOUR_PX  = 56   // px per hour in agenda grid
+const DAY_START = 8   // 08:00
+const DAY_END   = 20  // 20:00
+const NUM_DAYS  = 6   // Mon–Sat
+
+const DIAS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const MESES_FULL = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+const MESES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getMonday(d: Date): Date {
+  const dt = new Date(d); dt.setHours(0, 0, 0, 0)
+  const day = dt.getDay()
+  dt.setDate(dt.getDate() + (day === 0 ? -6 : 1 - day))
+  return dt
 }
 
-function daysSince(iso: string) {
+function getWorkDays(monday: Date): Date[] {
+  return Array.from({ length: NUM_DAYS }, (_, i) => {
+    const d = new Date(monday); d.setDate(d.getDate() + i); return d
+  })
+}
+
+function isToday(d: Date): boolean {
+  const t = new Date()
+  return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear()
+}
+
+function isSameDay(d: Date, iso: string): boolean {
+  const v = new Date(iso)
+  return d.getDate() === v.getDate() && d.getMonth() === v.getMonth() && d.getFullYear() === v.getFullYear()
+}
+
+function fmtHM(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+}
+
+function daysSince(iso: string): number {
   return Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24))
 }
 
-function BarLabel(props: any) {
-  const { x, y, width, height, value } = props
-  if (!value) return null
-  const insideBar = height > 26
+function fmtPreco(p: number): string {
+  if (p >= 1_000_000) return `R$ ${(p / 1_000_000).toFixed(1).replace('.', ',')}M`
+  if (p >= 1_000)     return `R$ ${(p / 1_000).toFixed(0)}k`
+  return `R$ ${p}`
+}
+
+function durStr(min: number): string {
+  if (min < 60) return `${min}min`
+  const h = Math.floor(min / 60), m = min % 60
+  return m > 0 ? `${h}h${m}min` : `${h}h`
+}
+
+function mesParam(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Assigns overlap sub-columns to visits sorted by startMin */
+function assignOverlapCols(items: { startMin: number; endMin: number }[]): { col: number; total: number }[] {
+  const colEnds: number[] = []
+  const cols: number[] = []
+  items.forEach(item => {
+    let c = colEnds.findIndex(e => e <= item.startMin)
+    if (c === -1) { c = colEnds.length; colEnds.push(item.endMin) } else colEnds[c] = item.endMin
+    cols.push(c)
+  })
+  const total = colEnds.length || 1
+  return cols.map(c => ({ col: c, total }))
+}
+
+// ── Score helpers ─────────────────────────────────────────────────────────────
+
+function scoreLabel(s: number) {
+  if (s >= 80) return { label: 'Quente 🔥', stroke: '#10b981', text: 'text-emerald-600' }
+  if (s >= 65) return { label: 'Morno',     stroke: '#3b82f6', text: 'text-blue-600'    }
+  return             { label: 'Frio',       stroke: '#f59e0b', text: 'text-amber-600'   }
+}
+
+function ScoreRing({ score }: { score: number }) {
+  const { stroke, text } = scoreLabel(score)
+  const dash = Math.round(score * 0.879)
   return (
-    <text
-      x={x + width / 2}
-      y={insideBar ? y + 15 : y - 5}
-      textAnchor="middle"
-      fill={insideBar ? '#ffffff' : '#374151'}
-      fontSize={11}
-      fontWeight="700"
-    >
-      {value}
-    </text>
+    <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
+      <svg viewBox="0 0 36 36" className="w-10 h-10 -rotate-90">
+        <circle cx="18" cy="18" r="14" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
+        <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3.5"
+          stroke={stroke} strokeDasharray={`${dash} 100`} strokeLinecap="round" />
+      </svg>
+      <span className={`absolute text-[9px] font-extrabold ${text}`}>{score}</span>
+    </div>
   )
 }
 
+// ── Status styles ─────────────────────────────────────────────────────────────
+
+const STATUS_VISIT: Record<Visita['status'], string> = {
+  AGENDADA:  'bg-blue-50  text-blue-800  border-l-blue-500',
+  REALIZADA: 'bg-emerald-50 text-emerald-800 border-l-emerald-500',
+  CANCELADA: 'bg-red-50   text-red-800   border-l-red-500   opacity-60',
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export default function CorretorDashboardPage() {
-  const router  = useRouter()
-  const [matches, setMatches] = useState<Match[]>([])
-  const [etapas,  setEtapas]  = useState<PipelineEtapa[]>([])
-  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
-  // Lê o usuário apenas no cliente
   const [userName, setUserName] = useState('')
+  const [matches,  setMatches]  = useState<Match[]>([])
+  const [etapas,   setEtapas]   = useState<PipelineEtapa[]>([])
+  const [visitas,  setVisitas]  = useState<Visita[]>([])
+  const [loading,  setLoading]  = useState(true)
 
+  // Agenda state
+  const [agendaView,   setAgendaView]   = useState<'dia' | 'semana'>('dia')
+  const [weekMonday,   setWeekMonday]   = useState<Date>(() => getMonday(new Date()))
+  const loadedMonths  = useRef(new Set<string>())
+  const dayScrollRef  = useRef<HTMLDivElement>(null)
+  const weekScrollRef = useRef<HTMLDivElement>(null)
+
+  // ── Load initial data ──────────────────────────────────────────────────────
   useEffect(() => {
     const user = getCurrentUser()
-
-    // Redireciona ADMIN para o dashboard deles
     if (user?.role === 'ADMIN') { router.replace('/dashboard'); return }
-
     setUserName(user?.name?.split(' ')[0] ?? 'Corretor')
 
-    const loadAll = async () => {
-      const [ma, et] = await Promise.allSettled([
-        api.get<Match[]>('/matches'),
-        api.get<PipelineEtapa[]>('/pipeline/etapas'),
-      ])
-      if (ma.status === 'fulfilled') setMatches(ma.value)
-      if (et.status === 'fulfilled') setEtapas(et.value)
+    const now = new Date()
+    const mes = mesParam(now)
+    loadedMonths.current.add(mes)
+
+    Promise.allSettled([
+      api.get<Match[]>('/matches'),
+      api.get<PipelineEtapa[]>('/pipeline/etapas'),
+      api.get<Visita[]>(`/visitas?mes=${mes}`),
+    ]).then(([mr, er, vr]) => {
+      if (mr.status === 'fulfilled') setMatches(mr.value)
+      if (er.status === 'fulfilled') setEtapas(er.value)
+      if (vr.status === 'fulfilled') setVisitas(vr.value)
       setLoading(false)
-    }
-    loadAll()
+    })
   }, [router])
 
-  // Derivacoes
-  // Ultima etapa = Encerrado (cancelado/perdido) — penultima = Fechado (conversao real)
+  // ── Load visitas for new months when navigating weeks ─────────────────────
+  const ensureMonthLoaded = useCallback(async (d: Date) => {
+    const mes = mesParam(d)
+    if (loadedMonths.current.has(mes)) return
+    loadedMonths.current.add(mes)
+    try {
+      const data = await api.get<Visita[]>(`/visitas?mes=${mes}`)
+      setVisitas(prev => {
+        const byId = new Map(prev.map(v => [v.id, v]))
+        data.forEach(v => byId.set(v.id, v))
+        return [...byId.values()]
+      })
+    } catch { /* silent */ }
+  }, [])
+
+  function prevWeek() {
+    setWeekMonday(m => { const d = new Date(m); d.setDate(d.getDate() - 7); ensureMonthLoaded(d); return d })
+  }
+  function nextWeek() {
+    setWeekMonday(m => { const d = new Date(m); d.setDate(d.getDate() + 7); ensureMonthLoaded(d); return d })
+  }
+  function goThisWeek() {
+    const d = getMonday(new Date()); ensureMonthLoaded(d); setWeekMonday(d)
+  }
+
+  // ── Derived: pipeline ──────────────────────────────────────────────────────
   const etapaEncerrada = etapas.length >= 1 ? etapas[etapas.length - 1] : null
   const etapaFechado   = etapas.length >= 2 ? etapas[etapas.length - 2] : null
-  const convertidos    = etapaFechado ? matches.filter((m) => m.etapaId === etapaFechado.id).length : 0
-  const emNegociacao   = matches.filter(
-    (m) => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id,
+
+  const emNegociacao = matches.filter(
+    m => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id,
   ).length
-  const taxaConv = matches.length ? Math.round(convertidos / matches.length * 100) : 0
 
-  // Funil (apenas meus matches)
-  const funilData = etapas.map((e) => ({
-    name:  e.nome,
-    total: matches.filter((m) => m.etapaId === e.id).length,
-    color: e.cor,
-  }))
+  const funil = etapas
+    .filter(e => e.id !== etapaEncerrada?.id)
+    .map(e => ({ nome: e.nome, cor: e.cor, n: matches.filter(m => m.etapaId === e.id).length }))
+  const funilMax = Math.max(...funil.map(f => f.n), 1)
 
-  // Matches sem movimentacao: em negociacao (nem Fechado, nem Encerrado) e criados ha mais de 7 dias
-  const semMovimentacao = matches
-    .filter((m) => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id && daysSince(m.createdAt) > 7)
+  // ── Derived: visitas KPIs ─────────────────────────────────────────────────
+  const now           = new Date()
+  const todayVisitas  = visitas.filter(v => v.status === 'AGENDADA' && isToday(new Date(v.dataHora)))
+  const mesRealizadas = visitas.filter(v => v.status === 'REALIZADA').length
+  const mesAgendadas  = visitas.filter(v => v.status === 'AGENDADA').length
+  const mesFechados   = matches.filter(m => m.etapaId === etapaFechado?.id).length
+  const conversaoMes  = mesRealizadas > 0 ? Math.round((mesFechados / mesRealizadas) * 100) : 0
+
+  // ── Derived: next visit ────────────────────────────────────────────────────
+  const proximaVisita = visitas
+    .filter(v => v.status === 'AGENDADA' && new Date(v.dataHora) >= now)
+    .sort((a, b) => a.dataHora.localeCompare(b.dataHora))[0]
+
+  // ── Derived: top oportunidades ────────────────────────────────────────────
+  const topOportunidades = [...matches]
+    .filter(m => m.leadScore >= 65 && m.etapa.ordem <= 2 && m.etapaId !== etapaEncerrada?.id)
+    .sort((a, b) => b.leadScore - a.leadScore)
+    .slice(0, 3)
+
+  // ── Derived: precisam atenção ─────────────────────────────────────────────
+  const precisamAtencao = matches
+    .filter(m => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id && daysSince(m.createdAt) > 7)
     .sort((a, b) => daysSince(b.createdAt) - daysSince(a.createdAt))
-    .slice(0, 6)
+    .slice(0, 5)
 
-  const Skeleton = () => <span className="text-muted-foreground/30">-</span>
+  // ── Derived: agenda ────────────────────────────────────────────────────────
+  const weekDays = getWorkDays(weekMonday)
+  const weekStart = weekDays[0], weekEnd = weekDays[NUM_DAYS - 1]
+
+  const weekLabel = weekStart.getMonth() === weekEnd.getMonth()
+    ? `${weekStart.getDate()} a ${weekEnd.getDate()} de ${MESES_FULL[weekStart.getMonth()]} ${weekStart.getFullYear()}`
+    : `${weekStart.getDate()} ${MESES_SHORT[weekStart.getMonth()]} – ${weekEnd.getDate()} ${MESES_SHORT[weekEnd.getMonth()]} ${weekEnd.getFullYear()}`
+
+  const agendaSubtitle = agendaView === 'dia'
+    ? `${DIAS_SHORT[now.getDay()]}, ${now.getDate()} de ${MESES_FULL[now.getMonth()]}`
+    : weekLabel
+
+  const agendaKpis = agendaView === 'dia'
+    ? visitas.filter(v => isToday(new Date(v.dataHora)))
+    : visitas.filter(v => weekDays.some(d => isSameDay(d, v.dataHora)))
+
+  // Context line
+  const contextParts: string[] = []
+  if (todayVisitas.length > 0)      contextParts.push(`${todayVisitas.length} ${todayVisitas.length === 1 ? 'visita' : 'visitas'} hoje`)
+  if (precisamAtencao.length > 0)   contextParts.push(`${precisamAtencao.length} ${precisamAtencao.length === 1 ? 'match precisa' : 'matches precisam'} de atenção`)
+  if (topOportunidades.length > 0)  contextParts.push(`${topOportunidades.length} ${topOportunidades.length === 1 ? 'oportunidade quente' : 'oportunidades quentes'} sem contato`)
+
+  // Scroll to business hours on mount / view change
+  useEffect(() => {
+    const scrollTarget = Math.max(0, (Math.min(now.getHours(), DAY_END - 2) - DAY_START - 1) * HOUR_PX)
+    if (agendaView === 'dia'    && dayScrollRef.current)  dayScrollRef.current.scrollTop  = scrollTarget
+    if (agendaView === 'semana' && weekScrollRef.current) weekScrollRef.current.scrollTop = scrollTarget
+  }, [agendaView]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const HOURS = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i)
+  const GRID_H = (DAY_END - DAY_START) * HOUR_PX
+
+  // Now-line offset (null if outside business hours)
+  const nowMin     = now.getHours() * 60 + now.getMinutes()
+  const nowLinePx  = nowMin >= DAY_START * 60 && nowMin < DAY_END * 60
+    ? (nowMin - DAY_START * 60) * (HOUR_PX / 60)
+    : null
+
+  // ── Day view items ─────────────────────────────────────────────────────────
+  const dayItems = visitas
+    .filter(v => isToday(new Date(v.dataHora)))
+    .sort((a, b) => a.dataHora.localeCompare(b.dataHora))
+    .map(v => {
+      const dt = new Date(v.dataHora)
+      const startMin = dt.getHours() * 60 + dt.getMinutes()
+      return { visit: v, startMin, endMin: startMin + v.duracaoMin }
+    })
+  const dayOverlaps = assignOverlapCols(dayItems)
+
+  // ── Week view: visits per day ──────────────────────────────────────────────
+  function weekDayItems(d: Date) {
+    return visitas
+      .filter(v => isSameDay(d, v.dataHora))
+      .sort((a, b) => a.dataHora.localeCompare(b.dataHora))
+      .map(v => {
+        const dt = new Date(v.dataHora)
+        const startMin = dt.getHours() * 60 + dt.getMinutes()
+        return { visit: v, startMin, endMin: startMin + v.duracaoMin }
+      })
+  }
+
+  const Sk = () => <span className="text-muted-foreground/30 text-3xl font-bold">-</span>
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* Cabecalho */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {loading ? 'Carregando...' : `Ola, ${userName}!`}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Seu painel de acompanhamento</p>
+      {/* ── 1. Context bar ──────────────────────────────────────────────────── */}
+      <div className="rounded-2xl px-6 py-5 shadow-sm text-white"
+           style={{ background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' }}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-blue-200 text-xs font-semibold uppercase tracking-wide mb-1">
+              {DIAS_SHORT[now.getDay()]}, {now.getDate()} de {MESES_FULL[now.getMonth()]} de {now.getFullYear()}
+            </p>
+            <h1 className="text-2xl font-bold">
+              {loading ? 'Carregando...' : `Olá, ${userName}!`}
+            </h1>
+            {!loading && (
+              <p className="text-blue-100 text-sm mt-1 leading-relaxed">
+                {contextParts.length ? contextParts.join(' · ') : 'Tudo em dia — bom trabalho!'}
+              </p>
+            )}
+          </div>
+
+          {/* Próxima visita */}
+          {proximaVisita && (
+            <div className="rounded-xl px-4 py-3 min-w-[200px] shrink-0"
+                 style={{ background: 'rgba(255,255,255,0.15)' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-200 mb-1">
+                Próxima visita
+              </p>
+              <p className="text-lg font-bold leading-none">
+                {isToday(new Date(proximaVisita.dataHora)) ? 'Hoje' : 'Amanhã'} às {fmtHM(proximaVisita.dataHora)}
+              </p>
+              <p className="text-sm text-blue-100 mt-0.5 truncate">{proximaVisita.cliente.nome}</p>
+              <p className="text-xs text-blue-200 truncate">{proximaVisita.imovel.titulo}</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── 2. KPIs ─────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
-        {/* Meus Matches */}
-        <Card className="rounded-xl shadow-sm border-l-4 border-l-blue-500">
+        {/* Visitas Hoje */}
+        <Card className="rounded-xl shadow-sm border-l-4 border-l-blue-500 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => document.getElementById('agenda-section')?.scrollIntoView({ behavior: 'smooth' })}>
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Meus Matches</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Skeleton /> : matches.length}</p>
-                {!loading && <p className="text-xs text-muted-foreground mt-1">total atribuidos a mim</p>}
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Visitas Hoje</p>
+                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : todayVisitas.length}</p>
+                {!loading && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {todayVisitas.length === 1 ? 'agendada para hoje' : 'agendadas para hoje'}
+                  </p>
+                )}
               </div>
               <div className="p-2.5 rounded-xl bg-blue-50 shrink-0">
-                <GitMerge className="h-5 w-5 text-blue-600" />
+                <CalendarDays className="h-5 w-5 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Em Negociacao */}
+        {/* Em Negociação */}
         <Card className="rounded-xl shadow-sm border-l-4 border-l-amber-500">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Em Negociacao</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Skeleton /> : emNegociacao}</p>
-                {!loading && <p className="text-xs text-muted-foreground mt-1">etapas ativas no pipeline</p>}
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Em Negociação</p>
+                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : emNegociacao}</p>
+                {!loading && <p className="text-xs text-muted-foreground mt-1">matches ativos na carteira</p>}
               </div>
               <div className="p-2.5 rounded-xl bg-amber-50 shrink-0">
-                <BarChart3 className="h-5 w-5 text-amber-600" />
+                <GitMerge className="h-5 w-5 text-amber-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Convertidos */}
+        {/* Visitas no Mês */}
+        <Card className="rounded-xl shadow-sm border-l-4 border-l-indigo-500">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Visitas no Mês</p>
+                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : mesRealizadas + mesAgendadas}</p>
+                {!loading && (
+                  <p className="text-xs mt-1">
+                    <span className="text-emerald-600 font-semibold">{mesRealizadas} realizadas</span>
+                    <span className="text-muted-foreground"> · {mesAgendadas} ag.</span>
+                  </p>
+                )}
+              </div>
+              <div className="p-2.5 rounded-xl bg-indigo-50 shrink-0">
+                <TrendingUp className="h-5 w-5 text-indigo-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Conversão do Mês */}
         <Card className="rounded-xl shadow-sm border-l-4 border-l-emerald-500">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Convertidos</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Skeleton /> : convertidos}</p>
-                {!loading && <p className="text-xs text-muted-foreground mt-1">fechamentos concluidos</p>}
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Conversão do Mês</p>
+                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : `${conversaoMes}%`}</p>
+                {!loading && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {mesFechados} fechamentos · {mesRealizadas} visitas
+                  </p>
+                )}
               </div>
               <div className="p-2.5 rounded-xl bg-emerald-50 shrink-0">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -159,103 +438,414 @@ export default function CorretorDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Taxa de Conversao */}
-        <Card className="rounded-xl shadow-sm border-l-4 border-l-violet-500">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Conversao</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Skeleton /> : `${taxaConv}%`}</p>
-                {!loading && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {convertidos} de {matches.length} matches
-                  </p>
-                )}
-              </div>
-              <div className="p-2.5 rounded-xl bg-violet-50 shrink-0">
-                <TrendingUp className="h-5 w-5 text-violet-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Funil do meu pipeline */}
-      <Card className="rounded-xl shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Meu pipeline</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {loading || matches.length === 0 ? (
-            <div className="flex items-center justify-center h-[240px] text-sm text-muted-foreground">
-              {loading ? 'Carregando...' : 'Nenhum match atribuido ainda'}
+      {/* ── 3. Agenda ────────────────────────────────────────────────────────── */}
+      <Card id="agenda-section" className="rounded-2xl shadow-sm overflow-hidden">
+
+        {/* Card header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+              <CalendarDays className="h-4 w-4 text-blue-600" />
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={funilData} margin={{ top: 20, right: 16, left: 8, bottom: 48 }}>
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                  angle={-25}
-                  textAnchor="end"
-                  interval={0}
-                  height={60}
-                />
-                <YAxis hide />
-                <Tooltip
-                  cursor={{ fill: 'rgba(0,0,0,0.04)' }}
-                  formatter={(v: number) => [v, 'matches']}
-                />
-                <Bar dataKey="total" radius={[6, 6, 0, 0]} maxBarSize={72}>
-                  {funilData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  <LabelList dataKey="total" content={BarLabel} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
+            <div>
+              <p className="text-sm font-bold text-slate-800 leading-none">Agenda</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{agendaSubtitle}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+
+            {/* KPI pills */}
+            <div className="hidden sm:flex items-center gap-1.5">
+              {[
+                { n: agendaKpis.filter(v => v.status === 'AGENDADA').length,  color: 'blue',    label: 'ag.' },
+                { n: agendaKpis.filter(v => v.status === 'REALIZADA').length, color: 'emerald', label: 'real.' },
+                { n: agendaKpis.filter(v => v.status === 'CANCELADA').length, color: 'red',     label: 'canc.' },
+              ].filter(p => p.n > 0).map(p => (
+                <span key={p.label}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold
+                    bg-${p.color}-50 border border-${p.color}-100 text-${p.color}-700`}>
+                  <span className={`w-1.5 h-1.5 rounded-full bg-${p.color}-500`} />
+                  {p.n} {p.label}
+                </span>
+              ))}
+            </div>
+
+            {/* View toggle */}
+            <div className="flex items-center bg-slate-100 rounded-full p-0.5">
+              {(['dia', 'semana'] as const).map(v => (
+                <button key={v}
+                  onClick={() => setAgendaView(v)}
+                  className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                    agendaView === v
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}>
+                  {v === 'dia' ? 'Hoje' : 'Semana'}
+                </button>
+              ))}
+            </div>
+
+            {/* Week nav (only in semana view) */}
+            {agendaView === 'semana' && (
+              <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5">
+                <button onClick={prevWeek} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 transition-colors">
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={goThisWeek} className="px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 rounded-md transition-colors">
+                  Hoje
+                </button>
+                <button onClick={nextWeek} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 transition-colors">
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Nova visita */}
+            <Link href="/dashboard/agenda" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+              <Plus className="h-3.5 w-3.5" />
+              Nova
+            </Link>
+
+            {/* Agenda completa */}
+            <Link href="/dashboard/agenda" className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline whitespace-nowrap">
+              Agenda completa
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* ── View: Hoje ──────────────────────────────────────────────────────── */}
+        {agendaView === 'dia' && (
+          <>
+            {loading ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Carregando...</div>
+            ) : dayItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
+                <CalendarDays className="h-8 w-8 text-slate-200" />
+                <p className="text-sm">Nenhuma visita hoje</p>
+                <Link href="/dashboard/agenda" className="text-xs text-blue-600 font-semibold hover:underline">
+                  + Agendar visita
+                </Link>
+              </div>
+            ) : (
+              <div ref={dayScrollRef} className="overflow-y-auto" style={{ maxHeight: 300 }}>
+                <div className="flex" style={{ height: GRID_H }}>
+
+                  {/* Hour labels */}
+                  <div className="w-12 shrink-0 border-r border-slate-100 relative">
+                    {HOURS.map((h, i) => (
+                      <div key={h} className="absolute left-0 right-0 border-b border-slate-50"
+                           style={{ top: i * HOUR_PX, height: HOUR_PX }}>
+                        <span className="absolute right-1.5 -top-[9px] text-[10px] font-semibold text-slate-400">
+                          {h.toString().padStart(2, '0')}h
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Visit column */}
+                  <div className="flex-1 relative bg-white">
+                    {/* Guide lines */}
+                    {HOURS.map((_, i) => (
+                      <div key={i} className="absolute left-0 right-0 border-b border-slate-50"
+                           style={{ top: i * HOUR_PX }} />
+                    ))}
+
+                    {/* Visit blocks */}
+                    {dayItems.map((item, i) => {
+                      const { col, total } = dayOverlaps[i]
+                      const top    = (item.startMin - DAY_START * 60) * (HOUR_PX / 60)
+                      const height = Math.max(item.visit.duracaoMin * (HOUR_PX / 60) - 4, 26)
+                      const leftPct  = (col / total) * 100
+                      const rightPct = ((total - col - 1) / total) * 100
+                      const v  = item.visit
+                      const dt = new Date(v.dataHora)
+                      const hh = dt.getHours().toString().padStart(2, '0')
+                      const mm = dt.getMinutes().toString().padStart(2, '0')
+                      const et = new Date(dt.getTime() + v.duracaoMin * 60000)
+                      const strike = v.status === 'CANCELADA' ? 'line-through' : ''
+                      return (
+                        <div key={v.id}
+                          className={`absolute rounded-lg border-l-[3px] px-2.5 py-1.5 cursor-pointer hover:brightness-95 transition-all overflow-hidden ${STATUS_VISIT[v.status]}`}
+                          style={{ top: top + 2, height, left: `calc(${leftPct}% + 4px)`, right: `calc(${rightPct}% + 4px)` }}
+                        >
+                          <div className={`text-[11px] font-bold tabular-nums ${strike}`}>
+                            {hh}:{mm}–{et.getHours().toString().padStart(2, '0')}:{et.getMinutes().toString().padStart(2, '0')}
+                            <span className="font-normal opacity-60 ml-1">{durStr(v.duracaoMin)}</span>
+                          </div>
+                          <div className={`text-xs font-bold mt-0.5 truncate ${strike}`}>{v.cliente.nome}</div>
+                          {height > 48 && (
+                            <div className={`text-[11px] opacity-70 truncate ${strike}`}>{v.imovel.titulo}</div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {/* Now line */}
+                    {nowLinePx !== null && isToday(now) && (
+                      <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: nowLinePx }}>
+                        <div className="absolute left-0 -top-1 w-2 h-2 rounded-full bg-red-500" />
+                        <div className="absolute left-2 right-0 top-0 h-0.5 bg-red-500 rounded-full" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── View: Semana ────────────────────────────────────────────────────── */}
+        {agendaView === 'semana' && (
+          <>
+            {/* Day headers */}
+            <div className="grid border-b border-slate-100"
+                 style={{ gridTemplateColumns: '48px repeat(6, 1fr)' }}>
+              <div className="bg-slate-50 border-r border-slate-100" />
+              {weekDays.map(d => {
+                const cnt = visitas.filter(v => isSameDay(d, v.dataHora)).length
+                return (
+                  <div key={d.toISOString()}
+                    className={`border-r last:border-r-0 border-slate-100 py-2.5 flex flex-col items-center gap-0.5 ${isToday(d) ? 'bg-blue-50' : 'bg-slate-50'}`}>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {DIAS_SHORT[d.getDay()]}
+                    </span>
+                    <span className={`text-sm font-medium ${isToday(d) ? 'w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold' : 'text-slate-600'}`}>
+                      {d.getDate()}
+                    </span>
+                    <span className={`text-[9px] font-semibold ${cnt > 0 ? 'text-blue-500' : 'text-slate-300'}`}>
+                      {cnt > 0 ? `${cnt} vis.` : '—'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Time grid */}
+            <div ref={weekScrollRef} className="overflow-y-auto" style={{ maxHeight: 360 }}>
+              <div className="flex" style={{ height: GRID_H }}>
+
+                {/* Hour labels */}
+                <div className="w-12 shrink-0 border-r border-slate-100 relative" style={{ background: '#f8fafc' }}>
+                  {HOURS.map((h, i) => (
+                    <div key={h} className="absolute left-0 right-0 border-b border-slate-100"
+                         style={{ top: i * HOUR_PX, height: HOUR_PX }}>
+                      <span className="absolute right-1.5 -top-[9px] text-[10px] font-semibold text-slate-400">
+                        {h.toString().padStart(2, '0')}h
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day columns */}
+                {weekDays.map((d, ci) => {
+                  const items   = weekDayItems(d)
+                  const overlaps = assignOverlapCols(items)
+                  return (
+                    <div key={d.toISOString()}
+                      className={`flex-1 relative border-r last:border-r-0 border-slate-100 ${isToday(d) ? 'bg-blue-50/40' : 'bg-white'}`}
+                      style={{ height: GRID_H }}>
+                      {/* Hour lines */}
+                      {HOURS.map((_, i) => (
+                        <div key={i} className="absolute left-0 right-0 border-b border-slate-100"
+                             style={{ top: i * HOUR_PX }} />
+                      ))}
+
+                      {/* Visit blocks */}
+                      {items.map((item, i) => {
+                        const { col, total } = overlaps[i]
+                        const top    = (item.startMin - DAY_START * 60) * (HOUR_PX / 60)
+                        const height = Math.max(item.visit.duracaoMin * (HOUR_PX / 60) - 3, 18)
+                        const lp     = (col / total) * 100
+                        const rp     = ((total - col - 1) / total) * 100
+                        const v      = item.visit
+                        const dt     = new Date(v.dataHora)
+                        const hh     = dt.getHours().toString().padStart(2, '0')
+                        const mm     = dt.getMinutes().toString().padStart(2, '0')
+                        const strike = v.status === 'CANCELADA' ? 'line-through' : ''
+                        const cls    = {
+                          AGENDADA:  'bg-blue-100  text-blue-800  border-l-blue-500',
+                          REALIZADA: 'bg-emerald-100 text-emerald-800 border-l-emerald-500',
+                          CANCELADA: 'bg-red-100   text-red-800   border-l-red-500 opacity-60',
+                        }[v.status]
+                        return (
+                          <div key={v.id}
+                            className={`absolute rounded border-l-[3px] px-1.5 py-0.5 cursor-pointer hover:brightness-95 transition-all overflow-hidden z-10 ${cls}`}
+                            style={{ top: top + 2, height, left: `calc(${lp}% + 3px)`, right: `calc(${rp}% + 3px)` }}>
+                            <div className={`text-[9px] font-bold tabular-nums leading-none`}>{hh}:{mm}</div>
+                            <div className={`text-[10px] font-semibold leading-tight truncate mt-0.5 ${strike}`}>{v.cliente.nome}</div>
+                            {height > 38 && (
+                              <div className={`text-[9px] opacity-70 truncate ${strike}`}>{v.imovel.titulo}</div>
+                            )}
+                          </div>
+                        )
+                      })}
+
+                      {/* Now line (today only) */}
+                      {isToday(d) && nowLinePx !== null && (
+                        <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: nowLinePx }}>
+                          <div className="absolute left-0 -top-1 w-2 h-2 rounded-full bg-red-500" />
+                          <div className="absolute left-2 right-0 top-0 h-0.5 bg-red-500 rounded-full" />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="px-5 py-2 border-t border-slate-100 bg-slate-50 flex items-center gap-4">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Status:</span>
+              {[
+                { label: 'Agendada',  bg: 'bg-blue-200',    border: 'border-l-blue-500'    },
+                { label: 'Realizada', bg: 'bg-emerald-200', border: 'border-l-emerald-500' },
+                { label: 'Cancelada', bg: 'bg-red-200',     border: 'border-l-red-500'     },
+              ].map(s => (
+                <span key={s.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className={`w-2.5 h-1.5 rounded-sm inline-block border-l-2 ${s.bg} ${s.border}`} />
+                  {s.label}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
       </Card>
 
-      {/* Ultimos matches + Atencao */}
+      {/* ── 4. Top Oportunidades ─────────────────────────────────────────────── */}
+      {(loading || topOportunidades.length > 0) && (
+        <Card className="rounded-2xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                <Star className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800 leading-none">Top Oportunidades</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Matches com maior lead score nas etapas iniciais — aja agora
+                </p>
+              </div>
+            </div>
+            <Link href="/dashboard/matches"
+              className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1">
+              Ver todos <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Carregando...</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {topOportunidades.map(m => {
+                const sc  = scoreLabel(m.leadScore)
+                const cor = m.etapa?.cor ?? '#6B7280'
+                return (
+                  <Link key={m.id} href="/dashboard/matches"
+                    className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-3">
+
+                    {/* Imóvel */}
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg className="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-800 leading-snug line-clamp-1">{m.imovel.titulo}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {m.imovel.cidade.nome} · {fmtPreco(m.imovel.preco)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Cliente + etapa */}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-slate-700 truncate">{m.perfil.cliente.nome}</p>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                            style={{ background: cor + '18', color: cor, outline: `1px solid ${cor}40` }}>
+                        {m.etapa.nome}
+                      </span>
+                    </div>
+
+                    {/* Score + CTA */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <ScoreRing score={m.leadScore} />
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground leading-none">
+                            Lead Score
+                          </p>
+                          <p className={`text-xs font-bold mt-0.5 ${sc.text}`}>{sc.label}</p>
+                        </div>
+                      </div>
+                      <Link href="/dashboard/agenda"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                        onClick={e => e.stopPropagation()}>
+                        <CalendarDays className="h-3 w-3" />
+                        Agendar
+                      </Link>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* ── 5. Bottom row: Precisam atenção + Funil ─────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* Meus ultimos matches */}
+        {/* Precisam de atenção (com Lead Score) */}
         <Card className="rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-sm font-semibold">Meus ultimos matches</CardTitle>
-            <Link
-              href="/dashboard/matches"
-              className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-            >
-              Ver todos <ArrowRight className="h-3.5 w-3.5" />
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-500" />
+              Precisam de atenção
+            </CardTitle>
+            <Link href="/dashboard/matches"
+              className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
+              Ver matches <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </CardHeader>
           <CardContent className="pt-0">
             {loading ? (
               <p className="text-sm text-muted-foreground py-8 text-center">Carregando...</p>
-            ) : matches.length === 0 ? (
-              <div className="text-center py-10">
-                <GitMerge className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">Nenhum match atribuido a voce ainda.</p>
+            ) : precisamAtencao.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
+                <p className="text-sm text-muted-foreground">
+                  {matches.length === 0 ? 'Nenhum match atribuído ainda.' : 'Todos os matches estão em dia!'}
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {matches.slice(0, 7).map((m) => {
+                {precisamAtencao.map(m => {
                   const cor = m.etapa?.cor ?? '#6B7280'
+                  const sc  = scoreLabel(m.leadScore)
                   return (
                     <div key={m.id} className="flex items-center justify-between py-2.5 gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{m.imovel.titulo}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {m.perfil.clienteNome} · {m.imovel.cidade.nome} · {formatDate(m.createdAt)}
+                          {m.perfil.cliente.nome} · {m.imovel.cidade.nome}
                         </p>
                       </div>
-                      <span
-                        className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: cor + '20', color: cor, outline: `1px solid ${cor}50` }}
-                      >
-                        {m.etapa?.nome ?? '-'}
-                      </span>
+                      <div className="shrink-0 flex flex-col items-end gap-1">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: cor + '20', color: cor, outline: `1px solid ${cor}50` }}>
+                          {m.etapa?.nome ?? '-'}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[10px] font-bold ${sc.text}`}>Score {m.leadScore}</span>
+                          <span className="text-[10px] text-slate-300">·</span>
+                          <span className="text-[10px] text-amber-600 font-medium">{daysSince(m.createdAt)}d</span>
+                        </div>
+                      </div>
                     </div>
                   )
                 })}
@@ -264,57 +854,31 @@ export default function CorretorDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Matches sem movimentacao */}
+        {/* Funil — barras horizontais */}
         <Card className="rounded-xl shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
-              Precisam de atencao
-            </CardTitle>
-            <Link
-              href="/dashboard/matches"
-              className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-            >
-              Ver matches <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">Meu funil</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {loading ? (
               <p className="text-sm text-muted-foreground py-8 text-center">Carregando...</p>
-            ) : semMovimentacao.length === 0 ? (
-              <div className="text-center py-10">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
-                <p className="text-sm text-muted-foreground">
-                  {matches.length === 0
-                    ? 'Nenhum match atribuido ainda.'
-                    : 'Todos os matches estao atualizados!'}
-                </p>
+            ) : funil.length === 0 || funil.every(f => f.n === 0) ? (
+              <div className="text-center py-8">
+                <GitMerge className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">Nenhum match atribuído ainda</p>
               </div>
             ) : (
-              <div className="divide-y divide-border">
-                {semMovimentacao.map((m) => {
-                  const days = daysSince(m.createdAt)
-                  const cor  = m.etapa?.cor ?? '#6B7280'
-                  return (
-                    <div key={m.id} className="flex items-center justify-between py-2.5 gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{m.imovel.titulo}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {m.perfil.clienteNome} · {m.imovel.cidade.nome}
-                        </p>
-                      </div>
-                      <div className="shrink-0 flex flex-col items-end gap-1">
-                        <span
-                          className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: cor + '20', color: cor, outline: `1px solid ${cor}50` }}
-                        >
-                          {m.etapa?.nome ?? '-'}
-                        </span>
-                        <span className="text-[10px] text-amber-600 font-medium">{days}d sem mover</span>
-                      </div>
+              <div className="space-y-2.5">
+                {funil.map(f => (
+                  <div key={f.nome} className="flex items-center gap-3">
+                    <span className="text-[11px] text-muted-foreground w-36 truncate shrink-0">{f.nome}</span>
+                    <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all"
+                           style={{ width: `${Math.round((f.n / funilMax) * 100)}%`, background: f.cor }} />
                     </div>
-                  )
-                })}
+                    <span className="text-xs font-bold text-slate-700 tabular-nums w-4 text-right">{f.n}</span>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
