@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { api } from '@/lib/api'
 import { formatWhatsappLink } from '@/lib/utils'
 import { LeadScore } from '@/components/ui/lead-score'
+import { AgendarVisitaModal, VisitaRapidaData } from '@/components/ui/agendar-visita-modal'
+import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -61,7 +63,8 @@ interface Etapa {
 
 interface Match {
   id: string
-  leadScore: number
+  leadScore:   number
+  corretorId:  string | null
   imovel: {
     id: string
     titulo: string
@@ -193,6 +196,9 @@ export default function ClienteDetalhePage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
 
+  const currentUser = getCurrentUser()
+  const isAdmin     = currentUser?.role === 'ADMIN'
+
   const [cliente,         setCliente]         = useState<Cliente | null>(null)
   const [matches,         setMatches]         = useState<Match[]>([])
   const [tipos,           setTipos]           = useState<Tipo[]>([])
@@ -203,6 +209,10 @@ export default function ClienteDetalhePage() {
   const [selectedPerfil,   setSelectedPerfil]   = useState<string | null>(null)
   const [movingMatch,      setMovingMatch]      = useState<string | null>(null)
   const [scoreDetailMatch, setScoreDetailMatch] = useState<Match | null>(null)
+
+  // Agendamento de visita
+  const [visitaRapida,  setVisitaRapida]  = useState<VisitaRapidaData | null>(null)
+  const [visitaLoading, setVisitaLoading] = useState(false)
 
   // Modal editar cliente
   const [editOpen,   setEditOpen]   = useState(false)
@@ -385,8 +395,13 @@ export default function ClienteDetalhePage() {
 
   async function handleMoverEtapa(matchId: string, etapaId: string) {
     setMovingMatch(matchId)
-    // atualiza otimisticamente na UI
     const novaEtapa = etapas.find(e => e.id === etapaId)
+    const isVisitaEtapa = novaEtapa?.nome.toLowerCase().includes('visita') ?? false
+
+    // indica carregamento do modal de visita antes da chamada à API
+    if (isVisitaEtapa) setVisitaLoading(true)
+
+    // atualiza otimisticamente na UI
     if (novaEtapa) {
       setMatches(prev => prev.map(m =>
         m.id === matchId ? { ...m, etapa: { id: novaEtapa.id, nome: novaEtapa.nome, cor: novaEtapa.cor } } : m
@@ -395,11 +410,30 @@ export default function ClienteDetalhePage() {
     try {
       await api.patch(`/matches/${matchId}/etapa`, { etapaId })
       toast.success('Etapa atualizada.')
+
+      // Se for etapa de visita, abre modal de agendamento rápido
+      if (isVisitaEtapa && cliente) {
+        const match = matches.find(m => m.id === matchId)
+        if (match) {
+          setVisitaRapida({
+            matchId,
+            imovelId:        match.imovel.id,
+            imovelTitulo:    match.imovel.titulo,
+            imovelLocal:     `${match.imovel.bairro}, ${match.imovel.cidade.nome}`,
+            clienteId:       cliente.id,
+            clienteNome:     cliente.nome,
+            clienteEmail:    cliente.email,
+            clienteWhatsapp: cliente.whatsapp ?? '',
+            corretorId:      match.corretorId,
+          })
+        }
+      }
     } catch {
       toast.error('Erro ao mover etapa')
       loadMatches() // reverte em caso de erro
     } finally {
       setMovingMatch(null)
+      setVisitaLoading(false)
     }
   }
 
@@ -994,6 +1028,16 @@ export default function ClienteDetalhePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Modal Agendar Visita ── */}
+      {visitaRapida && (
+        <AgendarVisitaModal
+          data={visitaRapida}
+          corretores={corretores}
+          isAdmin={isAdmin}
+          onClose={() => setVisitaRapida(null)}
+        />
+      )}
 
     </div>
   )
