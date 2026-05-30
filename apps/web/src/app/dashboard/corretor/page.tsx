@@ -73,14 +73,21 @@ function isToday(d: Date): boolean {
   return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear()
 }
 
+// Compara data local de d com data UTC do ISO ("2026-06-01T09:00:00.000Z" → "2026-06-01")
 function isSameDay(d: Date, iso: string): boolean {
-  const v = new Date(iso)
-  return d.getDate() === v.getDate() && d.getMonth() === v.getMonth() && d.getFullYear() === v.getFullYear()
+  const isoDate = iso.substring(0, 10)
+  const dDate   = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return dDate === isoDate
 }
 
+// Lê hora UTC diretamente da string — consistente com AgendarVisitaModal que appenda .000Z
 function fmtHM(iso: string): string {
-  const d = new Date(iso)
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  return iso.substring(11, 16)
+}
+
+// Minutos a partir de 00:00 UTC, usado para posicionar blocos no grid (evita fuso)
+function isoStartMin(iso: string): number {
+  return parseInt(iso.substring(11, 13)) * 60 + parseInt(iso.substring(14, 16))
 }
 
 function daysSince(iso: string): number {
@@ -177,14 +184,26 @@ export default function CorretorDashboardPage() {
     const mes = mesParam(now)
     loadedMonths.current.add(mes)
 
-    Promise.allSettled([
+    // Se a semana atual cruza a virada do mês, pré-carrega o mês adjacente
+    const monday = getMonday(now)
+    const lastWorkDay = new Date(monday); lastWorkDay.setDate(lastWorkDay.getDate() + NUM_DAYS - 1)
+    const mesExtra = lastWorkDay.getMonth() !== now.getMonth() ? mesParam(lastWorkDay) : null
+    if (mesExtra) loadedMonths.current.add(mesExtra)
+
+    const requests: Promise<any>[] = [
       api.get<Match[]>('/matches'),
       api.get<PipelineEtapa[]>('/pipeline/etapas'),
       api.get<Visita[]>(`/visitas?mes=${mes}`),
-    ]).then(([mr, er, vr]) => {
+      ...(mesExtra ? [api.get<Visita[]>(`/visitas?mes=${mesExtra}`)] : []),
+    ]
+
+    Promise.allSettled(requests).then(([mr, er, vr, vrExtra]) => {
       if (mr.status === 'fulfilled') setMatches(mr.value)
       if (er.status === 'fulfilled') setEtapas(er.value)
-      if (vr.status === 'fulfilled') setVisitas(vr.value)
+      const visitasBase  = vr.status === 'fulfilled' ? vr.value : []
+      const visitasExtra = vrExtra?.status === 'fulfilled' ? vrExtra.value : []
+      const byId = new Map([...visitasBase, ...visitasExtra].map(v => [v.id, v]))
+      setVisitas([...byId.values()])
       setLoading(false)
     })
   }, [router])
@@ -204,11 +223,14 @@ export default function CorretorDashboardPage() {
     } catch { /* silent */ }
   }, [])
 
+  // Navegação fora do setter — chamar async dentro de setter React não é confiável
   function prevWeek() {
-    setWeekMonday(m => { const d = new Date(m); d.setDate(d.getDate() - 7); ensureMonthLoaded(d); return d })
+    const d = new Date(weekMonday); d.setDate(d.getDate() - 7)
+    ensureMonthLoaded(d); setWeekMonday(new Date(d))
   }
   function nextWeek() {
-    setWeekMonday(m => { const d = new Date(m); d.setDate(d.getDate() + 7); ensureMonthLoaded(d); return d })
+    const d = new Date(weekMonday); d.setDate(d.getDate() + 7)
+    ensureMonthLoaded(d); setWeekMonday(new Date(d))
   }
   function goThisWeek() {
     const d = getMonday(new Date()); ensureMonthLoaded(d); setWeekMonday(d)
@@ -229,15 +251,17 @@ export default function CorretorDashboardPage() {
 
   // ── Derived: visitas KPIs ─────────────────────────────────────────────────
   const now           = new Date()
-  const todayVisitas  = visitas.filter(v => v.status === 'AGENDADA' && isToday(new Date(v.dataHora)))
+  const todayISODate  = now.toISOString().substring(0, 10)
+  const todayVisitas  = visitas.filter(v => v.status === 'AGENDADA' && v.dataHora.startsWith(todayISODate))
   const mesRealizadas = visitas.filter(v => v.status === 'REALIZADA').length
   const mesAgendadas  = visitas.filter(v => v.status === 'AGENDADA').length
   const mesFechados   = matches.filter(m => m.etapaId === etapaFechado?.id).length
   const conversaoMes  = mesRealizadas > 0 ? Math.round((mesFechados / mesRealizadas) * 100) : 0
 
   // ── Derived: next visit ────────────────────────────────────────────────────
+  const nowISO        = now.toISOString()
   const proximaVisita = visitas
-    .filter(v => v.status === 'AGENDADA' && new Date(v.dataHora) >= now)
+    .filter(v => v.status === 'AGENDADA' && v.dataHora >= nowISO)
     .sort((a, b) => a.dataHora.localeCompare(b.dataHora))[0]
 
   // ── Derived: top oportunidades ────────────────────────────────────────────
@@ -284,19 +308,18 @@ export default function CorretorDashboardPage() {
   const HOURS = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i)
   const GRID_H = (DAY_END - DAY_START) * HOUR_PX
 
-  // Now-line offset (null if outside business hours)
-  const nowMin     = now.getHours() * 60 + now.getMinutes()
-  const nowLinePx  = nowMin >= DAY_START * 60 && nowMin < DAY_END * 60
+  // Now-line em UTC — alinha com os blocos de visita que também usam hora UTC
+  const nowMin    = now.getUTCHours() * 60 + now.getUTCMinutes()
+  const nowLinePx = nowMin >= DAY_START * 60 && nowMin < DAY_END * 60
     ? (nowMin - DAY_START * 60) * (HOUR_PX / 60)
     : null
 
-  // ── Day view items ─────────────────────────────────────────────────────────
+  // ── Day view items — usa hora UTC da string para posicionamento ───────────
   const dayItems = visitas
-    .filter(v => isToday(new Date(v.dataHora)))
+    .filter(v => v.dataHora.startsWith(new Date().toISOString().substring(0, 10)))
     .sort((a, b) => a.dataHora.localeCompare(b.dataHora))
     .map(v => {
-      const dt = new Date(v.dataHora)
-      const startMin = dt.getHours() * 60 + dt.getMinutes()
+      const startMin = isoStartMin(v.dataHora)
       return { visit: v, startMin, endMin: startMin + v.duracaoMin }
     })
   const dayOverlaps = assignOverlapCols(dayItems)
@@ -307,8 +330,7 @@ export default function CorretorDashboardPage() {
       .filter(v => isSameDay(d, v.dataHora))
       .sort((a, b) => a.dataHora.localeCompare(b.dataHora))
       .map(v => {
-        const dt = new Date(v.dataHora)
-        const startMin = dt.getHours() * 60 + dt.getMinutes()
+        const startMin = isoStartMin(v.dataHora)
         return { visit: v, startMin, endMin: startMin + v.duracaoMin }
       })
   }
@@ -348,7 +370,7 @@ export default function CorretorDashboardPage() {
                 Próxima visita
               </p>
               <p className="text-lg font-bold leading-none">
-                {isToday(new Date(proximaVisita.dataHora)) ? 'Hoje' : 'Amanhã'} às {fmtHM(proximaVisita.dataHora)}
+                {proximaVisita.dataHora.startsWith(todayISODate) ? 'Hoje' : DIAS_SHORT[new Date(proximaVisita.dataHora.substring(0,10)+'T12:00:00Z').getUTCDay()]} às {fmtHM(proximaVisita.dataHora)}
               </p>
               <p className="text-sm text-blue-100 mt-0.5 truncate">{proximaVisita.cliente.nome}</p>
               <p className="text-xs text-blue-200 truncate">{proximaVisita.imovel.titulo}</p>
