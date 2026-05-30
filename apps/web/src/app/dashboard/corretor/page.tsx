@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   CalendarDays, ChevronLeft, ChevronRight,
-  GitMerge, CheckCircle2, Clock, Plus, Star, ArrowRight, TrendingUp, X, Trash2,
+  GitMerge, CheckCircle2, Clock, Star, ArrowRight, TrendingUp, X, Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -172,12 +172,13 @@ export default function CorretorDashboardPage() {
   // Agenda state
   const [agendaView,   setAgendaView]   = useState<'dia' | 'semana'>('dia')
   const [weekMonday,   setWeekMonday]   = useState<Date>(() => getMonday(new Date()))
+
   const loadedMonths  = useRef(new Set<string>())
   const dayScrollRef  = useRef<HTMLDivElement>(null)
   const weekScrollRef = useRef<HTMLDivElement>(null)
 
   // Modal editar visita
-  const [editingVisita, setEditingVisita] = useState<Visita | null>(null)
+  const [editVisita, setEditVisita] = useState<Visita | null>(null)
   const [editForm,      setEditForm]      = useState({ data: '', hora: '', duracaoMin: 60, status: 'AGENDADA' as Visita['status'], observacoes: '' })
   const [editSaving,    setEditSaving]    = useState(false)
   const [editDeleting,  setEditDeleting]  = useState(false)
@@ -345,7 +346,7 @@ export default function CorretorDashboardPage() {
 
   // ── Handlers: editar visita ────────────────────────────────────────────────
   function openEditVisita(v: Visita) {
-    setEditingVisita(v)
+    setEditVisita(v)
     setEditForm({
       data:        v.dataHora.substring(0, 10),
       hora:        v.dataHora.substring(11, 16),
@@ -355,11 +356,11 @@ export default function CorretorDashboardPage() {
     })
   }
 
-  async function handleSaveVisita() {
-    if (!editingVisita) return
+  async function handleSaveEdit() {
+    if (!editVisita) return
     setEditSaving(true)
     try {
-      const updated = await api.patch<Visita>(`/visitas/${editingVisita.id}`, {
+      const updated = await api.patch<Visita>(`/visitas/${editVisita.id}`, {
         dataHora:    `${editForm.data}T${editForm.hora}:00.000Z`,
         duracaoMin:  editForm.duracaoMin,
         status:      editForm.status,
@@ -367,7 +368,7 @@ export default function CorretorDashboardPage() {
       })
       setVisitas(prev => prev.map(v => v.id === updated.id ? updated : v))
       toast.success('Visita atualizada')
-      setEditingVisita(null)
+      setEditVisita(null)
     } catch {
       toast.error('Erro ao salvar visita')
     } finally {
@@ -376,13 +377,13 @@ export default function CorretorDashboardPage() {
   }
 
   async function handleDeleteVisita() {
-    if (!editingVisita) return
+    if (!editVisita) return
     setEditDeleting(true)
     try {
-      await api.delete(`/visitas/${editingVisita.id}`)
-      setVisitas(prev => prev.filter(v => v.id !== editingVisita.id))
+      await api.delete(`/visitas/${editVisita.id}`)
+      setVisitas(prev => prev.filter(v => v.id !== editVisita.id))
       toast.success('Visita removida')
-      setEditingVisita(null)
+      setEditVisita(null)
     } catch {
       toast.error('Erro ao remover visita')
     } finally {
@@ -580,11 +581,7 @@ export default function CorretorDashboardPage() {
               </div>
             )}
 
-            {/* Nova visita */}
-            <Link href="/dashboard/agenda" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-              <Plus className="h-3.5 w-3.5" />
-              Nova
-            </Link>
+
 
             {/* Agenda completa */}
             <Link href="/dashboard/agenda" className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline whitespace-nowrap">
@@ -966,9 +963,9 @@ export default function CorretorDashboardPage() {
       </div>
 
       {/* ── Modal: Editar Visita ──────────────────────────────────────────────── */}
-      {editingVisita && (
+      {editVisita && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-             onClick={() => setEditingVisita(null)}>
+             onClick={() => setEditVisita(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[92vh]"
                onClick={e => e.stopPropagation()}>
 
@@ -983,7 +980,7 @@ export default function CorretorDashboardPage() {
                                                     'bg-red-50 text-red-600 ring-1 ring-red-200'
                 }`}>{editForm.status === 'AGENDADA' ? 'Agendada' : editForm.status === 'REALIZADA' ? 'Realizada' : 'Cancelada'}</span>
               </div>
-              <button onClick={() => setEditingVisita(null)}
+              <button onClick={() => setEditVisita(null)}
                       className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
                 <X className="h-4 w-4" />
               </button>
@@ -997,14 +994,14 @@ export default function CorretorDashboardPage() {
                 <div className="flex items-start gap-2">
                   <svg className="h-3.5 w-3.5 text-indigo-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
                   <div>
-                    <p className="text-xs font-semibold text-slate-700">{editingVisita.imovel.titulo}</p>
-                    <p className="text-[11px] text-slate-400">{editingVisita.imovel.bairro} · {editingVisita.imovel.cidade.nome}</p>
+                    <p className="text-xs font-semibold text-slate-700">{editVisita.imovel.titulo}</p>
+                    <p className="text-[11px] text-slate-400">{editVisita.imovel.bairro} · {editVisita.imovel.cidade.nome}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <svg className="h-3.5 w-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  <p className="text-xs font-semibold text-slate-700">{editingVisita.cliente.nome}</p>
-                  <p className="text-[11px] text-slate-400">{editingVisita.cliente.email}</p>
+                  <p className="text-xs font-semibold text-slate-700">{editVisita.cliente.nome}</p>
+                  <p className="text-[11px] text-slate-400">{editVisita.cliente.email}</p>
                 </div>
               </div>
 
@@ -1069,11 +1066,11 @@ export default function CorretorDashboardPage() {
                 {editDeleting ? 'Removendo...' : 'Remover'}
               </button>
               <div className="flex items-center gap-2">
-                <button onClick={() => setEditingVisita(null)}
+                <button onClick={() => setEditVisita(null)}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors">
                   Cancelar
                 </button>
-                <button onClick={handleSaveVisita} disabled={editSaving}
+                <button onClick={handleSaveEdit} disabled={editSaving}
                   className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50">
                   {editSaving ? 'Salvando...' : 'Salvar'}
                 </button>
