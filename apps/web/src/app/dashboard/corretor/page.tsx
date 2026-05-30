@@ -3,13 +3,15 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   CalendarDays, ChevronLeft, ChevronRight,
-  GitMerge, CheckCircle2, Clock, Plus, Star, ArrowRight, TrendingUp,
+  GitMerge, CheckCircle2, Clock, Plus, Star, ArrowRight, TrendingUp, X, Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
+import { VISITA_TIME_SLOTS, VISITA_DURACAO } from '@/components/ui/agendar-visita-modal'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -174,6 +176,12 @@ export default function CorretorDashboardPage() {
   const dayScrollRef  = useRef<HTMLDivElement>(null)
   const weekScrollRef = useRef<HTMLDivElement>(null)
 
+  // Modal editar visita
+  const [editingVisita, setEditingVisita] = useState<Visita | null>(null)
+  const [editForm,      setEditForm]      = useState({ data: '', hora: '', duracaoMin: 60, status: 'AGENDADA' as Visita['status'], observacoes: '' })
+  const [editSaving,    setEditSaving]    = useState(false)
+  const [editDeleting,  setEditDeleting]  = useState(false)
+
   // ── Load initial data ──────────────────────────────────────────────────────
   useEffect(() => {
     const user = getCurrentUser()
@@ -333,6 +341,53 @@ export default function CorretorDashboardPage() {
         const startMin = isoStartMin(v.dataHora)
         return { visit: v, startMin, endMin: startMin + v.duracaoMin }
       })
+  }
+
+  // ── Handlers: editar visita ────────────────────────────────────────────────
+  function openEditVisita(v: Visita) {
+    setEditingVisita(v)
+    setEditForm({
+      data:        v.dataHora.substring(0, 10),
+      hora:        v.dataHora.substring(11, 16),
+      duracaoMin:  v.duracaoMin,
+      status:      v.status,
+      observacoes: v.observacoes ?? '',
+    })
+  }
+
+  async function handleSaveVisita() {
+    if (!editingVisita) return
+    setEditSaving(true)
+    try {
+      const updated = await api.patch<Visita>(`/visitas/${editingVisita.id}`, {
+        dataHora:    `${editForm.data}T${editForm.hora}:00.000Z`,
+        duracaoMin:  editForm.duracaoMin,
+        status:      editForm.status,
+        observacoes: editForm.observacoes || null,
+      })
+      setVisitas(prev => prev.map(v => v.id === updated.id ? updated : v))
+      toast.success('Visita atualizada')
+      setEditingVisita(null)
+    } catch {
+      toast.error('Erro ao salvar visita')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function handleDeleteVisita() {
+    if (!editingVisita) return
+    setEditDeleting(true)
+    try {
+      await api.delete(`/visitas/${editingVisita.id}`)
+      setVisitas(prev => prev.filter(v => v.id !== editingVisita.id))
+      toast.success('Visita removida')
+      setEditingVisita(null)
+    } catch {
+      toast.error('Erro ao remover visita')
+    } finally {
+      setEditDeleting(false)
+    }
   }
 
   const Sk = () => <span className="text-muted-foreground/30 text-3xl font-bold">-</span>
@@ -583,19 +638,21 @@ export default function CorretorDashboardPage() {
                       const height = Math.max(item.visit.duracaoMin * (HOUR_PX / 60) - 4, 26)
                       const leftPct  = (col / total) * 100
                       const rightPct = ((total - col - 1) / total) * 100
-                      const v  = item.visit
-                      const dt = new Date(v.dataHora)
-                      const hh = dt.getHours().toString().padStart(2, '0')
-                      const mm = dt.getMinutes().toString().padStart(2, '0')
-                      const et = new Date(dt.getTime() + v.duracaoMin * 60000)
+                      const v      = item.visit
+                      const hh     = v.dataHora.substring(11, 13)
+                      const mm     = v.dataHora.substring(14, 16)
+                      const endMin = item.startMin + v.duracaoMin
+                      const ehh    = Math.floor(endMin / 60).toString().padStart(2, '0')
+                      const emm    = (endMin % 60).toString().padStart(2, '0')
                       const strike = v.status === 'CANCELADA' ? 'line-through' : ''
                       return (
                         <div key={v.id}
                           className={`absolute rounded-lg border-l-[3px] px-2.5 py-1.5 cursor-pointer hover:brightness-95 transition-all overflow-hidden ${STATUS_VISIT[v.status]}`}
                           style={{ top: top + 2, height, left: `calc(${leftPct}% + 4px)`, right: `calc(${rightPct}% + 4px)` }}
+                          onClick={() => openEditVisita(v)}
                         >
                           <div className={`text-[11px] font-bold tabular-nums ${strike}`}>
-                            {hh}:{mm}–{et.getHours().toString().padStart(2, '0')}:{et.getMinutes().toString().padStart(2, '0')}
+                            {hh}:{mm}–{ehh}:{emm}
                             <span className="font-normal opacity-60 ml-1">{durStr(v.duracaoMin)}</span>
                           </div>
                           <div className={`text-xs font-bold mt-0.5 truncate ${strike}`}>{v.cliente.nome}</div>
@@ -683,10 +740,9 @@ export default function CorretorDashboardPage() {
                         const height = Math.max(item.visit.duracaoMin * (HOUR_PX / 60) - 3, 18)
                         const lp     = (col / total) * 100
                         const rp     = ((total - col - 1) / total) * 100
-                        const v      = item.visit
-                        const dt     = new Date(v.dataHora)
-                        const hh     = dt.getHours().toString().padStart(2, '0')
-                        const mm     = dt.getMinutes().toString().padStart(2, '0')
+                        const v   = item.visit
+                        const hh  = v.dataHora.substring(11, 13)
+                        const mm  = v.dataHora.substring(14, 16)
                         const strike = v.status === 'CANCELADA' ? 'line-through' : ''
                         const cls    = {
                           AGENDADA:  'bg-blue-100  text-blue-800  border-l-blue-500',
@@ -696,8 +752,9 @@ export default function CorretorDashboardPage() {
                         return (
                           <div key={v.id}
                             className={`absolute rounded border-l-[3px] px-1.5 py-0.5 cursor-pointer hover:brightness-95 transition-all overflow-hidden z-10 ${cls}`}
-                            style={{ top: top + 2, height, left: `calc(${lp}% + 3px)`, right: `calc(${rp}% + 3px)` }}>
-                            <div className={`text-[9px] font-bold tabular-nums leading-none`}>{hh}:{mm}</div>
+                            style={{ top: top + 2, height, left: `calc(${lp}% + 3px)`, right: `calc(${rp}% + 3px)` }}
+                            onClick={() => openEditVisita(v)}>
+                            <div className="text-[9px] font-bold tabular-nums leading-none">{hh}:{mm}</div>
                             <div className={`text-[10px] font-semibold leading-tight truncate mt-0.5 ${strike}`}>{v.cliente.nome}</div>
                             {height > 38 && (
                               <div className={`text-[9px] opacity-70 truncate ${strike}`}>{v.imovel.titulo}</div>
@@ -907,6 +964,125 @@ export default function CorretorDashboardPage() {
         </Card>
 
       </div>
+
+      {/* ── Modal: Editar Visita ──────────────────────────────────────────────── */}
+      {editingVisita && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+             onClick={() => setEditingVisita(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[92vh]"
+               onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-semibold text-slate-800">Editar Visita</span>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                  editForm.status === 'AGENDADA'  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' :
+                  editForm.status === 'REALIZADA' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' :
+                                                    'bg-red-50 text-red-600 ring-1 ring-red-200'
+                }`}>{editForm.status === 'AGENDADA' ? 'Agendada' : editForm.status === 'REALIZADA' ? 'Realizada' : 'Cancelada'}</span>
+              </div>
+              <button onClick={() => setEditingVisita(null)}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+
+              {/* Imóvel + Cliente (somente leitura) */}
+              <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <svg className="h-3.5 w-3.5 text-indigo-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700">{editingVisita.imovel.titulo}</p>
+                    <p className="text-[11px] text-slate-400">{editingVisita.imovel.bairro} · {editingVisita.imovel.cidade.nome}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="h-3.5 w-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <p className="text-xs font-semibold text-slate-700">{editingVisita.cliente.nome}</p>
+                  <p className="text-[11px] text-slate-400">{editingVisita.cliente.email}</p>
+                </div>
+              </div>
+
+              {/* Data + Hora */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Data *</label>
+                  <input type="date" value={editForm.data}
+                    onChange={e => setEditForm(f => ({ ...f, data: e.target.value }))}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Horário *</label>
+                  <Select value={editForm.hora} onValueChange={v => setEditForm(f => ({ ...f, hora: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {VISITA_TIME_SLOTS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Duração + Status */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Duração</label>
+                  <Select value={String(editForm.duracaoMin)} onValueChange={v => setEditForm(f => ({ ...f, duracaoMin: Number(v) }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {VISITA_DURACAO.map(o => <SelectItem key={o.v} value={String(o.v)}>{o.l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Status</label>
+                  <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v as Visita['status'] }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AGENDADA">Agendada</SelectItem>
+                      <SelectItem value="REALIZADA">Realizada</SelectItem>
+                      <SelectItem value="CANCELADA">Cancelada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Observações */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Observações</label>
+                <textarea rows={2} value={editForm.observacoes}
+                  onChange={e => setEditForm(f => ({ ...f, observacoes: e.target.value }))}
+                  placeholder="Notas sobre a visita..."
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-5 py-4 border-t bg-slate-50 rounded-b-2xl">
+              <button onClick={handleDeleteVisita} disabled={editDeleting}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+                <Trash2 className="h-4 w-4" />
+                {editDeleting ? 'Removendo...' : 'Remover'}
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setEditingVisita(null)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={handleSaveVisita} disabled={editSaving}
+                  className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50">
+                  {editSaving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
