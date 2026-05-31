@@ -66,6 +66,13 @@ export function AgendarVisitaModal({
         imovelId:    data.imovelId,
         clienteId:   data.clienteId,
         corretorId:  form.corretorId || null,
+        // NOTA BUG #1 (timezone): o sistema usa "UTC naïf" — armazena a hora
+        // digitada pelo usuário diretamente como UTC (ex: 09:00 → T09:00Z),
+        // sem aplicar o offset do fuso horário local. Todos os displays usam
+        // substring(11,16) para ler a hora UTC da string, criando consistência
+        // interna. Migrar para UTC real exige script de migração dos dados
+        // existentes e mudança de todos os displays para getHours() local.
+        // TODO: implementar junto com a migração de dados na Sprint B.
         dataHora:    `${form.data}T${form.hora}:00.000Z`,
         duracaoMin:  form.duracaoMin,
         status:      'AGENDADA',

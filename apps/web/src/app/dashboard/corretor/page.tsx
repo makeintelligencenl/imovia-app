@@ -176,6 +176,8 @@ export default function CorretorDashboardPage() {
   const loadedMonths  = useRef(new Set<string>())
   const dayScrollRef  = useRef<HTMLDivElement>(null)
   const weekScrollRef = useRef<HTMLDivElement>(null)
+  // BUG #8: feedback visual ao navegar para semana com mês ainda não carregado
+  const [weekLoading, setWeekLoading] = useState(false)
 
   // Modal editar visita
   const [editVisita, setEditVisita] = useState<Visita | null>(null)
@@ -222,6 +224,7 @@ export default function CorretorDashboardPage() {
     const mes = mesParam(d)
     if (loadedMonths.current.has(mes)) return
     loadedMonths.current.add(mes)
+    setWeekLoading(true) // BUG #8: mostra spinner enquanto carrega mês novo
     try {
       const data = await api.get<Visita[]>(`/visitas?mes=${mes}`)
       setVisitas(prev => {
@@ -230,6 +233,7 @@ export default function CorretorDashboardPage() {
         return [...byId.values()]
       })
     } catch { /* silent */ }
+    finally { setWeekLoading(false) }
   }, [])
 
   // Navegação fora do setter — chamar async dentro de setter React não é confiável
@@ -677,6 +681,13 @@ export default function CorretorDashboardPage() {
         {/* ── View: Semana ────────────────────────────────────────────────────── */}
         {agendaView === 'semana' && (
           <>
+            {/* BUG #8: overlay de loading ao navegar para semana de mês novo */}
+            {weekLoading && (
+              <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground border-b border-slate-100">
+                <div className="h-4 w-4 rounded-full border-2 border-blue-300 border-t-blue-600 animate-spin" />
+                <span className="text-sm">Carregando agenda...</span>
+              </div>
+            )}
             {/* Day headers */}
             <div className="grid border-b border-slate-100"
                  style={{ gridTemplateColumns: '48px repeat(6, 1fr)' }}>

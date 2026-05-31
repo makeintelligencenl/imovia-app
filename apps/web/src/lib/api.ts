@@ -58,9 +58,23 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     if (cached !== null) return cached
   }
 
-  // ── Mutações invalidam todo o cache para garantir dados frescos ──
+  // ── BUG #7: Invalidação cirúrgica por recurso, não nuclear.
+  // Antes: qualquer PATCH invalidava imóveis, matches, pipeline, etc.
+  // Agora: PATCH /matches/123/etapa invalida apenas /matches (e cascades mapeados).
   if (method !== 'GET') {
-    invalidateCache()
+    const resource = '/' + path.replace(/^\//, '').split(/[/?]/)[0]
+    const CASCADE: Record<string, string[]> = {
+      '/imoveis':   ['/imoveis', '/matches'],   // novo imóvel pode gerar matches
+      '/perfis':    ['/perfis',  '/matches'],   // novo perfil pode gerar matches
+      '/clientes':  ['/clientes', '/perfis'],
+      '/matches':   ['/matches'],
+      '/visitas':   ['/visitas'],
+      '/pipeline':  ['/pipeline', '/matches'],
+      '/users':     ['/users'],
+      '/auth':      [],                          // login: não há cache a limpar
+    }
+    const toInvalidate = CASCADE[resource] ?? [resource]
+    toInvalidate.forEach(r => invalidateCache(r))
   }
 
   const res = await fetch(`${API_BASE}${path}`, {

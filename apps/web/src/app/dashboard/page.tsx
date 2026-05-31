@@ -20,11 +20,12 @@ interface Imovel {
   tipo: { nome: string }
   cidade: { nome: string }
 }
-interface Perfil  { id: string; clienteNome: string }
+interface Perfil  { id: string; cliente: { nome: string } }
 interface Match {
   id: string; etapaId: string; etapa: PipelineEtapa; createdAt: string
   imovel: { id: string; titulo: string; preco: number; cidade: { nome: string } }
-  perfil: { clienteNome: string }
+  // BUG #2: a API retorna perfil.cliente.nome, não perfil.clienteNome
+  perfil: { cliente: { nome: string } }
 }
 
 const DONUT_COLORS = ['#3B82F6','#8B5CF6','#F59E0B','#10B981','#EF4444','#06B6D4','#EC4899']
@@ -393,7 +394,7 @@ export default function DashboardPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{m.imovel.titulo}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {m.perfil.clienteNome} · {m.imovel.cidade.nome} · {formatDate(m.createdAt)}
+                          {m.perfil.cliente?.nome ?? '—'} · {m.imovel.cidade.nome} · {formatDate(m.createdAt)}
                         </p>
                       </div>
                       <span

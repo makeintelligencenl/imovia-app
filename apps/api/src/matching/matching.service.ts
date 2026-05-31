@@ -97,36 +97,104 @@ export class MatchingService {
 
   // ─────────────────────────────────────────
   // Cria o match na primeira etapa do pipeline
+  // BUG #4: substitui findUnique+create pelo padrão create+catch para eliminar
+  // a race condition entre o check e o insert quando imóveis são cadastrados
+  // em paralelo pelo mesmo tenant.
   // ─────────────────────────────────────────
   private async gerarMatch(perfil: any, imovel: any, tenantId: string): Promise<boolean> {
-    const jaExiste = await this.prisma.match.findUnique({
-      where: { perfilId_imovelId: { perfilId: perfil.id, imovelId: imovel.id } },
-    })
-    if (jaExiste) return false
-
     const primeiraEtapa = await this.pipelineService.primeiraEtapa(tenantId)
 
-    const match = await this.prisma.match.create({
-      data: {
-        perfilId: perfil.id,
-        imovelId: imovel.id,
-        tenantId,
-        etapaId: primeiraEtapa.id,
-      },
+    try {
+      const match = await this.prisma.match.create({
+        data: {
+          perfilId: perfil.id,
+          imovelId: imovel.id,
+          tenantId,
+          etapaId: primeiraEtapa.id,
+        },
+      })
+
+      // Registra evento de criação no histórico
+      await this.prisma.matchHistorico.create({
+        data: {
+          matchId:        match.id,
+          tenantId,
+          tipo:           'MATCH_CRIADO',
+          etapaDestinoId: primeiraEtapa.id,
+        },
+      })
+
+      await this.notificacoesService.enviarNotificacaoMatch(perfil, imovel)
+      this.logger.log(`Match: perfil ${perfil.id} ↔ imóvel ${imovel.id} [etapa: ${primeiraEtapa.nome}]`)
+      return true
+    } catch (err: any) {
+      // P2002 = unique constraint violation → match já existe (criado por requisição concorrente)
+      if (err?.code === 'P2002') return false
+      throw err
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // BUG #5: Verifica matches existentes de um imóvel após atualização
+  // e move para "Encerrado" os que não satisfazem mais os critérios do perfil.
+  // Mantém histórico completo — não deleta nenhum match.
+  // ─────────────────────────────────────────
+  async invalidarMatchesIncompativeis(tenantId: string, imovelId: string): Promise<void> {
+    const imovel = await this.prisma.imovel.findFirst({
+      where: { id: imovelId, tenantId },
+      include: { cidade: true },
+    })
+    if (!imovel) return
+
+    // Usa a última etapa do pipeline como "Encerrado"
+    const etapaEncerrada = await this.prisma.pipelineEtapa.findFirst({
+      where: { tenantId, ativo: true },
+      orderBy: { ordem: 'desc' },
+    })
+    if (!etapaEncerrada) return
+
+    // Busca matches ainda não encerrados para este imóvel
+    const matches = await this.prisma.match.findMany({
+      where:   { imovelId, tenantId, etapaId: { not: etapaEncerrada.id } },
+      include: { perfil: { include: { tipos: true } } },
     })
 
-    // Registra evento de criação no histórico
-    await this.prisma.matchHistorico.create({
-      data: {
-        matchId:       match.id,
-        tenantId,
-        tipo:          'MATCH_CRIADO',
-        etapaDestinoId: primeiraEtapa.id,
-      },
-    })
+    const incompativeis = matches.filter(m => !this.isCompativel(m.perfil, imovel))
+    if (incompativeis.length === 0) return
 
-    await this.notificacoesService.enviarNotificacaoMatch(perfil, imovel)
-    this.logger.log(`Match: perfil ${perfil.id} ↔ imóvel ${imovel.id} [etapa: ${primeiraEtapa.nome}]`)
+    this.logger.log(`[Imóvel ${imovelId}] Desativando ${incompativeis.length} match(es) incompatíveis após atualização`)
+
+    // Usa $transaction para garantir atomicidade de update + histórico
+    await this.prisma.$transaction(
+      incompativeis.flatMap(m => [
+        this.prisma.match.update({
+          where: { id: m.id },
+          data:  { etapaId: etapaEncerrada.id },
+        }),
+        this.prisma.matchHistorico.create({
+          data: {
+            matchId:        m.id,
+            tenantId,
+            tipo:           'ETAPA_ALTERADA',
+            etapaOrigemId:  m.etapaId,
+            etapaDestinoId: etapaEncerrada.id,
+          },
+        }),
+      ]),
+    )
+  }
+
+  // Verifica se um perfil de busca ainda é compatível com um imóvel atualizado
+  private isCompativel(perfil: any, imovel: any): boolean {
+    if (perfil.finalidade !== imovel.finalidade) return false
+    if (!perfil.tipos.some((t: any) => t.id === imovel.tipoId)) return false
+    if (Number(perfil.precoMin) > Number(imovel.preco)) return false
+    if (Number(perfil.precoMax) < Number(imovel.preco)) return false
+    if (Number(perfil.areaMin) > Number(imovel.areaM2)) return false
+    if (!perfil.cidades.includes(imovel.cidade.nome)) return false
+    if (imovel.quartos && perfil.quartosMin && Number(perfil.quartosMin) > imovel.quartos) return false
+    const bairros = (perfil.bairros ?? []) as string[]
+    if (bairros.length > 0 && imovel.bairro && !bairros.includes(imovel.bairro)) return false
     return true
   }
 

@@ -66,6 +66,9 @@ export class ClientesService {
       include: {
         ...INCLUDE_DEFAULT,
         perfis: {
+          // BUG #3: sem where:{ ativo: true }, perfis desativados apareciam
+          // na tela de detalhe do cliente, inflando o contador de matches.
+          where:    { ativo: true },
           include:  { tipos: true, _count: { select: { matches: true } } },
           orderBy:  { createdAt: 'desc' },
         },
