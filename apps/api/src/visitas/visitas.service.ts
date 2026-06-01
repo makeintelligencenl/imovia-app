@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { VisitaStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateVisitaDto } from './dto/create-visita.dto'
 import { UpdateVisitaDto } from './dto/update-visita.dto'
@@ -23,7 +24,7 @@ export class VisitasService {
         corretorId,
         dataHora:   new Date(dto.dataHora),
         duracaoMin: dto.duracaoMin ?? 60,
-        status:     dto.status     ?? 'AGENDADA',
+        status:     (dto.status ?? 'AGENDADA') as VisitaStatus,
         observacoes: dto.observacoes ?? null,
       },
       include: {
