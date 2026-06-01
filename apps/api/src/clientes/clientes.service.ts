@@ -61,8 +61,10 @@ export class ClientesService {
   }
 
   async findById(tenantId: string, id: string) {
+    // BUG #3 FIX: adiciona `ativo: true` para impedir que clientes desativados
+    // (soft-deleted) sejam acessados por ID direto — consistente com findAll
     const c = await this.prisma.cliente.findFirst({
-      where: { id, tenantId },
+      where: { id, tenantId, ativo: true },
       include: {
         ...INCLUDE_DEFAULT,
         perfis: {

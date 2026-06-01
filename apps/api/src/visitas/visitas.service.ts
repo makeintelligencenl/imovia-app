@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { CreateVisitaDto } from './dto/create-visita.dto'
+import { UpdateVisitaDto } from './dto/update-visita.dto'
 
 const IMOVEL_SELECT   = { id: true, titulo: true, bairro: true, cidade: { select: { nome: true } } } as const
 const CORRETOR_SELECT = { id: true, name: true, email: true } as const
@@ -9,7 +11,7 @@ const CLIENTE_SELECT  = { id: true, nome: true, email: true, whatsapp: true, tel
 export class VisitasService {
   constructor(private prisma: PrismaService) {}
 
-  async criar(tenantId: string, userId: string, userRole: string, dto: any) {
+  async criar(tenantId: string, userId: string, userRole: string, dto: CreateVisitaDto) {
     const corretorId = userRole === 'CORRETOR' ? userId : (dto.corretorId ?? null)
 
     return this.prisma.visita.create({
@@ -79,17 +81,18 @@ export class VisitasService {
     return visita
   }
 
-  async atualizar(tenantId: string, id: string, dto: any) {
+  async atualizar(tenantId: string, id: string, dto: UpdateVisitaDto) {
     const visita = await this.prisma.visita.findFirst({ where: { id, tenantId } })
     if (!visita) throw new NotFoundException('Visita nao encontrada')
 
-    const data: any = {}
-    if (dto.imovelId   !== undefined) data.imovelId   = dto.imovelId
-    if (dto.clienteId  !== undefined) data.clienteId  = dto.clienteId
-    if (dto.corretorId !== undefined) data.corretorId = dto.corretorId ?? null
-    if (dto.dataHora   !== undefined) data.dataHora   = new Date(dto.dataHora)
-    if (dto.duracaoMin !== undefined) data.duracaoMin = dto.duracaoMin
-    if (dto.status     !== undefined) data.status     = dto.status
+    // Constrói o objeto de update apenas com os campos enviados (patch parcial)
+    const data: Record<string, unknown> = {}
+    if (dto.imovelId    !== undefined) data.imovelId    = dto.imovelId
+    if (dto.clienteId   !== undefined) data.clienteId   = dto.clienteId
+    if (dto.corretorId  !== undefined) data.corretorId  = dto.corretorId ?? null
+    if (dto.dataHora    !== undefined) data.dataHora    = new Date(dto.dataHora)
+    if (dto.duracaoMin  !== undefined) data.duracaoMin  = dto.duracaoMin
+    if (dto.status      !== undefined) data.status      = dto.status
     if (dto.observacoes !== undefined) data.observacoes = dto.observacoes ?? null
 
     return this.prisma.visita.update({

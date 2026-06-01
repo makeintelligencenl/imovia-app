@@ -2,6 +2,10 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Request, UseG
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { VisitasService } from './visitas.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+// BUG #2 FIX: DTOs tipados substituem `any` — ValidationPipe global agora valida
+// campos obrigatórios (imovelId, clienteId, dataHora) e rejeita campos extras
+import { CreateVisitaDto } from './dto/create-visita.dto'
+import { UpdateVisitaDto } from './dto/update-visita.dto'
 
 @ApiTags('visitas')
 @ApiBearerAuth()
@@ -12,7 +16,7 @@ export class VisitasController {
 
   @Post()
   @ApiOperation({ summary: 'Cria uma nova visita' })
-  criar(@Request() req: any, @Body() dto: any) {
+  criar(@Request() req: any, @Body() dto: CreateVisitaDto) {
     return this.visitasService.criar(req.user.tenantId, req.user.id, req.user.role, dto)
   }
 
@@ -34,7 +38,7 @@ export class VisitasController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza uma visita' })
-  atualizar(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+  atualizar(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateVisitaDto) {
     return this.visitasService.atualizar(req.user.tenantId, id, dto)
   }
 
