@@ -232,8 +232,15 @@ export default function CorretorDashboardPage() {
         data.forEach(v => byId.set(v.id, v))
         return [...byId.values()]
       })
-    } catch { /* silent */ }
-    finally { setWeekLoading(false) }
+    } catch {
+      // BUG #8 FIX: exibe toast de erro em vez de sumir silenciosamente —
+      // o usuário sabe que a agenda pode estar incompleta e pode tentar novamente.
+      toast.error('Erro ao carregar a agenda. Verifique sua conexão e tente novamente.')
+      // Reverte o mês do Set para permitir nova tentativa na próxima navegação
+      loadedMonths.current.delete(mes)
+    } finally {
+      setWeekLoading(false)
+    }
   }, [])
 
   // Navegação fora do setter — chamar async dentro de setter React não é confiável

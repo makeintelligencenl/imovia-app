@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common'
-import { Finalidade, StatusImovel } from '@prisma/client'
+import { Injectable, NotFoundException, InternalServerErrorException, Logger } from '@nestjs/common'
+import { Prisma, Finalidade, StatusImovel } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { MatchingService } from '../matching/matching.service'
 import { CreateImovelDto } from './dto/create-imovel.dto'
@@ -37,10 +37,17 @@ export class ImoveisService {
       include: { tipo: true, cidade: { include: { estado: true } } },
     })
 
-    // Fire-and-forget: dispara matching sem bloquear a resposta
+    // BUG #4 FIX: fire-and-forget com log completo (mensagem + stack) para facilitar
+    // diagnóstico quando o matching falha silenciosamente em produção.
+    // Mantém fire-and-forget intencional para não bloquear a resposta ao cliente.
     this.matchingService
       .executarMatching(tenantId, imovel.id)
-      .catch((err: Error) => this.logger.error(`Erro no matching do imóvel ${imovel.id}: ${err.message}`))
+      .catch((err: Error) =>
+        this.logger.error(
+          `[create] Matching falhou para imóvel ${imovel.id}: ${err.message}`,
+          err.stack,
+        ),
+      )
 
     return imovel
   }
@@ -80,17 +87,23 @@ export class ImoveisService {
       include: { tipo: true, cidade: { include: { estado: true } } },
     })
 
-    // BUG #5: Re-executa matching após atualização de preço/cidade/tipo/área.
-    // - Cria novos matches para perfis que agora são compatíveis
-    // - Move para "Encerrado" os matches que deixaram de ser compatíveis (sem deletar — mantém histórico)
+    // BUG #5 FIX: executa matching e invalidação SEQUENCIALMENTE via async IIFE.
+    // Antes: as duas chamadas disparavam em paralelo — invalidarMatchesIncompativeis
+    // podia encerrar matches recém-criados por executarMatching nessa mesma requisição.
+    // Agora: primeiro cria novos matches, depois encerra os incompatíveis.
     if (updated.status === 'DISPONIVEL') {
-      this.matchingService
-        .executarMatching(tenantId, id)
-        .catch((err: Error) => this.logger.error(`[update] Erro no matching do imóvel ${id}: ${err.message}`))
-
-      this.matchingService
-        .invalidarMatchesIncompativeis(tenantId, id)
-        .catch((err: Error) => this.logger.error(`[update] Erro ao invalidar matches do imóvel ${id}: ${err.message}`))
+      void (async () => {
+        try {
+          await this.matchingService.executarMatching(tenantId, id)
+        } catch (err: any) {
+          this.logger.error(`[update] Erro no matching do imóvel ${id}: ${err.message}`, err.stack)
+        }
+        try {
+          await this.matchingService.invalidarMatchesIncompativeis(tenantId, id)
+        } catch (err: any) {
+          this.logger.error(`[update] Erro ao invalidar matches do imóvel ${id}: ${err.message}`, err.stack)
+        }
+      })()
     }
 
     return updated
@@ -98,12 +111,27 @@ export class ImoveisService {
 
   async remove(tenantId: string, id: string) {
     await this.findById(tenantId, id)
-    // BUG #6: Envolve deleção de matches e do imóvel em uma única transação.
-    // Se o delete do imóvel falhar, os matches não são removidos (sem dados órfãos).
-    return this.prisma.$transaction(async (tx) => {
-      await tx.match.deleteMany({ where: { imovelId: id } })
-      return tx.imovel.delete({ where: { id } })
-    })
+    // BUG #6 FIX: captura erros da transação e lança exceções HTTP com mensagens
+    // descritivas em vez de deixar o erro Prisma vazar como 500 genérico.
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const matchCount = await tx.match.count({ where: { imovelId: id } })
+        await tx.match.deleteMany({ where: { imovelId: id } })
+        const deleted = await tx.imovel.delete({ where: { id } })
+        this.logger.log(`Imóvel ${id} removido — ${matchCount} match(es) excluídos junto`)
+        return deleted
+      })
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        // P2003 = FK constraint; P2025 = registro não encontrado na tx
+        const hint =
+          err.code === 'P2003'
+            ? 'Existem registros vinculados que impedem a exclusão.'
+            : `Código Prisma ${err.code}.`
+        throw new InternalServerErrorException(`Não foi possível remover o imóvel. ${hint}`)
+      }
+      throw err
+    }
   }
 
   async updateStatus(tenantId: string, id: string, status: string) {
