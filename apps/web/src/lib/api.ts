@@ -33,15 +33,14 @@ export function invalidateCache(prefix?: string) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function getToken() {
-  if (typeof window === 'undefined') return ''
-  return sessionStorage.getItem('token') || ''
-}
+// S1 FIX: getToken() removido — o JWT agora viaja no HttpOnly cookie automaticamente.
+// Não há mais acesso ao token via JavaScript (elimina vetor XSS).
 
 function redirectToLogin(reason: 'expired' | 'unauthorized' = 'expired') {
   clearSession()
   if (typeof window !== 'undefined') {
-    window.location.href = `/login?expired=1&reason=${reason}`
+    // S4 FIX: encodeURIComponent garante que o valor não quebre a URL nem injete parâmetros extras
+    window.location.href = `/login?expired=1&reason=${encodeURIComponent(reason)}`
   }
 }
 
@@ -58,31 +57,29 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     if (cached !== null) return cached
   }
 
-  // ── BUG #7: Invalidação cirúrgica por recurso, não nuclear.
-  // Antes: qualquer PATCH invalidava imóveis, matches, pipeline, etc.
-  // Agora: PATCH /matches/123/etapa invalida apenas /matches (e cascades mapeados).
+  // Invalidação cirúrgica por recurso
   if (method !== 'GET') {
     const resource = '/' + path.replace(/^\//, '').split(/[/?]/)[0]
     const CASCADE: Record<string, string[]> = {
-      '/imoveis':   ['/imoveis', '/matches'],   // novo imóvel pode gerar matches
-      '/perfis':    ['/perfis',  '/matches'],   // novo perfil pode gerar matches
+      '/imoveis':   ['/imoveis', '/matches'],
+      '/perfis':    ['/perfis',  '/matches'],
       '/clientes':  ['/clientes', '/perfis'],
       '/matches':   ['/matches'],
       '/visitas':   ['/visitas'],
       '/pipeline':  ['/pipeline', '/matches'],
       '/users':     ['/users'],
-      '/auth':      [],                          // login: não há cache a limpar
+      '/auth':      [],
     }
     const toInvalidate = CASCADE[resource] ?? [resource]
     toInvalidate.forEach(r => invalidateCache(r))
   }
 
+  // S1 FIX: `credentials: 'include'` envia o HttpOnly cookie em cada request.
+  // O header Authorization com Bearer foi removido — o browser gerencia o cookie.
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getToken()}`,
-    },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   })
 

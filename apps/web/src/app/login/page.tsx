@@ -32,13 +32,17 @@ function LoginForm() {
     const form = new FormData(e.currentTarget)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        // S1 FIX: `credentials: 'include'` faz o browser salvar o HttpOnly cookie
+        // que a API seta no response. O token não toca mais o JavaScript.
+        credentials: 'include',
         body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      sessionStorage.setItem('token', data.token)
+      // S1 FIX: token removido do sessionStorage — agora vive apenas no HttpOnly cookie.
+      // Apenas os dados não-sensíveis do usuário (id, name, role) ficam no sessionStorage.
       sessionStorage.setItem('user', JSON.stringify(data.user))
       // Registra atividade ao fazer login (inicia o contador)
       updateLastActivity()

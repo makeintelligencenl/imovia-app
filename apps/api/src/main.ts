@@ -1,10 +1,15 @@
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cookieParser = require('cookie-parser')
 import { AppModule } from './app.module'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+
+  // S1 FIX: habilita leitura de cookies — necessário para JWT em HttpOnly cookie
+  app.use(cookieParser())
 
   // Necessário para Railway/proxies: lê IP real do X-Forwarded-For
   app.getHttpAdapter().getInstance().set('trust proxy', 1)

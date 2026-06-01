@@ -35,9 +35,12 @@ export class ClientesService {
     role: string,
     search?: string,
   ) {
+    // S2 FIX: CORRETOR vê apenas os seus próprios clientes.
+    // Antes: `OR [corretorId: userId, corretorId: null]` expunha clientes
+    // não-atribuídos para qualquer CORRETOR do tenant (leads de outros corretores).
     const corretorFilter =
       role === 'CORRETOR'
-        ? { OR: [{ corretorId: userId }, { corretorId: null }] }
+        ? { corretorId: userId }
         : {}
 
     return this.prisma.cliente.findMany({
