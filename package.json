@@ -22,9 +22,5 @@
   "packageManager": "npm@11.9.0",
   "engines": {
     "node": ">=20.0.0"
-  },
-  "dependencies": {
-    "docx": "^9.7.1",
-    "puppeteer": "^25.1.0"
   }
 }
