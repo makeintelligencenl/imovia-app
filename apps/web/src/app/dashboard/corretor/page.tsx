@@ -37,6 +37,7 @@ interface Match {
   etapa: PipelineEtapa
   corretorId: string | null
   createdAt: string
+  updatedAt: string   // usado para saber quando o match foi movido para "Fechado"
   imovel: { id: string; titulo: string; preco: number; bairro: string; cidade: { nome: string } }
   perfil: { id: string; cliente: { id: string; nome: string } }
 }
@@ -275,8 +276,13 @@ export default function CorretorDashboardPage() {
   const todayVisitas  = visitas.filter(v => v.status === 'AGENDADA' && v.dataHora.startsWith(todayISODate))
   const mesRealizadas = visitas.filter(v => v.status === 'REALIZADA').length
   const mesAgendadas  = visitas.filter(v => v.status === 'AGENDADA').length
-  const mesFechados   = matches.filter(m => m.etapaId === etapaFechado?.id).length
-  const conversaoMes  = mesRealizadas > 0 ? Math.round((mesFechados / mesRealizadas) * 100) : 0
+  // Fechamentos do mês: matches na etapa "Fechado" cujo updatedAt cai no mês atual.
+  // Usa updatedAt porque é atualizado quando o match é movido de etapa — reflete
+  // a data real do fechamento, não a data de criação do match.
+  const mesAtualPrefix = mesParam(now) // ex: "2026-06"
+  const mesFechados = matches.filter(
+    m => m.etapaId === etapaFechado?.id && m.updatedAt.startsWith(mesAtualPrefix),
+  ).length
 
   // ── Derived: next visit ────────────────────────────────────────────────────
   const nowISO        = now.toISOString()
@@ -507,16 +513,16 @@ export default function CorretorDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Conversão do Mês */}
+        {/* Fechamentos do Mês */}
         <Card className="rounded-xl shadow-sm border-l-4 border-l-emerald-500">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Conversão do Mês</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : `${conversaoMes}%`}</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fechamentos no Mês</p>
+                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : mesFechados}</p>
                 {!loading && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {mesFechados} fechamentos · {mesRealizadas} visitas
+                    {mesFechados === 1 ? 'negócio fechado' : 'negócios fechados'} em {MESES_FULL[now.getMonth()]}
                   </p>
                 )}
               </div>
