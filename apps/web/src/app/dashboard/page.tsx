@@ -136,12 +136,17 @@ export default function DashboardPage() {
   const [apiError, setApiError] = useState(false)
 
   useEffect(() => {
-    // Corretores vao para o dashboard deles
+    // CORRETOR: redireciona imediatamente sem fazer nenhuma chamada à API.
+    // O segundo useEffect só roda se NÃO for redirecionado (role ADMIN).
     const user = getCurrentUser()
     if (user?.role === 'CORRETOR') { router.replace('/dashboard/corretor'); return }
   }, [router])
 
   useEffect(() => {
+    // Só executa para ADMIN — CORRETOR já foi redirecionado acima
+    const user = getCurrentUser()
+    if (user?.role === 'CORRETOR') return   // guard extra: evita requests se redirect ainda não processou
+
     const loadAll = async () => {
       setLoading(true); setApiError(false)
       let hasError = false
