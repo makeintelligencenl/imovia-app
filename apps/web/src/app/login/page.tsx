@@ -48,8 +48,19 @@ function LoginForm() {
       // Limpa todo o cache em memória para que dados de sessões anteriores
       // não sejam exibidos ao novo usuário (ex: dashboard de outro corretor)
       invalidateCache()
-      // Registra atividade ao fazer login (inicia o contador)
       updateLastActivity()
+
+      // Pré-aquece o cache ANTES de redirecionar: o cookie já está setado,
+      // então a requisição é autenticada. Quando o dashboard montar, os dados
+      // já estarão no cache — zero espera visível para o usuário.
+      if (data.user.role === 'CORRETOR') {
+        const mes = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+        await Promise.allSettled([
+          api.get('/matches/dashboard-summary'),
+          api.get(`/visitas?mes=${mes}`),
+        ])
+      }
+
       if (data.user.role === 'ADMIN' && data.user.tenantId === 'super-admin') {
         router.push('/admin')
       } else {
