@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateLastActivity } from '@/lib/session'
+import { invalidateCache } from '@/lib/api'
 
 function LoginForm() {
   const router  = useRouter()
@@ -44,6 +45,9 @@ function LoginForm() {
       // S1 FIX: token removido do sessionStorage — agora vive apenas no HttpOnly cookie.
       // Apenas os dados não-sensíveis do usuário (id, name, role) ficam no sessionStorage.
       sessionStorage.setItem('user', JSON.stringify(data.user))
+      // Limpa todo o cache em memória para que dados de sessões anteriores
+      // não sejam exibidos ao novo usuário (ex: dashboard de outro corretor)
+      invalidateCache()
       // Registra atividade ao fazer login (inicia o contador)
       updateLastActivity()
       if (data.user.role === 'ADMIN' && data.user.tenantId === 'super-admin') {
