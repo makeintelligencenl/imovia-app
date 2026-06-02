@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { Building2 } from 'lucide-react'
 
 type Msg =
   | { tipo: 'agente' | 'cliente'; texto: string }
@@ -7,7 +8,7 @@ type Msg =
 
 const SCRIPT: Array<Msg & { delay: number }> = [
   { tipo: 'agente',  texto: 'Olá! 👋 Sou o assistente virtual da BH Premium Imóveis. Como posso te chamar?', delay: 700 },
-  { tipo: 'cliente', texto: 'Oi, pode chamar de Fernanda', delay: 2000 },
+  { tipo: 'cliente', texto: 'Oi, meu nome é Fernanda', delay: 2000 },
   { tipo: 'agente',  texto: 'Prazer, Fernanda! Você busca um imóvel para comprar ou alugar?', delay: 1600 },
   { tipo: 'cliente', texto: 'Comprar', delay: 1800 },
   { tipo: 'agente',  texto: 'Que tipo de imóvel? Casa, apartamento ou sala comercial?', delay: 1400 },
@@ -81,8 +82,9 @@ export function ChatAnimado() {
         {/* header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10"
              style={{ background: '#1e3a6e' }}>
-          <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
-            IA
+          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+               style={{ background: '#0F172A' }}>
+            <Building2 className="w-4 h-4 text-blue-400" />
           </div>
           <div>
             <p className="text-sm font-semibold text-white leading-tight">Assistente ImovIA</p>
