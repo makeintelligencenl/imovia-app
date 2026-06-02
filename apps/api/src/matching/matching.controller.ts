@@ -11,6 +11,13 @@ import { RolesGuard, Roles } from '../auth/guards/roles.guard'
 export class MatchingController {
   constructor(private readonly matchingService: MatchingService) {}
 
+  // Deve vir antes de :id para não ser capturado como parâmetro
+  @Get('dashboard-summary')
+  @ApiOperation({ summary: 'Resumo otimizado para o dashboard do corretor (KPIs + top matches)' })
+  dashboardSummary(@Request() req: any) {
+    return this.matchingService.dashboardSummary(req.user.tenantId, req.user.id, req.user.role)
+  }
+
   @Get()
   @ApiOperation({ summary: 'Lista matches. CORRETOR vê apenas os seus' })
   findAll(

@@ -37,9 +37,18 @@ interface Match {
   etapa: PipelineEtapa
   corretorId: string | null
   createdAt: string
-  updatedAt: string   // usado para saber quando o match foi movido para "Fechado"
+  updatedAt: string
   imovel: { id: string; titulo: string; preco: number; bairro: string; cidade: { nome: string } }
   perfil: { id: string; cliente: { id: string; nome: string } }
+}
+
+interface DashboardSummary {
+  etapas:           PipelineEtapa[]
+  porEtapa:         { etapaId: string; count: number }[]
+  emNegociacao:     number
+  mesFechados:      number
+  topOportunidades: Match[]
+  precisamAtencao:  Match[]
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -164,11 +173,10 @@ const STATUS_VISIT: Record<Visita['status'], string> = {
 export default function CorretorDashboardPage() {
   const router = useRouter()
 
-  const [userName, setUserName] = useState('')
-  const [matches,  setMatches]  = useState<Match[]>([])
-  const [etapas,   setEtapas]   = useState<PipelineEtapa[]>([])
-  const [visitas,  setVisitas]  = useState<Visita[]>([])
-  const [loading,  setLoading]  = useState(true)
+  const [userName,  setUserName]  = useState('')
+  const [summary,   setSummary]   = useState<DashboardSummary | null>(null)
+  const [visitas,   setVisitas]   = useState<Visita[]>([])
+  const [loading,   setLoading]   = useState(true)
 
   // Agenda state
   const [agendaView,   setAgendaView]   = useState<'dia' | 'semana'>('dia')
@@ -202,16 +210,17 @@ export default function CorretorDashboardPage() {
     const mesExtra = lastWorkDay.getMonth() !== now.getMonth() ? mesParam(lastWorkDay) : null
     if (mesExtra) loadedMonths.current.add(mesExtra)
 
+    // PERF: substitui 3-4 requests pesados por 2 requests leves em paralelo.
+    // /matches/dashboard-summary entrega KPIs + top matches pré-computados no servidor
+    // em vez de retornar todos os matches com joins completos para o cliente processar.
     const requests: Promise<any>[] = [
-      api.get<Match[]>('/matches'),
-      api.get<PipelineEtapa[]>('/pipeline/etapas'),
+      api.get<DashboardSummary>('/matches/dashboard-summary'),
       api.get<Visita[]>(`/visitas?mes=${mes}`),
       ...(mesExtra ? [api.get<Visita[]>(`/visitas?mes=${mesExtra}`)] : []),
     ]
 
-    Promise.allSettled(requests).then(([mr, er, vr, vrExtra]) => {
-      if (mr.status === 'fulfilled') setMatches(mr.value)
-      if (er.status === 'fulfilled') setEtapas(er.value)
+    Promise.allSettled(requests).then(([sr, vr, vrExtra]) => {
+      if (sr.status === 'fulfilled') setSummary(sr.value)
       const visitasBase  = vr.status === 'fulfilled' ? vr.value : []
       const visitasExtra = vrExtra?.status === 'fulfilled' ? vrExtra.value : []
       const byId = new Map([...visitasBase, ...visitasExtra].map(v => [v.id, v]))
@@ -257,50 +266,37 @@ export default function CorretorDashboardPage() {
     const d = getMonday(new Date()); ensureMonthLoaded(d); setWeekMonday(d)
   }
 
-  // ── Derived: pipeline ──────────────────────────────────────────────────────
-  const etapaEncerrada = etapas.length >= 1 ? etapas[etapas.length - 1] : null
-  const etapaFechado   = etapas.length >= 2 ? etapas[etapas.length - 2] : null
+  // ── Derived: pipeline (vem do summary pré-computado no servidor) ──────────
+  const etapas         = summary?.etapas         ?? []
+  const etapaEncerrada = etapas.at(-1) ?? null
+  const etapaFechado   = etapas.at(-2) ?? null
+  const emNegociacao   = summary?.emNegociacao   ?? 0
+  const mesFechados    = summary?.mesFechados    ?? 0
+  const topOportunidades = summary?.topOportunidades ?? []
+  const precisamAtencao  = summary?.precisamAtencao  ?? []
 
-  const emNegociacao = matches.filter(
-    m => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id,
-  ).length
-
+  const porEtapa = summary?.porEtapa ?? []
   const funil = etapas
     .filter(e => e.id !== etapaEncerrada?.id)
-    .map(e => ({ nome: e.nome, cor: e.cor, n: matches.filter(m => m.etapaId === e.id).length }))
+    .map(e => ({
+      nome: e.nome,
+      cor:  e.cor,
+      n:    porEtapa.find(p => p.etapaId === e.id)?.count ?? 0,
+    }))
   const funilMax = Math.max(...funil.map(f => f.n), 1)
 
   // ── Derived: visitas KPIs ─────────────────────────────────────────────────
-  const now           = new Date()
-  const todayISODate  = now.toISOString().substring(0, 10)
-  const todayVisitas  = visitas.filter(v => v.status === 'AGENDADA' && v.dataHora.startsWith(todayISODate))
+  const now          = new Date()
+  const todayISODate = now.toISOString().substring(0, 10)
+  const todayVisitas = visitas.filter(v => v.status === 'AGENDADA' && v.dataHora.startsWith(todayISODate))
   const mesRealizadas = visitas.filter(v => v.status === 'REALIZADA').length
   const mesAgendadas  = visitas.filter(v => v.status === 'AGENDADA').length
-  // Fechamentos do mês: matches na etapa "Fechado" cujo updatedAt cai no mês atual.
-  // Usa updatedAt porque é atualizado quando o match é movido de etapa — reflete
-  // a data real do fechamento, não a data de criação do match.
-  const mesAtualPrefix = mesParam(now) // ex: "2026-06"
-  const mesFechados = matches.filter(
-    m => m.etapaId === etapaFechado?.id && m.updatedAt.startsWith(mesAtualPrefix),
-  ).length
 
   // ── Derived: next visit ────────────────────────────────────────────────────
   const nowISO        = now.toISOString()
   const proximaVisita = visitas
     .filter(v => v.status === 'AGENDADA' && v.dataHora >= nowISO)
     .sort((a, b) => a.dataHora.localeCompare(b.dataHora))[0]
-
-  // ── Derived: top oportunidades ────────────────────────────────────────────
-  const topOportunidades = [...matches]
-    .filter(m => m.leadScore >= 65 && m.etapa.ordem <= 2 && m.etapaId !== etapaEncerrada?.id)
-    .sort((a, b) => b.leadScore - a.leadScore)
-    .slice(0, 3)
-
-  // ── Derived: precisam atenção ─────────────────────────────────────────────
-  const precisamAtencao = matches
-    .filter(m => m.etapaId !== etapaEncerrada?.id && m.etapaId !== etapaFechado?.id && daysSince(m.createdAt) > 7)
-    .sort((a, b) => daysSince(b.createdAt) - daysSince(a.createdAt))
-    .slice(0, 5)
 
   // ── Derived: agenda ────────────────────────────────────────────────────────
   const weekDays = getWorkDays(weekMonday)
@@ -919,7 +915,7 @@ export default function CorretorDashboardPage() {
               <div className="text-center py-8">
                 <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
                 <p className="text-sm text-muted-foreground">
-                  {matches.length === 0 ? 'Nenhum match atribuído ainda.' : 'Todos os matches estão em dia!'}
+                  {emNegociacao === 0 ? 'Nenhum match atribuído ainda.' : 'Todos os matches estão em dia!'}
                 </p>
               </div>
             ) : (

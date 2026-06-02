@@ -388,6 +388,111 @@ export class MatchingService {
   // ─────────────────────────────────────────
   // Histórico de movimentação de um match
   // ─────────────────────────────────────────
+  // Dashboard summary — substitui GET /matches no dashboard do corretor.
+  // Em vez de retornar todos os matches com joins pesados, retorna apenas
+  // o que a página precisa: contagens por etapa + 3 oportunidades + 5 atenção.
+  // Reduz drasticamente o volume de dados e o número de queries.
+  // ─────────────────────────────────────────
+  async dashboardSummary(tenantId: string, userId: string, userRole: string) {
+    const corretorWhere = userRole === 'CORRETOR' ? { corretorId: userId } : {}
+    const baseWhere     = { tenantId, ...corretorWhere }
+
+    // Etapas do tenant (necessário para identificar "Fechado" e "Encerrado")
+    const etapas = await this.prisma.pipelineEtapa.findMany({
+      where: { tenantId, ativo: true },
+      orderBy: { ordem: 'asc' },
+      select: { id: true, nome: true, cor: true, ordem: true },
+    })
+
+    const etapaEncerrada = etapas.at(-1)
+    const etapaFechado   = etapas.at(-2)
+
+    // 1. Contagem por etapa (uma query leve, sem joins)
+    const contagensBruto = await this.prisma.match.groupBy({
+      by: ['etapaId'],
+      where: baseWhere,
+      _count: { _all: true },
+    })
+    const porEtapa = contagensBruto.map(r => ({ etapaId: r.etapaId, count: r._count._all }))
+
+    // 2. Total em negociação (excluindo Fechado e Encerrado)
+    const etapasExcluidas = [etapaFechado?.id, etapaEncerrada?.id].filter(Boolean) as string[]
+    const emNegociacao = porEtapa
+      .filter(r => !etapasExcluidas.includes(r.etapaId))
+      .reduce((sum, r) => sum + r.count, 0)
+
+    // 3. Fechamentos do mês (updatedAt no mês atual)
+    const now          = new Date()
+    const inicioMes    = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const mesFechados  = etapaFechado
+      ? await this.prisma.match.count({
+          where: { ...baseWhere, etapaId: etapaFechado.id, updatedAt: { gte: inicioMes } },
+        })
+      : 0
+
+    // Selects compartilhados para os dois grupos de matches
+    const MATCH_SELECT = {
+      id: true, etapaId: true, createdAt: true, updatedAt: true,
+      etapa:    { select: { id: true, nome: true, cor: true, ordem: true } },
+      imovel:   { select: { id: true, titulo: true, preco: true, bairro: true,
+                             cidade: { select: { nome: true } } } },
+      perfil:   { select: { id: true, cliente: { select: { id: true, nome: true } } } },
+    } as const
+
+    // 4. Candidatos a "Top Oportunidades": etapas iniciais, excluindo Encerrado/Fechado
+    const etapasIniciaisIds = etapas
+      .filter(e => e.ordem <= 2 && e.id !== etapaEncerrada?.id && e.id !== etapaFechado?.id)
+      .map(e => e.id)
+
+    const candidatosOportunidades = etapasIniciaisIds.length > 0
+      ? await this.prisma.match.findMany({
+          where: { ...baseWhere, etapaId: { in: etapasIniciaisIds } },
+          select: MATCH_SELECT,
+          orderBy: { createdAt: 'desc' },
+          take: 20, // score calculado em JS sobre amostra pequena
+        })
+      : []
+
+    // 5. Candidatos a "Precisam Atenção": mais de 7 dias, excluindo Encerrado/Fechado
+    const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const candidatosAtencao = await this.prisma.match.findMany({
+      where: {
+        ...baseWhere,
+        etapaId:   { notIn: etapasExcluidas },
+        createdAt: { lt: seteDiasAtras },
+      },
+      select: MATCH_SELECT,
+      orderBy: { createdAt: 'asc' }, // mais antigos primeiro
+      take: 20,
+    })
+
+    // Calcula leadScore apenas para os candidatos (max 40 matches, não centenas)
+    const scoreMatch = (m: any) => {
+      try { return this.computeLeadScore(m) } catch { return 50 }
+    }
+
+    const topOportunidades = candidatosOportunidades
+      .map(m => ({ ...m, leadScore: scoreMatch(m) }))
+      .filter(m => m.leadScore >= 65)
+      .sort((a, b) => b.leadScore - a.leadScore)
+      .slice(0, 3)
+
+    const precisamAtencao = candidatosAtencao
+      .map(m => ({ ...m, leadScore: scoreMatch(m) }))
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .slice(0, 5)
+
+    return {
+      etapas,
+      porEtapa,
+      emNegociacao,
+      mesFechados,
+      topOportunidades,
+      precisamAtencao,
+    }
+  }
+
+  // ─────────────────────────────────────────
   async listarHistorico(tenantId: string, matchId: string) {
     const match = await this.prisma.match.findFirst({ where: { id: matchId, tenantId } })
     if (!match) throw new NotFoundException('Match não encontrado')
