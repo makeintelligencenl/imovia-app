@@ -104,13 +104,17 @@ export class MatchingService {
   private async gerarMatch(perfil: any, imovel: any, tenantId: string): Promise<boolean> {
     const primeiraEtapa = await this.pipelineService.primeiraEtapa(tenantId)
 
+    // Calcula leadScore uma única vez na criação — persiste no banco
+    const leadScore = this.computeLeadScore({ perfil, imovel })
+
     try {
       const match = await this.prisma.match.create({
         data: {
           perfilId: perfil.id,
           imovelId: imovel.id,
           tenantId,
-          etapaId: primeiraEtapa.id,
+          etapaId:  primeiraEtapa.id,
+          leadScore,
         },
       })
 
@@ -182,6 +186,58 @@ export class MatchingService {
         }),
       ]),
     )
+  }
+
+  // ─────────────────────────────────────────
+  // Recalcula e persiste leadScore de todos os matches de um imóvel.
+  // Chamado após update de imóvel (preço, área, quartos, bairro).
+  // ─────────────────────────────────────────
+  async recalcularLeadScoresPorImovel(tenantId: string, imovelId: string): Promise<void> {
+    const imovel = await this.prisma.imovel.findFirst({
+      where:   { id: imovelId, tenantId },
+      include: { cidade: true },
+    })
+    if (!imovel) return
+
+    const matches = await this.prisma.match.findMany({
+      where:   { imovelId, tenantId },
+      include: { perfil: { include: { tipos: true } } },
+    })
+    if (matches.length === 0) return
+
+    await this.prisma.$transaction(
+      matches.map(m => {
+        const score = this.computeLeadScore({ perfil: m.perfil, imovel })
+        return this.prisma.match.update({ where: { id: m.id }, data: { leadScore: score } })
+      }),
+    )
+    this.logger.log(`[Imóvel ${imovelId}] leadScore recalculado para ${matches.length} match(es)`)
+  }
+
+  // ─────────────────────────────────────────
+  // Recalcula e persiste leadScore de todos os matches de um perfil.
+  // Chamado após update de perfil (preço, área, quartos, bairros, cidades).
+  // ─────────────────────────────────────────
+  async recalcularLeadScoresPorPerfil(tenantId: string, perfilId: string): Promise<void> {
+    const perfil = await this.prisma.perfilBusca.findFirst({
+      where:   { id: perfilId, tenantId },
+      include: { tipos: true },
+    })
+    if (!perfil) return
+
+    const matches = await this.prisma.match.findMany({
+      where:   { perfilId, tenantId },
+      include: { imovel: { include: { cidade: true } } },
+    })
+    if (matches.length === 0) return
+
+    await this.prisma.$transaction(
+      matches.map(m => {
+        const score = this.computeLeadScore({ perfil, imovel: m.imovel })
+        return this.prisma.match.update({ where: { id: m.id }, data: { leadScore: score } })
+      }),
+    )
+    this.logger.log(`[Perfil ${perfilId}] leadScore recalculado para ${matches.length} match(es)`)
   }
 
   // Verifica se um perfil de busca ainda é compatível com um imóvel atualizado
@@ -299,13 +355,8 @@ export class MatchingService {
       orderBy: { createdAt: 'desc' },
     })
 
-    return matches.map(m => {
-      let leadScore = 50
-      try { leadScore = this.computeLeadScore(m) } catch (e) {
-        this.logger.warn(`computeLeadScore falhou para match ${m.id}: ${e}`)
-      }
-      return { ...m, leadScore }
-    })
+    // leadScore já vem do banco — calculado na criação e recalculado em updates
+    return matches
   }
 
   // ─────────────────────────────────────────
@@ -430,57 +481,41 @@ export class MatchingService {
         })
       : 0
 
-    // Selects compartilhados para os dois grupos de matches
+    // leadScore vem do banco — sem cálculo em runtime
     const MATCH_SELECT = {
-      id: true, etapaId: true, createdAt: true, updatedAt: true,
+      id: true, etapaId: true, leadScore: true, createdAt: true, updatedAt: true,
       etapa:    { select: { id: true, nome: true, cor: true, ordem: true } },
       imovel:   { select: { id: true, titulo: true, preco: true, bairro: true,
                              cidade: { select: { nome: true } } } },
       perfil:   { select: { id: true, cliente: { select: { id: true, nome: true } } } },
     } as const
 
-    // 4. Candidatos a "Top Oportunidades": etapas iniciais, excluindo Encerrado/Fechado
+    // 4. "Top Oportunidades": etapas iniciais, leadScore >= 65, ordenado por score DESC
     const etapasIniciaisIds = etapas
       .filter(e => e.ordem <= 2 && e.id !== etapaEncerrada?.id && e.id !== etapaFechado?.id)
       .map(e => e.id)
 
-    const candidatosOportunidades = etapasIniciaisIds.length > 0
+    const topOportunidades = etapasIniciaisIds.length > 0
       ? await this.prisma.match.findMany({
-          where: { ...baseWhere, etapaId: { in: etapasIniciaisIds } },
-          select: MATCH_SELECT,
-          orderBy: { createdAt: 'desc' },
-          take: 20, // score calculado em JS sobre amostra pequena
+          where:   { ...baseWhere, etapaId: { in: etapasIniciaisIds }, leadScore: { gte: 65 } },
+          select:  MATCH_SELECT,
+          orderBy: { leadScore: 'desc' },
+          take:    3,
         })
       : []
 
-    // 5. Candidatos a "Precisam Atenção": mais de 7 dias, excluindo Encerrado/Fechado
+    // 5. "Precisam Atenção": mais de 7 dias, excluindo Encerrado/Fechado, mais antigos primeiro
     const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const candidatosAtencao = await this.prisma.match.findMany({
+    const precisamAtencao = await this.prisma.match.findMany({
       where: {
         ...baseWhere,
         etapaId:   { notIn: etapasExcluidas },
         createdAt: { lt: seteDiasAtras },
       },
-      select: MATCH_SELECT,
-      orderBy: { createdAt: 'asc' }, // mais antigos primeiro
-      take: 20,
+      select:  MATCH_SELECT,
+      orderBy: { createdAt: 'asc' },
+      take:    5,
     })
-
-    // Calcula leadScore apenas para os candidatos (max 40 matches, não centenas)
-    const scoreMatch = (m: any) => {
-      try { return this.computeLeadScore(m) } catch { return 50 }
-    }
-
-    const topOportunidades = candidatosOportunidades
-      .map(m => ({ ...m, leadScore: scoreMatch(m) }))
-      .filter(m => m.leadScore >= 65)
-      .sort((a, b) => b.leadScore - a.leadScore)
-      .slice(0, 3)
-
-    const precisamAtencao = candidatosAtencao
-      .map(m => ({ ...m, leadScore: scoreMatch(m) }))
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .slice(0, 5)
 
     return {
       etapas,

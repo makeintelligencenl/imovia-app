@@ -103,6 +103,12 @@ export class ImoveisService {
         } catch (err: any) {
           this.logger.error(`[update] Erro ao invalidar matches do imóvel ${id}: ${err.message}`, err.stack)
         }
+        // Recalcula leadScore pois preço/área/bairro/quartos podem ter mudado
+        try {
+          await this.matchingService.recalcularLeadScoresPorImovel(tenantId, id)
+        } catch (err: any) {
+          this.logger.error(`[update] Erro ao recalcular leadScore do imóvel ${id}: ${err.message}`, err.stack)
+        }
       })()
     }
 

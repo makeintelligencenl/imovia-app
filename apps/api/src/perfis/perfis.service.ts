@@ -84,7 +84,7 @@ export class PerfisService {
   async update(tenantId: string, id: string, dto: Partial<CreatePerfilDto>) {
     await this.findById(tenantId, id)
     const { tiposIds, finalidade, ...rest } = dto
-    return this.prisma.perfilBusca.update({
+    const updated = await this.prisma.perfilBusca.update({
       where: { id },
       data: {
         ...rest,
@@ -95,6 +95,15 @@ export class PerfisService {
       },
       include: INCLUDE_DEFAULT,
     })
+
+    // Recalcula leadScore pois preço/área/bairros/cidades/quartos podem ter mudado
+    this.matchingService
+      .recalcularLeadScoresPorPerfil(tenantId, id)
+      .catch((err: Error) =>
+        this.logger.error(`[update] Erro ao recalcular leadScore do perfil ${id}: ${err.message}`, err.stack),
+      )
+
+    return updated
   }
 
   async remove(tenantId: string, id: string) {
