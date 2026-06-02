@@ -33,14 +33,20 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     router.replace('/login?expired=1')
   }, [router])
 
-  // ── Warmup: pré-busca dados comuns para popular o cache e acordar a API ──
+  // ── Warmup: pré-busca os dados do dashboard para acordar a API e popular o cache ──
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null
-    if (!token) return
-    // Fire-and-forget — erros são ignorados; apenas aquece o servidor e popula o cache
+    // S1 FIX: usa 'user' em vez de 'token' (token agora vive em HttpOnly cookie)
+    const user = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null
+    if (!user) return
+
+    const now = new Date()
+    const mes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+    // Fire-and-forget — aquece o servidor e popula o cache com os endpoints
+    // que o dashboard do corretor vai precisar imediatamente
     Promise.allSettled([
-      api.get('/pipeline/etapas'),
-      api.get('/tipos'),
+      api.get('/matches/dashboard-summary'),
+      api.get(`/visitas?mes=${mes}`),
     ])
   }, []) // apenas uma vez no mount do dashboard
 
@@ -63,8 +69,9 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     const interval = setInterval(() => {
       if (typeof window === 'undefined') return
 
-      const token = sessionStorage.getItem('token')
-      if (!token) return   // não está logado, nada a fazer
+      // S1 FIX: verifica 'user' em vez de 'token' (token vive em HttpOnly cookie)
+      const user = sessionStorage.getItem('user')
+      if (!user) return   // não está logado, nada a fazer
 
       if (isSessionExpired()) {
         handleExpiry()

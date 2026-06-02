@@ -455,67 +455,65 @@ export class MatchingService {
       select: { id: true, nome: true, cor: true, ordem: true },
     })
 
-    const etapaEncerrada = etapas.at(-1)
-    const etapaFechado   = etapas.at(-2)
-
-    // 1. Contagem por etapa (uma query leve, sem joins)
-    const contagensBruto = await this.prisma.match.groupBy({
-      by: ['etapaId'],
-      where: baseWhere,
-      _count: { _all: true },
-    })
-    const porEtapa = contagensBruto.map(r => ({ etapaId: r.etapaId, count: r._count._all }))
-
-    // 2. Total em negociação (excluindo Fechado e Encerrado)
+    const etapaEncerrada  = etapas.at(-1)
+    const etapaFechado    = etapas.at(-2)
     const etapasExcluidas = [etapaFechado?.id, etapaEncerrada?.id].filter(Boolean) as string[]
-    const emNegociacao = porEtapa
-      .filter(r => !etapasExcluidas.includes(r.etapaId))
-      .reduce((sum, r) => sum + r.count, 0)
-
-    // 3. Fechamentos do mês (updatedAt no mês atual)
-    const now          = new Date()
-    const inicioMes    = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-    const mesFechados  = etapaFechado
-      ? await this.prisma.match.count({
-          where: { ...baseWhere, etapaId: etapaFechado.id, updatedAt: { gte: inicioMes } },
-        })
-      : 0
-
-    // leadScore vem do banco — sem cálculo em runtime
-    const MATCH_SELECT = {
-      id: true, etapaId: true, leadScore: true, createdAt: true, updatedAt: true,
-      etapa:    { select: { id: true, nome: true, cor: true, ordem: true } },
-      imovel:   { select: { id: true, titulo: true, preco: true, bairro: true,
-                             cidade: { select: { nome: true } } } },
-      perfil:   { select: { id: true, cliente: { select: { id: true, nome: true } } } },
-    } as const
-
-    // 4. "Top Oportunidades": etapas iniciais, leadScore >= 65, ordenado por score DESC
     const etapasIniciaisIds = etapas
       .filter(e => e.ordem <= 2 && e.id !== etapaEncerrada?.id && e.id !== etapaFechado?.id)
       .map(e => e.id)
 
-    const topOportunidades = etapasIniciaisIds.length > 0
-      ? await this.prisma.match.findMany({
-          where:   { ...baseWhere, etapaId: { in: etapasIniciaisIds }, leadScore: { gte: 65 } },
-          select:  MATCH_SELECT,
-          orderBy: { leadScore: 'desc' },
-          take:    3,
-        })
-      : []
-
-    // 5. "Precisam Atenção": mais de 7 dias, excluindo Encerrado/Fechado, mais antigos primeiro
+    const now        = new Date()
+    const inicioMes  = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
     const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const precisamAtencao = await this.prisma.match.findMany({
-      where: {
-        ...baseWhere,
-        etapaId:   { notIn: etapasExcluidas },
-        createdAt: { lt: seteDiasAtras },
-      },
-      select:  MATCH_SELECT,
-      orderBy: { createdAt: 'asc' },
-      take:    5,
-    })
+
+    const MATCH_SELECT = {
+      id: true, etapaId: true, leadScore: true, createdAt: true, updatedAt: true,
+      etapa:  { select: { id: true, nome: true, cor: true, ordem: true } },
+      imovel: { select: { id: true, titulo: true, preco: true, bairro: true,
+                           cidade: { select: { nome: true } } } },
+      perfil: { select: { id: true, cliente: { select: { id: true, nome: true } } } },
+    } as const
+
+    // Queries 1–4 em paralelo — todas dependem apenas das etapas (já carregadas)
+    const [contagensBruto, mesFechados, topOportunidades, precisamAtencao] = await Promise.all([
+
+      // 1. Contagem por etapa para o funil
+      this.prisma.match.groupBy({
+        by: ['etapaId'],
+        where: baseWhere,
+        _count: { _all: true },
+      }),
+
+      // 2. Fechamentos do mês corrente
+      etapaFechado
+        ? this.prisma.match.count({
+            where: { ...baseWhere, etapaId: etapaFechado.id, updatedAt: { gte: inicioMes } },
+          })
+        : Promise.resolve(0),
+
+      // 3. Top Oportunidades: etapas iniciais, leadScore >= 65
+      etapasIniciaisIds.length > 0
+        ? this.prisma.match.findMany({
+            where:   { ...baseWhere, etapaId: { in: etapasIniciaisIds }, leadScore: { gte: 65 } },
+            select:  MATCH_SELECT,
+            orderBy: { leadScore: 'desc' },
+            take:    3,
+          })
+        : Promise.resolve([]),
+
+      // 4. Precisam Atenção: mais de 7 dias sem mover
+      this.prisma.match.findMany({
+        where:   { ...baseWhere, etapaId: { notIn: etapasExcluidas }, createdAt: { lt: seteDiasAtras } },
+        select:  MATCH_SELECT,
+        orderBy: { createdAt: 'asc' },
+        take:    5,
+      }),
+    ])
+
+    const porEtapa = contagensBruto.map(r => ({ etapaId: r.etapaId, count: r._count._all }))
+    const emNegociacao = porEtapa
+      .filter(r => !etapasExcluidas.includes(r.etapaId))
+      .reduce((sum, r) => sum + r.count, 0)
 
     return {
       etapas,
