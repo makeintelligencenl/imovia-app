@@ -177,11 +177,11 @@ export class FinanceiroService {
       // 2. Registra histórico
       await tx.matchHistorico.create({
         data: {
-          matchId:  dto.matchId,
+          matchId:        dto.matchId,
           tenantId,
-          tipo:     'ETAPA_ALTERADA',
+          tipo:           'ETAPA_ALTERADA',
           userId,
-          payload:  { etapaId: dto.etapaId },
+          etapaDestinoId: dto.etapaId,
         },
       })
 
