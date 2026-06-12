@@ -29,6 +29,7 @@ import { formatCurrency, formatWhatsappLink } from '@/lib/utils'
 import { getCurrentUser } from '@/lib/auth'
 import { LeadScore } from '@/components/ui/lead-score'
 import { AgendarVisitaModal, VisitaRapidaData } from '@/components/ui/agendar-visita-modal'
+import { FecharVendaModal, FecharVendaData } from '@/components/ui/fechar-venda-modal'
 
 interface PipelineEtapa {
   id: string
@@ -537,6 +538,7 @@ function MatchesContent() {
   const [historicoMatchId, setHistoricoMatchId] = useState<string | null>(null)
   const [visitaRapida,    setVisitaRapida]    = useState<VisitaRapidaData | null>(null)
   const [visitaLoading,   setVisitaLoading]   = useState(false)
+  const [fecharVenda,     setFecharVenda]     = useState<FecharVendaData | null>(null)
 
   const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
@@ -596,6 +598,14 @@ function MatchesContent() {
     if (!oldMatch) return
     const etapa = etapas.find((e) => e.id === etapaId)
     if (!etapa) return
+
+    // Penúltima etapa = Fechado; intercepta para mostrar modal de comissão
+    const etapasSorted = [...etapas].sort((a, b) => a.ordem - b.ordem)
+    const isFechado = etapasSorted.at(-2)?.id === etapaId
+    if (isFechado && oldMatch.imovel.finalidade === 'VENDA') {
+      setFecharVenda({ matchId, etapaId })
+      return
+    }
 
     const isVisitaEtapa = etapa.nome.toLowerCase().includes('visita')
 
@@ -712,6 +722,18 @@ function MatchesContent() {
           onClose={() => setVisitaRapida(null)}
         />
       )}
+
+      {/* Modal de fechamento de venda */}
+      <FecharVendaModal
+        data={fecharVenda}
+        onConfirm={(matchId, etapaId) => {
+          const etapa = etapas.find((e) => e.id === etapaId)
+          if (etapa) setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, etapaId, etapa } : m))
+          setFecharVenda(null)
+          toast.success('Negociação fechada e comissões registradas.')
+        }}
+        onCancel={() => setFecharVenda(null)}
+      />
 
       {/* Cabecalho */}
       <div className="flex items-center justify-between">

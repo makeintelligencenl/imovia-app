@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Query, Body, Request, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Param, Query, Body, Request, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { FinanceiroService } from './financeiro.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -28,6 +28,29 @@ export class FinanceiroController {
     @Body() dto: { percentualTotal: number; splitImobiliaria: number; splitCorretor: number },
   ) {
     return this.financeiroService.updateConfig(req.user.tenantId, dto)
+  }
+
+  @Get('fechamento/:matchId')
+  @ApiOperation({ summary: 'Dados pré-preenchidos para o modal de fechamento de venda' })
+  dadosFechamento(@Request() req: any, @Param('matchId') matchId: string) {
+    return this.financeiroService.dadosFechamento(req.user.tenantId, matchId)
+  }
+
+  @Post('fechar-venda')
+  @ApiOperation({ summary: 'Registra etapa Fechado + comissões confirmadas pelo usuário' })
+  fecharVenda(
+    @Request() req: any,
+    @Body() dto: {
+      matchId:          string
+      etapaId:          string
+      valorImovel:      number
+      percImobiliaria:  number
+      valorImobiliaria: number
+      percCorretor:     number
+      valorCorretor:    number
+    },
+  ) {
+    return this.financeiroService.fecharVenda(req.user.tenantId, req.user.sub, dto)
   }
 
   @Get('resumo')

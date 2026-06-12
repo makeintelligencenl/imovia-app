@@ -48,55 +48,175 @@ export class FinanceiroService {
   // Chamado por MatchingService.moverEtapa quando a etapa destino é "Fechado"
   // e o imóvel tem finalidade VENDA.
 
-  async gerarComissoesVenda(tenantId: string, matchId: string) {
+  // Retorna dados do match + config do tenant para pré-preencher o modal de fechamento
+  async dadosFechamento(tenantId: string, matchId: string) {
+    const [match, config] = await Promise.all([
+      this.prisma.match.findFirst({
+        where: { id: matchId, tenantId },
+        include: {
+          imovel:   { select: { id: true, titulo: true, preco: true, finalidade: true } },
+          corretor: { select: { id: true, name: true } },
+        },
+      }),
+      this.getConfig(tenantId),
+    ])
+    if (!match) throw new NotFoundException('Match não encontrado')
+
+    const valorImovel   = Number(match.imovel.preco)
+    const percImob      = config.percentualTotal * (config.splitImobiliaria / 100)
+    const percCorretor  = config.percentualTotal * (config.splitCorretor    / 100)
+
+    return {
+      imovelId:        match.imovelId,
+      imovelTitulo:    match.imovel.titulo,
+      imovelFinalidade: match.imovel.finalidade,
+      corretorId:      match.corretorId,
+      corretorNome:    match.corretor?.name ?? null,
+      valorImovel,
+      comissao: {
+        percentualTotal:   config.percentualTotal,
+        percImobiliaria:   percImob,
+        percCorretor:      percCorretor,
+        valorImobiliaria:  valorImovel * percImob    / 100,
+        valorCorretor:     valorImovel * percCorretor / 100,
+      },
+    }
+  }
+
+  async gerarComissoesVenda(
+    tenantId: string,
+    matchId:  string,
+    valores?: {
+      valorImovel:      number
+      percImobiliaria:  number
+      valorImobiliaria: number
+      percCorretor:     number
+      valorCorretor:    number
+    },
+  ) {
     const match = await this.prisma.match.findFirst({
       where: { id: matchId, tenantId },
-      include: {
-        imovel: { select: { id: true, preco: true, finalidade: true } },
-      },
+      include: { imovel: { select: { id: true, preco: true, finalidade: true } } },
     })
     if (!match || match.imovel.finalidade !== 'VENDA') return
 
-    // Idempotente: não duplica se já existir
-    const existente = await this.prisma.comissaoVenda.findFirst({
-      where: { matchId, tipo: 'IMOBILIARIA' },
-    })
-    if (existente) return
+    // Idempotente: apaga registros anteriores se valores foram recalculados
+    await this.prisma.comissaoVenda.deleteMany({ where: { matchId, tenantId } })
 
-    const config = await this.getConfig(tenantId)
-    const valorImovel    = Number(match.imovel.preco)
-    const valorTotal     = valorImovel * (config.percentualTotal / 100)
-    const valorImob      = valorTotal  * (config.splitImobiliaria / 100)
-    const valorCorretor  = valorTotal  * (config.splitCorretor    / 100)
-    const percImob       = config.percentualTotal * (config.splitImobiliaria / 100)
-    const percCorretor   = config.percentualTotal * (config.splitCorretor    / 100)
+    let valorImovel: number
+    let percImob:    number
+    let valImob:     number
+    let percCorr:    number
+    let valCorr:     number
+
+    if (valores) {
+      valorImovel = valores.valorImovel
+      percImob    = valores.percImobiliaria
+      valImob     = valores.valorImobiliaria
+      percCorr    = valores.percCorretor
+      valCorr     = valores.valorCorretor
+    } else {
+      const config = await this.getConfig(tenantId)
+      valorImovel  = Number(match.imovel.preco)
+      percImob     = config.percentualTotal * (config.splitImobiliaria / 100)
+      percCorr     = config.percentualTotal * (config.splitCorretor    / 100)
+      valImob      = valorImovel * percImob  / 100
+      valCorr      = valorImovel * percCorr  / 100
+    }
 
     await this.prisma.$transaction([
       this.prisma.comissaoVenda.create({
         data: {
-          tenantId,
-          matchId,
+          tenantId, matchId,
           imovelId:   match.imovelId,
           corretorId: match.corretorId ?? null,
           tipo:       'IMOBILIARIA',
-          valorImovel,
-          percentual: percImob,
-          valor:      valorImob,
+          valorImovel, percentual: percImob, valor: valImob,
         },
       }),
       this.prisma.comissaoVenda.create({
         data: {
-          tenantId,
-          matchId,
+          tenantId, matchId,
           imovelId:   match.imovelId,
           corretorId: match.corretorId ?? null,
           tipo:       'CORRETOR',
-          valorImovel,
-          percentual: percCorretor,
-          valor:      valorCorretor,
+          valorImovel, percentual: percCorr, valor: valCorr,
         },
       }),
     ])
+  }
+
+  // ── Fechar venda: move etapa + grava comissões em uma operação ─────────────
+
+  async fecharVenda(
+    tenantId: string,
+    userId:   string,
+    dto: {
+      matchId:          string
+      etapaId:          string
+      valorImovel:      number
+      percImobiliaria:  number
+      valorImobiliaria: number
+      percCorretor:     number
+      valorCorretor:    number
+    },
+  ) {
+    const match = await this.prisma.match.findFirst({
+      where: { id: dto.matchId, tenantId },
+      select: { id: true, imovelId: true, corretorId: true, imovel: { select: { finalidade: true } } },
+    })
+    if (!match) throw new NotFoundException('Match não encontrado')
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Move a etapa
+      await tx.match.update({
+        where: { id: dto.matchId },
+        data:  { etapaId: dto.etapaId },
+      })
+
+      // 2. Registra histórico
+      await tx.matchHistorico.create({
+        data: {
+          matchId:  dto.matchId,
+          tenantId,
+          tipo:     'ETAPA_ALTERADA',
+          userId,
+          payload:  { etapaId: dto.etapaId },
+        },
+      })
+
+      // 3. Remove comissões anteriores (idempotente) e recria com valores confirmados
+      await tx.comissaoVenda.deleteMany({ where: { matchId: dto.matchId, tenantId } })
+
+      if (match.imovel.finalidade === 'VENDA') {
+        await tx.comissaoVenda.createMany({
+          data: [
+            {
+              tenantId,
+              matchId:    dto.matchId,
+              imovelId:   match.imovelId,
+              corretorId: match.corretorId ?? null,
+              tipo:       'IMOBILIARIA',
+              valorImovel: dto.valorImovel,
+              percentual:  dto.percImobiliaria,
+              valor:       dto.valorImobiliaria,
+            },
+            {
+              tenantId,
+              matchId:    dto.matchId,
+              imovelId:   match.imovelId,
+              corretorId: match.corretorId ?? null,
+              tipo:       'CORRETOR',
+              valorImovel: dto.valorImovel,
+              percentual:  dto.percCorretor,
+              valor:       dto.valorCorretor,
+            },
+          ],
+        })
+      }
+    })
+
+    return { ok: true }
   }
 
   // ── Listagem de comissões ───────────────────────────────────────────────────

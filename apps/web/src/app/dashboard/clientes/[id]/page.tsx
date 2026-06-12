@@ -17,6 +17,7 @@ import { api } from '@/lib/api'
 import { formatWhatsappLink } from '@/lib/utils'
 import { LeadScore } from '@/components/ui/lead-score'
 import { AgendarVisitaModal, VisitaRapidaData } from '@/components/ui/agendar-visita-modal'
+import { FecharVendaModal, FecharVendaData } from '@/components/ui/fechar-venda-modal'
 import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
 
@@ -212,6 +213,7 @@ export default function ClienteDetalhePage() {
 
   // Agendamento de visita
   const [visitaRapida,  setVisitaRapida]  = useState<VisitaRapidaData | null>(null)
+  const [fecharVenda,   setFecharVenda]   = useState<FecharVendaData | null>(null)
   const [visitaLoading, setVisitaLoading] = useState(false)
 
   // Modal editar cliente
@@ -394,8 +396,18 @@ export default function ClienteDetalhePage() {
   // ─── Mover etapa do match ─────────────────────────────────────────────────────
 
   async function handleMoverEtapa(matchId: string, etapaId: string) {
-    setMovingMatch(matchId)
     const novaEtapa = etapas.find(e => e.id === etapaId)
+
+    // Penúltima etapa = Fechado; intercepta para mostrar modal de comissão
+    const etapasSorted = [...etapas].sort((a, b) => a.ordem - b.ordem)
+    const isFechado = etapasSorted.at(-2)?.id === etapaId
+    const matchAtual = matches.find(m => m.id === matchId)
+    if (isFechado && matchAtual?.imovel?.finalidade === 'VENDA') {
+      setFecharVenda({ matchId, etapaId })
+      return
+    }
+
+    setMovingMatch(matchId)
     const isVisitaEtapa = novaEtapa?.nome.toLowerCase().includes('visita') ?? false
 
     // indica carregamento do modal de visita antes da chamada à API
@@ -1038,6 +1050,22 @@ export default function ClienteDetalhePage() {
           onClose={() => setVisitaRapida(null)}
         />
       )}
+
+      {/* ── Modal Fechamento de Venda ── */}
+      <FecharVendaModal
+        data={fecharVenda}
+        onConfirm={(matchId, etapaId) => {
+          const etapa = etapas.find((e) => e.id === etapaId)
+          if (etapa) {
+            setMatches(prev => prev.map(m =>
+              m.id === matchId ? { ...m, etapa: { id: etapa.id, nome: etapa.nome, cor: etapa.cor } } : m
+            ))
+          }
+          setFecharVenda(null)
+          toast.success('Negociação fechada e comissões registradas.')
+        }}
+        onCancel={() => setFecharVenda(null)}
+      />
 
     </div>
   )
