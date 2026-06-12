@@ -62,9 +62,7 @@ export class FinanceiroController {
   }
 
   @Get('comissoes')
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Lista comissões com filtros' })
+  @ApiOperation({ summary: 'Lista comissões com filtros (CORRETOR vê apenas as próprias)' })
   listar(
     @Request() req: any,
     @Query('tipo')       tipo?:       string,
@@ -72,7 +70,7 @@ export class FinanceiroController {
     @Query('corretorId') corretorId?: string,
     @Query('periodo')    periodo?:    string,
   ) {
-    return this.financeiroService.listar(req.user.tenantId, { tipo, status, corretorId, periodo })
+    return this.financeiroService.listar(req.user.tenantId, { tipo, status, corretorId, periodo }, req.user)
   }
 
   @Patch('comissoes/:id/pagar')

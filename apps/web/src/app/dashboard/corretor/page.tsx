@@ -461,21 +461,21 @@ export default function CorretorDashboardPage() {
           {/* KPI cards inline */}
           <div className="flex items-center gap-3 flex-wrap">
             {[
-              { label: 'Visitas Hoje',      value: todayVisitas.length,             sub: 'hoje',           icon: CalendarDays, onClick: () => document.getElementById('agenda-section')?.scrollIntoView({ behavior: 'smooth' }) },
-              { label: 'Em Negociação',     value: emNegociacao,                    sub: 'matches ativos', icon: GitMerge,     onClick: undefined },
-              { label: 'Visitas no Mês',    value: mesRealizadas + mesAgendadas,    sub: `${mesRealizadas} real. · ${mesAgendadas} ag.`, icon: TrendingUp, onClick: undefined },
-              { label: 'Fechamentos',       value: mesFechados,                     sub: MESES_FULL[now.getMonth()], icon: CheckCircle2, onClick: undefined },
+              { label: 'Visitas Hoje',      value: todayVisitas.length,             sub: 'hoje',           onClick: () => document.getElementById('agenda-section')?.scrollIntoView({ behavior: 'smooth' }) },
+              { label: 'Em Negociação',     value: emNegociacao,                    sub: 'matches ativos', onClick: undefined },
+              { label: 'Visitas no Mês',    value: mesRealizadas + mesAgendadas,    sub: `${mesRealizadas} real. · ${mesAgendadas} ag.`, onClick: undefined },
+              { label: 'Fechamentos',       value: mesFechados,                     sub: MESES_FULL[now.getMonth()], onClick: undefined },
             ].map((kpi) => (
               <button
                 key={kpi.label}
                 onClick={kpi.onClick}
                 disabled={!kpi.onClick}
-                className="rounded-xl px-4 py-3 text-left transition-colors disabled:cursor-default"
+                className="rounded-xl px-5 py-4 text-left transition-colors disabled:cursor-default min-w-[120px]"
                 style={{ background: 'rgba(255,255,255,0.15)' }}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-200 mb-1 whitespace-nowrap">{kpi.label}</p>
-                <p className="text-2xl font-bold tabular-nums leading-none">{loading ? '—' : kpi.value}</p>
-                <p className="text-[11px] text-blue-200 mt-0.5 whitespace-nowrap">{kpi.sub}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-200 mb-1.5 whitespace-nowrap">{kpi.label}</p>
+                <p className="text-3xl font-bold tabular-nums leading-none">{loading ? '—' : kpi.value}</p>
+                <p className="text-xs text-blue-200 mt-1 whitespace-nowrap">{kpi.sub}</p>
               </button>
             ))}
           </div>
