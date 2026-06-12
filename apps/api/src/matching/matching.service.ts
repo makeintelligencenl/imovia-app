@@ -569,36 +569,68 @@ export class MatchingService {
         })
       : []
 
-    // Tempo médio por etapa (equipe toda) — pares consecutivos de ETAPA_ALTERADA
-    const historico = await this.prisma.matchHistorico.findMany({
-      where: { tenantId, tipo: 'ETAPA_ALTERADA', createdAt: { gte, lte } },
-      select: { matchId: true, etapaOrigemId: true, etapaDestinoId: true, createdAt: true },
-      orderBy: [{ matchId: 'asc' }, { createdAt: 'asc' }],
-    })
+    // Tempo médio por etapa (equipe toda)
+    // Busca todos os eventos ETAPA_ALTERADA dos matches do período (sem filtro de data no histórico
+    // para capturar transições que ocorreram fora do intervalo mas pertencem a matches do período)
+    const matchIds = matchesPeriodo.map(m => m.id)
+    const matchCreatedAt = new Map(matchesPeriodo.map(m => [m.id, m.createdAt]))
 
-    // Agrupa deltas por etapa de origem
+    const historico = matchIds.length
+      ? await this.prisma.matchHistorico.findMany({
+          where: { matchId: { in: matchIds }, tipo: 'ETAPA_ALTERADA' },
+          select: { matchId: true, etapaOrigemId: true, etapaDestinoId: true, createdAt: true },
+          orderBy: [{ matchId: 'asc' }, { createdAt: 'asc' }],
+        })
+      : []
+
+    // Para cada match, reconstrói a linha do tempo de etapas e computa tempo em cada uma
+    // Etapa inicial: entrada = match.createdAt; saída = primeiro evento ETAPA_ALTERADA
+    // Demais etapas: entrada = evento anterior; saída = evento atual
     const deltasPorEtapa: Record<string, number[]> = {}
-    let prev: typeof historico[0] | null = null
+
+    const byMatch = new Map<string, typeof historico>()
     for (const h of historico) {
-      if (prev && prev.matchId === h.matchId && prev.etapaDestinoId === h.etapaOrigemId) {
-        const dias = (h.createdAt.getTime() - prev.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-        const key  = prev.etapaDestinoId ?? 'unknown'
-        if (!deltasPorEtapa[key]) deltasPorEtapa[key] = []
-        deltasPorEtapa[key].push(dias)
+      if (!byMatch.has(h.matchId)) byMatch.set(h.matchId, [])
+      byMatch.get(h.matchId)!.push(h)
+    }
+
+    for (const [matchId, eventos] of byMatch) {
+      const criacao = matchCreatedAt.get(matchId)
+      if (!criacao) continue
+
+      // Tempo na primeira etapa: match.createdAt → primeiro evento
+      const primeiro = eventos[0]
+      if (primeiro?.etapaOrigemId) {
+        const dias = (primeiro.createdAt.getTime() - criacao.getTime()) / (1000 * 60 * 60 * 24)
+        if (!deltasPorEtapa[primeiro.etapaOrigemId]) deltasPorEtapa[primeiro.etapaOrigemId] = []
+        deltasPorEtapa[primeiro.etapaOrigemId].push(dias)
       }
-      prev = h
+
+      // Tempo nas demais etapas: evento[i].createdAt → evento[i+1].createdAt
+      for (let i = 0; i < eventos.length - 1; i++) {
+        const entrada = eventos[i].createdAt
+        const saida   = eventos[i + 1].createdAt
+        const etapa   = eventos[i].etapaDestinoId
+        if (!etapa) continue
+        const dias = (saida.getTime() - entrada.getTime()) / (1000 * 60 * 60 * 24)
+        if (!deltasPorEtapa[etapa]) deltasPorEtapa[etapa] = []
+        deltasPorEtapa[etapa].push(dias)
+      }
     }
 
     const tempoMedioPorEtapa = etapas
       .filter(e => e.id !== etapaEncerrada?.id)
-      .map(e => ({
-        etapaId:   e.id,
-        etapaNome: e.nome,
-        cor:       e.cor,
-        diasMedio: deltasPorEtapa[e.id]?.length
-          ? Math.round(deltasPorEtapa[e.id].reduce((a, b) => a + b, 0) / deltasPorEtapa[e.id].length)
-          : null,
-      }))
+      .map(e => {
+        const deltas = deltasPorEtapa[e.id]
+        if (!deltas?.length) return { etapaId: e.id, etapaNome: e.nome, cor: e.cor, diasMedio: null }
+        const media = deltas.reduce((a, b) => a + b, 0) / deltas.length
+        return {
+          etapaId:   e.id,
+          etapaNome: e.nome,
+          cor:       e.cor,
+          diasMedio: Math.round(media * 10) / 10, // 1 casa decimal
+        }
+      })
 
     // Stats por corretor
     const now = Date.now()

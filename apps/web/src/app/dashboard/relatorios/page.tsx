@@ -325,8 +325,8 @@ export default function RelatoriosPage() {
                         />
                       )}
                     </div>
-                    <span className="text-xs font-semibold tabular-nums text-slate-700 w-8 text-right">
-                      {e.diasMedio !== null ? `${e.diasMedio}d` : '—'}
+                    <span className="text-xs font-semibold tabular-nums text-slate-700 w-12 text-right">
+                      {e.diasMedio !== null ? (e.diasMedio < 1 ? '< 1d' : `${e.diasMedio}d`) : '—'}
                     </span>
                   </div>
                 ))}
