@@ -38,11 +38,12 @@ export default function FinanceiroSettingsPage() {
   }, [])
 
   function handleTotalChange(total: number) {
-    // Mantém a proporção atual ao alterar o total
+    const t = Math.round(total)
+    // Mantém a proporção atual; imobiliária arredondada, corretor = resto exato
     const somaAtual = config.percImobiliaria + config.percCorretor || 1
-    const novaImob = round2(total * config.percImobiliaria / somaAtual)
-    const novaCorr = round2(total - novaImob)
-    setConfig({ percentualTotal: total, percImobiliaria: novaImob, percCorretor: novaCorr })
+    const novaImob = Math.round(t * config.percImobiliaria / somaAtual)
+    const novaCorr = t - novaImob
+    setConfig({ percentualTotal: t, percImobiliaria: novaImob, percCorretor: novaCorr })
   }
 
   function handlePercImob(v: number) {
