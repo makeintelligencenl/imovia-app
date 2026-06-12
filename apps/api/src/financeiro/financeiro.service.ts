@@ -226,11 +226,17 @@ export class FinanceiroService {
     status?:     string
     corretorId?: string
     periodo?:    string
-  }) {
+  }, requester?: { sub: string; role: string }) {
     const where: any = { tenantId }
-    if (params.tipo)       where.tipo       = params.tipo
-    if (params.status)     where.status     = params.status
-    if (params.corretorId) where.corretorId = params.corretorId
+    if (params.status) where.status = params.status
+    // CORRETOR só vê as próprias comissões (tipo CORRETOR com seu corretorId)
+    if (requester?.role === 'CORRETOR') {
+      where.corretorId = requester.sub
+      where.tipo = 'CORRETOR'
+    } else {
+      if (params.tipo)       where.tipo       = params.tipo
+      if (params.corretorId) where.corretorId = params.corretorId
+    }
     if (params.periodo) {
       const { gte, lte } = this.periodoToRange(params.periodo)
       where.createdAt = { gte, lte }
