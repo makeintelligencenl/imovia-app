@@ -56,10 +56,9 @@ export default function FinanceiroPage() {
   const [pagando,    setPagando]    = useState<string | null>(null)
 
   useEffect(() => {
-    getCurrentUser().then((u) => {
-      if (!u || u.role !== 'ADMIN') { router.replace('/dashboard'); return }
-      setAllowed(true)
-    })
+    const u = getCurrentUser()
+    if (!u || u.role !== 'ADMIN') { router.replace('/dashboard'); return }
+    setAllowed(true)
     api.get<(Corretor & { role: string })[]>('/users').then((users) =>
       setCorretores(users.filter((u) => u.role === 'CORRETOR'))
     ).catch(() => {})
