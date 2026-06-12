@@ -39,8 +39,8 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState('')
 
-  // valor do imóvel como número puro
-  const [valorImovel, setValorImovel] = useState(0)
+  const [valorImovel,    setValorImovel]    = useState(0)
+  const [valorImovelStr, setValorImovelStr] = useState('')
   // percentuais como inteiros
   const [percImob, setPercImob]       = useState(0)
   const [percCorr, setPercCorr]       = useState(0)
@@ -53,6 +53,7 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
       .then((d) => {
         setDados(d)
         setValorImovel(d.valorImovel)
+        setValorImovelStr(fmt(d.valorImovel))
         setPercImob(Math.round(d.comissao.percImobiliaria))
         setPercCorr(Math.round(d.comissao.percCorretor))
       })
@@ -143,11 +144,15 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
                 <div className="flex items-center gap-2 border border-input rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500">
                   <span className="text-sm text-muted-foreground">R$</span>
                   <input
-                    type="number"
-                    min={0}
-                    step={1000}
-                    value={valorImovel}
-                    onChange={(e) => setValorImovel(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={valorImovelStr}
+                    onChange={(e) => {
+                      setValorImovelStr(e.target.value)
+                      const raw = parseFloat(e.target.value.replace(/\./g, '').replace(',', '.')) || 0
+                      setValorImovel(raw)
+                    }}
+                    onBlur={() => setValorImovelStr(fmt(valorImovel))}
                     className="flex-1 bg-transparent text-sm font-medium focus:outline-none"
                   />
                 </div>
