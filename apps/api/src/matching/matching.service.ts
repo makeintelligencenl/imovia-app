@@ -526,6 +526,150 @@ export class MatchingService {
   }
 
   // ─────────────────────────────────────────
+  // Relatório de desempenho por corretor (ADMIN only)
+  // ─────────────────────────────────────────
+  async relatorioCorretores(tenantId: string, periodo: string) {
+    const { gte, lte } = this.periodoToRange(periodo)
+
+    const [etapas, corretores, matchesPeriodo, visitasPeriodo] = await Promise.all([
+      this.prisma.pipelineEtapa.findMany({
+        where: { tenantId, ativo: true },
+        orderBy: { ordem: 'asc' },
+        select: { id: true, nome: true, cor: true, ordem: true },
+      }),
+      this.prisma.user.findMany({
+        where: { tenantId, role: 'CORRETOR', ativo: true },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.match.findMany({
+        where: { tenantId, createdAt: { gte, lte } },
+        select: { id: true, corretorId: true, etapaId: true, createdAt: true, updatedAt: true },
+      }),
+      this.prisma.visita.findMany({
+        where: { tenantId, createdAt: { gte, lte }, corretorId: { not: null } },
+        select: { id: true, corretorId: true },
+      }),
+    ])
+
+    const etapaFechado   = etapas.at(-2)
+    const etapaEncerrada = etapas.at(-1)
+    const etapasFinais   = [etapaFechado?.id, etapaEncerrada?.id].filter(Boolean) as string[]
+
+    // Conversões: entradas na etapa Fechado no período via MatchHistorico
+    const conversoes = etapaFechado
+      ? await this.prisma.matchHistorico.findMany({
+          where: {
+            tenantId,
+            tipo:            'ETAPA_ALTERADA',
+            etapaDestinoId:  etapaFechado.id,
+            createdAt:       { gte, lte },
+          },
+          select: { matchId: true, match: { select: { corretorId: true } } },
+        })
+      : []
+
+    // Tempo médio por etapa (equipe toda) — pares consecutivos de ETAPA_ALTERADA
+    const historico = await this.prisma.matchHistorico.findMany({
+      where: { tenantId, tipo: 'ETAPA_ALTERADA', createdAt: { gte, lte } },
+      select: { matchId: true, etapaOrigemId: true, etapaDestinoId: true, createdAt: true },
+      orderBy: [{ matchId: 'asc' }, { createdAt: 'asc' }],
+    })
+
+    // Agrupa deltas por etapa de origem
+    const deltasPorEtapa: Record<string, number[]> = {}
+    let prev: typeof historico[0] | null = null
+    for (const h of historico) {
+      if (prev && prev.matchId === h.matchId && prev.etapaDestinoId === h.etapaOrigemId) {
+        const dias = (h.createdAt.getTime() - prev.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        const key  = prev.etapaDestinoId ?? 'unknown'
+        if (!deltasPorEtapa[key]) deltasPorEtapa[key] = []
+        deltasPorEtapa[key].push(dias)
+      }
+      prev = h
+    }
+
+    const tempoMedioPorEtapa = etapas
+      .filter(e => e.id !== etapaEncerrada?.id)
+      .map(e => ({
+        etapaId:   e.id,
+        etapaNome: e.nome,
+        cor:       e.cor,
+        diasMedio: deltasPorEtapa[e.id]?.length
+          ? Math.round(deltasPorEtapa[e.id].reduce((a, b) => a + b, 0) / deltasPorEtapa[e.id].length)
+          : null,
+      }))
+
+    // Stats por corretor
+    const now = Date.now()
+    const corretoresStats = corretores
+      .map(c => {
+        const cMatches    = matchesPeriodo.filter(m => m.corretorId === c.id)
+        const cConversoes = conversoes.filter(cv => cv.match.corretorId === c.id)
+        const cVisitas    = visitasPeriodo.filter(v => v.corretorId === c.id)
+
+        const tempos = cMatches.map(m => {
+          const end = etapasFinais.includes(m.etapaId) ? m.updatedAt.getTime() : now
+          return (end - m.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        })
+        const tempoMedio = tempos.length
+          ? Math.round(tempos.reduce((a, b) => a + b, 0) / tempos.length)
+          : 0
+
+        return {
+          id:            c.id,
+          name:          c.name,
+          matches:       cMatches.length,
+          conversoes:    cConversoes.length,
+          taxaConversao: cMatches.length ? Math.round(cConversoes.length / cMatches.length * 100) : 0,
+          tempoMedio,
+          visitas:       cVisitas.length,
+        }
+      })
+      .filter(c => c.matches > 0 || c.visitas > 0)
+      .sort((a, b) => b.conversoes - a.conversoes || b.matches - a.matches)
+
+    const totalMatches    = corretoresStats.reduce((s, c) => s + c.matches, 0)
+    const totalConversoes = corretoresStats.reduce((s, c) => s + c.conversoes, 0)
+    const tempoMedioGeral = totalMatches
+      ? Math.round(corretoresStats.reduce((s, c) => s + c.tempoMedio * c.matches, 0) / totalMatches)
+      : 0
+
+    return {
+      periodo,
+      kpis: {
+        totalMatches,
+        totalConversoes,
+        taxaConversao:    totalMatches ? Math.round(totalConversoes / totalMatches * 100) : 0,
+        tempoMedioGeral,
+        corretoresAtivos: corretoresStats.length,
+      },
+      corretores:         corretoresStats,
+      tempoMedioPorEtapa,
+    }
+  }
+
+  private periodoToRange(periodo: string): { gte: Date; lte: Date } {
+    const now   = new Date()
+    const lte   = new Date(now)
+    let   gte: Date
+
+    if (periodo === '7dias') {
+      gte = new Date(now); gte.setDate(gte.getDate() - 7)
+    } else if (periodo === '15dias') {
+      gte = new Date(now); gte.setDate(gte.getDate() - 15)
+    } else if (periodo === 'mes_anterior') {
+      gte = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
+      lte.setTime(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59)).getTime())
+    } else {
+      // mes_atual (default)
+      gte = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    }
+
+    return { gte, lte }
+  }
+
+  // ─────────────────────────────────────────
   async listarHistorico(tenantId: string, matchId: string) {
     const match = await this.prisma.match.findFirst({ where: { id: matchId, tenantId } })
     if (!match) throw new NotFoundException('Match não encontrado')

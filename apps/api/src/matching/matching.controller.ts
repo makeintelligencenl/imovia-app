@@ -12,6 +12,17 @@ export class MatchingController {
   constructor(private readonly matchingService: MatchingService) {}
 
   // Deve vir antes de :id para não ser capturado como parâmetro
+  @Get('relatorio-corretores')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Relatório de desempenho por corretor (ADMIN only)' })
+  relatorioCorretores(
+    @Request() req: any,
+    @Query('periodo') periodo?: string,
+  ) {
+    return this.matchingService.relatorioCorretores(req.user.tenantId, periodo ?? 'mes_atual')
+  }
+
   @Get('dashboard-summary')
   @ApiOperation({ summary: 'Resumo otimizado para o dashboard do corretor (KPIs + top matches)' })
   dashboardSummary(@Request() req: any) {
