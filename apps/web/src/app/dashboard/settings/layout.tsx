@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings2, Users } from 'lucide-react'
+import { Settings2, Users, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const TABS = [
-  { href: '/dashboard/settings/pipeline', label: 'Funil de Vendas', icon: Settings2 },
-  { href: '/dashboard/settings/usuarios', label: 'Usuários',        icon: Users    },
+  { href: '/dashboard/settings/pipeline',   label: 'Funil de Vendas', icon: Settings2  },
+  { href: '/dashboard/settings/usuarios',   label: 'Usuários',        icon: Users      },
+  { href: '/dashboard/settings/financeiro', label: 'Financeiro',      icon: DollarSign },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

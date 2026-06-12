@@ -16,6 +16,7 @@ import { PipelineModule } from './pipeline/pipeline.module'
 import { UsersModule } from './users/users.module'
 import { VisitasModule } from './visitas/visitas.module'
 import { ClientesModule } from './clientes/clientes.module'
+import { FinanceiroModule } from './financeiro/financeiro.module'
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ClientesModule } from './clientes/clientes.module'
     PipelineModule,
     UsersModule,
     VisitasModule,
+    FinanceiroModule,
   ],
   providers: [
     // ThrottlerGuard global: protege todos os endpoints da API

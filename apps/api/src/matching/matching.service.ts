@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { PrismaService } from '../prisma/prisma.service'
 import { NotificacoesService } from '../notificacoes/notificacoes.service'
 import { PipelineService } from '../pipeline/pipeline.service'
+import { FinanceiroService } from '../financeiro/financeiro.service'
 
 const CORRETOR_SELECT = { id: true, name: true, email: true } as const
 
@@ -13,6 +14,7 @@ export class MatchingService {
     private prisma: PrismaService,
     private notificacoesService: NotificacoesService,
     private pipelineService: PipelineService,
+    private financeiroService: FinanceiroService,
   ) {}
 
   // ─────────────────────────────────────────
@@ -392,6 +394,20 @@ export class MatchingService {
       })
       return result
     })
+
+    // Gera comissões automaticamente quando o match entra na etapa Fechado (penúltima)
+    // Feito fora da transaction para não bloquear o fluxo em caso de falha
+    const etapas = await this.prisma.pipelineEtapa.findMany({
+      where: { tenantId, ativo: true },
+      orderBy: { ordem: 'asc' },
+      select: { id: true },
+    })
+    const etapaFechadoId = etapas.at(-2)?.id
+    if (etapaId === etapaFechadoId) {
+      this.financeiroService.gerarComissoesVenda(tenantId, matchId).catch((err) =>
+        this.logger.error(`Erro ao gerar comissões para match ${matchId}: ${err?.message}`),
+      )
+    }
 
     return updated
   }
