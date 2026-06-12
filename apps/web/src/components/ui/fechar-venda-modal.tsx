@@ -33,21 +33,17 @@ function fmt(n: number) {
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function parseVal(s: string) {
-  return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0
-}
-
 export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
-  const [dados,   setDados]   = useState<DadosFechamento | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [saving,  setSaving]  = useState(false)
-  const [error,   setError]   = useState('')
+  const [dados,      setDados]      = useState<DadosFechamento | null>(null)
+  const [loading,    setLoading]    = useState(false)
+  const [saving,     setSaving]     = useState(false)
+  const [error,      setError]      = useState('')
 
-  const [valorImovelStr, setValorImovelStr]   = useState('')
-  const [percImob,       setPercImob]         = useState(0)
-  const [valImobStr,     setValImobStr]       = useState('')
-  const [percCorr,       setPercCorr]         = useState(0)
-  const [valCorrStr,     setValCorrStr]       = useState('')
+  // valor do imóvel como número puro
+  const [valorImovel, setValorImovel] = useState(0)
+  // percentuais como inteiros
+  const [percImob, setPercImob]       = useState(0)
+  const [percCorr, setPercCorr]       = useState(0)
 
   useEffect(() => {
     if (!data) { setDados(null); return }
@@ -56,11 +52,9 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
     api.get<DadosFechamento>(`/financeiro/fechamento/${data.matchId}`)
       .then((d) => {
         setDados(d)
-        setValorImovelStr(fmt(d.valorImovel))
-        setPercImob(d.comissao.percImobiliaria)
-        setValImobStr(fmt(d.comissao.valorImobiliaria))
-        setPercCorr(d.comissao.percCorretor)
-        setValCorrStr(fmt(d.comissao.valorCorretor))
+        setValorImovel(d.valorImovel)
+        setPercImob(Math.round(d.comissao.percImobiliaria))
+        setPercCorr(Math.round(d.comissao.percCorretor))
       })
       .catch(() => setError('Erro ao carregar dados do fechamento.'))
       .finally(() => setLoading(false))
@@ -68,43 +62,23 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
 
   if (!data) return null
 
-  const valorImovel = parseVal(valorImovelStr)
-
-  function recalcFromValor(novoValor: number) {
-    setValImobStr(fmt(novoValor * percImob / 100))
-    setValCorrStr(fmt(novoValor * percCorr / 100))
-  }
-
-  function handleValorImovelChange(v: string) {
-    setValorImovelStr(v)
-    recalcFromValor(parseVal(v))
-  }
-
-  function handlePercImobChange(v: number) {
-    setPercImob(v)
-    setValImobStr(fmt(valorImovel * v / 100))
-  }
-
-  function handleValImobChange(v: string) {
-    setValImobStr(v)
-    const val = parseVal(v)
-    if (valorImovel > 0) setPercImob(parseFloat((val / valorImovel * 100).toFixed(2)))
-  }
-
-  function handlePercCorrChange(v: number) {
-    setPercCorr(v)
-    setValCorrStr(fmt(valorImovel * v / 100))
-  }
-
-  function handleValCorrChange(v: string) {
-    setValCorrStr(v)
-    const val = parseVal(v)
-    if (valorImovel > 0) setPercCorr(parseFloat((val / valorImovel * 100).toFixed(2)))
-  }
-
-  const totalPerc = parseFloat((percImob + percCorr).toFixed(2))
+  // R$ calculados sempre a partir de % * valor (somente leitura)
+  const valImob = valorImovel * percImob / 100
+  const valCorr = valorImovel * percCorr / 100
+  const totalPerc   = percImob + percCorr
   const configTotal = dados?.comissao.percentualTotal ?? 0
-  const diffAlerta = Math.abs(totalPerc - configTotal) > 0.05
+  const diffAlerta  = totalPerc !== configTotal
+  const isVenda     = dados?.imovelFinalidade === 'VENDA'
+
+  function handlePercImob(v: number) {
+    const imob = Math.max(0, Math.round(v))
+    setPercImob(imob)
+  }
+
+  function handlePercCorr(v: number) {
+    const corr = Math.max(0, Math.round(v))
+    setPercCorr(corr)
+  }
 
   async function handleConfirm() {
     if (!data) return
@@ -114,11 +88,11 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
       await api.post('/financeiro/fechar-venda', {
         matchId:          data.matchId,
         etapaId:          data.etapaId,
-        valorImovel:      valorImovel,
+        valorImovel,
         percImobiliaria:  percImob,
-        valorImobiliaria: parseVal(valImobStr),
+        valorImobiliaria: valImob,
         percCorretor:     percCorr,
-        valorCorretor:    parseVal(valCorrStr),
+        valorCorretor:    valCorr,
       })
       onConfirm(data.matchId, data.etapaId)
     } catch {
@@ -127,8 +101,6 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
       setSaving(false)
     }
   }
-
-  const isVenda = dados?.imovelFinalidade === 'VENDA'
 
   return (
     <div
@@ -171,9 +143,11 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
                 <div className="flex items-center gap-2 border border-input rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500">
                   <span className="text-sm text-muted-foreground">R$</span>
                   <input
-                    type="text"
-                    value={valorImovelStr}
-                    onChange={(e) => handleValorImovelChange(e.target.value)}
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={valorImovel}
+                    onChange={(e) => setValorImovel(Number(e.target.value))}
                     className="flex-1 bg-transparent text-sm font-medium focus:outline-none"
                   />
                 </div>
@@ -183,14 +157,15 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
                 </p>
               </div>
 
-              {/* Comissões — só mostra se VENDA */}
+              {/* Comissões */}
               {isVenda && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Comissão da venda</p>
-                    <span className="text-xs bg-secondary text-muted-foreground px-2.5 py-1 rounded-md">
-                      {totalPerc.toFixed(1)}% · R$ {fmt(parseVal(valImobStr) + parseVal(valCorrStr))}
-                    </span>
+                  <div className="flex items-center justify-between rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-4 py-3">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Comissão da venda</p>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold text-blue-700 dark:text-blue-300">R$ {fmt(valImob + valCorr)}</p>
+                      <p className="text-xs text-blue-500 dark:text-blue-400">{totalPerc}% sobre o valor do imóvel</p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -199,22 +174,14 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
                       <p className="text-xs text-muted-foreground uppercase tracking-wide">Imobiliária</p>
                       <div className="flex items-center gap-1">
                         <input
-                          type="number" min={0} max={20} step={0.1}
+                          type="number" min={0} max={20} step={1}
                           value={percImob}
-                          onChange={(e) => handlePercImobChange(Number(e.target.value))}
+                          onChange={(e) => handlePercImob(Number(e.target.value))}
                           className="w-16 bg-background border border-input rounded px-2 py-1 text-sm font-medium text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <span className="text-xs text-muted-foreground">%</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">R$</span>
-                        <input
-                          type="text"
-                          value={valImobStr}
-                          onChange={(e) => handleValImobChange(e.target.value)}
-                          className="flex-1 min-w-0 bg-background border border-input rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                      <p className="text-xs text-muted-foreground">R$ {fmt(valImob)}</p>
                     </div>
 
                     {/* Corretor */}
@@ -224,35 +191,27 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
                       </p>
                       <div className="flex items-center gap-1">
                         <input
-                          type="number" min={0} max={20} step={0.1}
+                          type="number" min={0} max={20} step={1}
                           value={percCorr}
-                          onChange={(e) => handlePercCorrChange(Number(e.target.value))}
+                          onChange={(e) => handlePercCorr(Number(e.target.value))}
                           className="w-16 bg-background border border-input rounded px-2 py-1 text-sm font-medium text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <span className="text-xs text-muted-foreground">%</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">R$</span>
-                        <input
-                          type="text"
-                          value={valCorrStr}
-                          onChange={(e) => handleValCorrChange(e.target.value)}
-                          className="flex-1 min-w-0 bg-background border border-input rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                      <p className="text-xs text-muted-foreground">R$ {fmt(valCorr)}</p>
                     </div>
                   </div>
 
                   {/* Barra visual */}
                   <div className="h-2 rounded-full overflow-hidden flex">
-                    <div className="bg-blue-500 transition-all" style={{ width: `${Math.min(percImob / (totalPerc || 1) * 100, 100)}%` }} />
-                    <div className="bg-amber-400 transition-all" style={{ width: `${Math.min(percCorr / (totalPerc || 1) * 100, 100)}%` }} />
+                    <div className="bg-blue-500 transition-all" style={{ width: `${totalPerc > 0 ? percImob / totalPerc * 100 : 50}%` }} />
+                    <div className="bg-amber-400 transition-all" style={{ width: `${totalPerc > 0 ? percCorr / totalPerc * 100 : 50}%` }} />
                   </div>
 
                   {diffAlerta && (
                     <div className="flex items-center gap-2 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                      Soma ({totalPerc.toFixed(1)}%) difere do padrão configurado ({configTotal}%).
+                      Soma ({totalPerc}%) difere do padrão configurado ({configTotal}%).
                     </div>
                   )}
                 </div>
@@ -267,9 +226,7 @@ export function FecharVendaModal({ data, onConfirm, onCancel }: Props) {
             </>
           )}
 
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
 
         {/* Footer */}
