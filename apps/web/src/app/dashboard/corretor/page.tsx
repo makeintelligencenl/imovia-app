@@ -2,8 +2,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  CalendarDays, ChevronLeft, ChevronRight,
-  GitMerge, CheckCircle2, Clock, Star, ArrowRight, TrendingUp, X, Trash2,
+  CalendarDays, ChevronLeft, ChevronRight, ChevronDown,
+  GitMerge, CheckCircle2, Clock, Star, ArrowRight, TrendingUp, X, Trash2, DollarSign,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -188,6 +188,13 @@ export default function CorretorDashboardPage() {
   // BUG #8: feedback visual ao navegar para semana com mês ainda não carregado
   const [weekLoading, setWeekLoading] = useState(false)
 
+  // Comissões
+  const [comissoesOpen, setComissoesOpen] = useState(false)
+  const [comissaoData, setComissaoData] = useState<{
+    totalGanho: number; pago: number; pendente: number
+    lista: { id: string; imovelTitulo: string; valor: number; percentual: number; status: 'PENDENTE' | 'PAGO'; createdAt: string }[]
+  } | null>(null)
+
   // Modal editar visita
   const [editVisita, setEditVisita] = useState<Visita | null>(null)
   const [editForm,      setEditForm]      = useState({ data: '', hora: '', duracaoMin: 60, status: 'AGENDADA' as Visita['status'], observacoes: '' })
@@ -227,6 +234,22 @@ export default function CorretorDashboardPage() {
       setVisitas([...byId.values()])
       setLoading(false)
     })
+
+    api.get<{ id: string; valor: number; percentual: number; status: 'PENDENTE' | 'PAGO'; createdAt: string; imovel: { titulo: string } }[]>(
+      '/financeiro/comissoes?periodo=mes_atual'
+    ).then((lista) => {
+      const totalGanho = lista.reduce((s, c) => s + Number(c.valor), 0)
+      const pago       = lista.filter(c => c.status === 'PAGO').reduce((s, c) => s + Number(c.valor), 0)
+      const pendente   = lista.filter(c => c.status === 'PENDENTE').reduce((s, c) => s + Number(c.valor), 0)
+      setComissaoData({
+        totalGanho, pago, pendente,
+        lista: lista.map(c => ({
+          id: c.id, imovelTitulo: c.imovel.titulo,
+          valor: Number(c.valor), percentual: Number(c.percentual),
+          status: c.status, createdAt: c.createdAt,
+        })),
+      })
+    }).catch(() => {})
   }, [router])
 
   // ── Load visitas for new months when navigating weeks ─────────────────────
@@ -413,11 +436,12 @@ export default function CorretorDashboardPage() {
   return (
     <div className="space-y-5">
 
-      {/* ── 1. Context bar ──────────────────────────────────────────────────── */}
+      {/* ── 1. Context bar + KPIs ───────────────────────────────────────────── */}
       <div className="rounded-2xl px-6 py-5 shadow-sm text-white"
            style={{ background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' }}>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
+        <div className="flex items-center gap-6 flex-wrap">
+          {/* Greeting */}
+          <div className="flex-1 min-w-0">
             <p className="text-blue-200 text-xs font-semibold uppercase tracking-wide mb-1">
               {DIAS_SHORT[now.getDay()]}, {now.getDate()} de {MESES_FULL[now.getMonth()]} de {now.getFullYear()}
             </p>
@@ -431,105 +455,111 @@ export default function CorretorDashboardPage() {
             )}
           </div>
 
-          {/* Próxima visita */}
-          {proximaVisita && (
-            <div className="rounded-xl px-4 py-3 min-w-[200px] shrink-0"
-                 style={{ background: 'rgba(255,255,255,0.15)' }}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-200 mb-1">
-                Próxima visita
-              </p>
-              <p className="text-lg font-bold leading-none">
-                {proximaVisita.dataHora.startsWith(todayISODate) ? 'Hoje' : DIAS_SHORT[new Date(proximaVisita.dataHora.substring(0,10)+'T12:00:00Z').getUTCDay()]} às {fmtHM(proximaVisita.dataHora)}
-              </p>
-              <p className="text-sm text-blue-100 mt-0.5 truncate">{proximaVisita.cliente.nome}</p>
-              <p className="text-xs text-blue-200 truncate">{proximaVisita.imovel.titulo}</p>
-            </div>
-          )}
+          {/* Divider */}
+          <div className="hidden lg:block w-px h-16 bg-white/20 shrink-0" />
+
+          {/* KPI cards inline */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {[
+              { label: 'Visitas Hoje',      value: todayVisitas.length,             sub: 'hoje',           icon: CalendarDays, onClick: () => document.getElementById('agenda-section')?.scrollIntoView({ behavior: 'smooth' }) },
+              { label: 'Em Negociação',     value: emNegociacao,                    sub: 'matches ativos', icon: GitMerge,     onClick: undefined },
+              { label: 'Visitas no Mês',    value: mesRealizadas + mesAgendadas,    sub: `${mesRealizadas} real. · ${mesAgendadas} ag.`, icon: TrendingUp, onClick: undefined },
+              { label: 'Fechamentos',       value: mesFechados,                     sub: MESES_FULL[now.getMonth()], icon: CheckCircle2, onClick: undefined },
+            ].map((kpi) => (
+              <button
+                key={kpi.label}
+                onClick={kpi.onClick}
+                disabled={!kpi.onClick}
+                className="rounded-xl px-4 py-3 text-left transition-colors disabled:cursor-default"
+                style={{ background: 'rgba(255,255,255,0.15)' }}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-200 mb-1 whitespace-nowrap">{kpi.label}</p>
+                <p className="text-2xl font-bold tabular-nums leading-none">{loading ? '—' : kpi.value}</p>
+                <p className="text-[11px] text-blue-200 mt-0.5 whitespace-nowrap">{kpi.sub}</p>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── 2. KPIs ─────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── 2. Minhas Comissões (collapsible) ───────────────────────────────── */}
+      {(() => {
+        const fmtR = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        return (
+          <div className="rounded-xl border border-border overflow-hidden border-l-4 border-l-amber-400">
+            <button
+              onClick={() => setComissoesOpen(o => !o)}
+              className="w-full flex items-center gap-3 px-5 py-3.5 bg-background hover:bg-secondary/40 transition-colors"
+            >
+              <div className="p-2 rounded-lg bg-amber-50 shrink-0">
+                <DollarSign className="h-4 w-4 text-amber-600" />
+              </div>
+              <span className="text-sm font-semibold flex-1 text-left">Minhas comissões</span>
+              {comissaoData ? (
+                <div className="flex items-center gap-2 mr-2">
+                  <span className="text-sm font-medium text-foreground">
+                    R$ {fmtR(comissaoData.totalGanho)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">· este mês</span>
+                  {comissaoData.pendente > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+                      R$ {fmtR(comissaoData.pendente)} pendente
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground mr-2">este mês</span>
+              )}
+              <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${comissoesOpen ? 'rotate-180' : ''}`} />
+            </button>
 
-        {/* Visitas Hoje */}
-        <Card className="rounded-xl shadow-sm border-l-4 border-l-blue-500 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => document.getElementById('agenda-section')?.scrollIntoView({ behavior: 'smooth' })}>
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Visitas Hoje</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : todayVisitas.length}</p>
-                {!loading && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {todayVisitas.length === 1 ? 'agendada para hoje' : 'agendadas para hoje'}
-                  </p>
+            {comissoesOpen && (
+              <div className="px-5 pb-5 pt-2 space-y-4 border-t border-border bg-background">
+                {/* Summary numbers */}
+                <div className="grid grid-cols-3 gap-3 pt-2">
+                  {[
+                    { label: 'Total ganho', value: comissaoData?.totalGanho ?? 0, color: 'text-foreground' },
+                    { label: 'Pago',        value: comissaoData?.pago      ?? 0, color: 'text-emerald-600' },
+                    { label: 'Pendente',    value: comissaoData?.pendente  ?? 0, color: 'text-amber-600'  },
+                  ].map((s) => (
+                    <div key={s.label} className="bg-secondary/50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
+                      <p className={`text-lg font-semibold ${s.color}`}>R$ {fmtR(s.value)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Commission list */}
+                {!comissaoData || comissaoData.lista.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comissão este mês.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Últimas comissões</p>
+                    {comissaoData.lista.slice(0, 5).map((c) => (
+                      <div key={c.id} className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{c.imovelTitulo}</p>
+                          <p className="text-xs text-muted-foreground">{c.percentual}% · {new Date(c.createdAt).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-semibold">R$ {fmtR(c.valor)}</p>
+                          <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${
+                            c.status === 'PENDENTE'
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-emerald-50 text-emerald-700'
+                          }`}>
+                            {c.status === 'PENDENTE' ? 'Pendente' : 'Pago'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              <div className="p-2.5 rounded-xl bg-blue-50 shrink-0">
-                <CalendarDays className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Em Negociação */}
-        <Card className="rounded-xl shadow-sm border-l-4 border-l-amber-500">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Em Negociação</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : emNegociacao}</p>
-                {!loading && <p className="text-xs text-muted-foreground mt-1">matches ativos na carteira</p>}
-              </div>
-              <div className="p-2.5 rounded-xl bg-amber-50 shrink-0">
-                <GitMerge className="h-5 w-5 text-amber-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Visitas no Mês */}
-        <Card className="rounded-xl shadow-sm border-l-4 border-l-indigo-500">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Visitas no Mês</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : mesRealizadas + mesAgendadas}</p>
-                {!loading && (
-                  <p className="text-xs mt-1">
-                    <span className="text-emerald-600 font-semibold">{mesRealizadas} realizadas</span>
-                    <span className="text-muted-foreground"> · {mesAgendadas} ag.</span>
-                  </p>
-                )}
-              </div>
-              <div className="p-2.5 rounded-xl bg-indigo-50 shrink-0">
-                <TrendingUp className="h-5 w-5 text-indigo-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Fechamentos do Mês */}
-        <Card className="rounded-xl shadow-sm border-l-4 border-l-emerald-500">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fechamentos no Mês</p>
-                <p className="text-3xl font-bold mt-2 tabular-nums">{loading ? <Sk /> : mesFechados}</p>
-                {!loading && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {mesFechados === 1 ? 'negócio fechado' : 'negócios fechados'} em {MESES_FULL[now.getMonth()]}
-                  </p>
-                )}
-              </div>
-              <div className="p-2.5 rounded-xl bg-emerald-50 shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── 3. Agenda ────────────────────────────────────────────────────────── */}
       <Card id="agenda-section" className="rounded-2xl shadow-sm overflow-hidden">
