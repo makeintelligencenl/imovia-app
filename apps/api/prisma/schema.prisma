@@ -7,87 +7,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─────────────────────────────────────────
-// Multi-tenancy: cada imobiliária é um tenant
-// ─────────────────────────────────────────
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  email     String?
-  telefone  String?
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Configuração de comissão de venda
-  comissaoPercentualTotal  Decimal? @default(6.00)  @db.Decimal(5, 2)
-  comissaoSplitImobiliaria Decimal? @default(50.00) @db.Decimal(5, 2)
-  comissaoSplitCorretor    Decimal? @default(50.00) @db.Decimal(5, 2)
-
-  users          User[]
-  clientes       Cliente[]
-  imoveis        Imovel[]
-  perfis         PerfilBusca[]
-  matches        Match[]
-  pipelineEtapas PipelineEtapa[]
-  visitas        Visita[]
-  comissoes      ComissaoVenda[]
+  id                       String          @id @default(cuid())
+  name                     String
+  slug                     String          @unique
+  email                    String?
+  telefone                 String?
+  ativo                    Boolean         @default(true)
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+  comissaoPercentualTotal  Decimal?        @default(6.00) @db.Decimal(5, 2)
+  comissaoSplitCorretor    Decimal?        @default(50.00) @db.Decimal(5, 2)
+  comissaoSplitImobiliaria Decimal?        @default(50.00) @db.Decimal(5, 2)
+  clientes                 Cliente[]
+  comissoes                ComissaoVenda[]
+  imoveis                  Imovel[]
+  matches                  Match[]
+  perfis                   PerfilBusca[]
+  pipelineEtapas           PipelineEtapa[]
+  users                    User[]
+  visitas                  Visita[]
 
   @@map("tenants")
 }
 
-// ─────────────────────────────────────────
-// Usuários (corretores e admins da imobiliária)
-// ─────────────────────────────────────────
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(CORRETOR)
-  ativo        Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
+  id                String           @id @default(cuid())
+  name              String
+  email             String           @unique
+  passwordHash      String
+  role              Role             @default(CORRETOR)
+  ativo             Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
   tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id])
-  matchesAssociados Match[]          @relation("MatchCorretor")
-  historico         MatchHistorico[]
-  visitas           Visita[]         @relation("VisitaCorretor")
   clientes          Cliente[]        @relation("ClienteCorretor")
   comissoes         ComissaoVenda[]  @relation("ComissaoCorretor")
+  historico         MatchHistorico[]
+  matchesAssociados Match[]          @relation("MatchCorretor")
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  visitas           Visita[]         @relation("VisitaCorretor")
 
   @@map("users")
 }
 
-enum Role {
-  ADMIN
-  CORRETOR
-}
-
-// ─────────────────────────────────────────
-// Clientes (separados dos perfis de busca)
-// ─────────────────────────────────────────
 model Cliente {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   nome        String
   email       String
   whatsapp    String?
   telefone    String?
   cpf         String?
-  observacoes String?  @db.Text
-  ativo       Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  corretorId String?
-  corretor   User?         @relation("ClienteCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
-
-  tenantId String
-  tenant   Tenant        @relation(fields: [tenantId], references: [id])
-  perfis   PerfilBusca[]
-  visitas  Visita[]
+  observacoes String?
+  ativo       Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tenantId    String
+  corretorId  String?
+  corretor    User?         @relation("ClienteCorretor", fields: [corretorId], references: [id])
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  perfis      PerfilBusca[]
+  visitas     Visita[]
 
   @@index([tenantId])
   @@index([tenantId, email])
@@ -95,79 +75,68 @@ model Cliente {
   @@map("clientes")
 }
 
-// ─────────────────────────────────────────
-// Localidades (fonte: IBGE)
-// ─────────────────────────────────────────
 model Estado {
-  id        Int      @id                // código IBGE
-  sigla     String   @unique @db.Char(2)
-  nome      String
-  cidades   Cidade[]
+  id      Int      @id
+  sigla   String   @unique @db.Char(2)
+  nome    String
+  cidades Cidade[]
 
   @@map("estados")
 }
 
 model Cidade {
-  id        Int      @id                // código IBGE
-  nome      String
-  estadoId  Int
-  estado    Estado   @relation(fields: [estadoId], references: [id])
-  imoveis   Imovel[]
+  id       Int      @id
+  nome     String
+  estadoId Int
+  estado   Estado   @relation(fields: [estadoId], references: [id])
+  imoveis  Imovel[]
 
   @@index([estadoId])
   @@map("cidades")
 }
 
-// ─────────────────────────────────────────
-// Tipos de imóvel (tabela no banco — extensível sem deploy)
-// ─────────────────────────────────────────
 model TipoImovel {
-  id        String   @id @default(cuid())
-  nome      String   @unique // "Apartamento", "Casa", "Comercial", "Terreno", "Rural"
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  imoveis Imovel[]
-  perfis  PerfilBusca[] @relation("PerfilTipos")
+  id        String        @id @default(cuid())
+  nome      String        @unique
+  ativo     Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  imoveis   Imovel[]
+  perfis    PerfilBusca[] @relation("PerfilTipos")
 
   @@map("tipos_imovel")
 }
 
-// ─────────────────────────────────────────
-// Imóveis cadastrados na plataforma
-// ─────────────────────────────────────────
 model Imovel {
-  id         String       @id @default(cuid())
-  titulo     String
-  tipoId     String
-  tipo       TipoImovel   @relation(fields: [tipoId], references: [id])
-  finalidade Finalidade
-  preco      Decimal      @db.Decimal(12, 2)
-  areaM2     Decimal      @db.Decimal(8, 2)
-  quartos    Int?
-  banheiros  Int?
-  vagas      Int?
-  bairro     String
-  cidadeId   Int
-  cidade     Cidade       @relation(fields: [cidadeId], references: [id])
-  estado     String       @db.Char(2)
-  latitude   Decimal?     @db.Decimal(10, 7)
-  longitude  Decimal?     @db.Decimal(10, 7)
-  descricao      String?      @db.Text
-  cep            String?      @db.VarChar(9)
-  codigoOrigem   String?      @db.VarChar(255)
-  urlImovel      String?      @db.VarChar(500)
-  status         StatusImovel @default(DISPONIVEL)
-  origem         String?
-  externalId     String?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-
-  tenantId  String
-  tenant    Tenant         @relation(fields: [tenantId], references: [id])
-  matches   Match[]
-  visitas   Visita[]
-  comissoes ComissaoVenda[]
+  id           String          @id @default(cuid())
+  titulo       String
+  finalidade   Finalidade
+  preco        Decimal         @db.Decimal(12, 2)
+  areaM2       Decimal         @db.Decimal(8, 2)
+  quartos      Int?
+  banheiros    Int?
+  vagas        Int?
+  bairro       String
+  estado       String          @db.Char(2)
+  latitude     Decimal?        @db.Decimal(10, 7)
+  longitude    Decimal?        @db.Decimal(10, 7)
+  descricao    String?
+  status       StatusImovel    @default(DISPONIVEL)
+  origem       String?
+  externalId   String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  tenantId     String
+  tipoId       String
+  cep          String?         @db.VarChar(9)
+  codigoOrigem String?         @db.VarChar(255)
+  urlImovel    String?         @db.VarChar(500)
+  cidadeId     Int
+  comissoes    ComissaoVenda[]
+  cidade       Cidade          @relation(fields: [cidadeId], references: [id])
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  tipo         TipoImovel      @relation(fields: [tipoId], references: [id])
+  matches      Match[]
+  visitas      Visita[]
 
   @@index([tenantId, status])
   @@index([tenantId, finalidade, tipoId])
@@ -175,100 +144,69 @@ model Imovel {
   @@map("imoveis")
 }
 
-enum Finalidade {
-  ALUGUEL
-  VENDA
-}
-
-enum StatusImovel {
-  DISPONIVEL
-  RESERVADO
-  ALUGADO
-  VENDIDO
-  INATIVO
-}
-
-// ─────────────────────────────────────────
-// Perfis de busca (vinculados ao Cliente)
-// ─────────────────────────────────────────
 model PerfilBusca {
-  id         String     @id @default(cuid())
-  clienteId  String
-  cliente    Cliente    @relation(fields: [clienteId], references: [id])
+  id         String       @id @default(cuid())
   finalidade Finalidade
-  precoMin   Decimal    @db.Decimal(12, 2)
-  precoMax   Decimal    @db.Decimal(12, 2)
-  areaMin    Decimal    @db.Decimal(8, 2)
-  areaMax    Decimal?   @db.Decimal(8, 2)
+  precoMin   Decimal      @db.Decimal(12, 2)
+  precoMax   Decimal      @db.Decimal(12, 2)
+  areaMin    Decimal      @db.Decimal(8, 2)
+  areaMax    Decimal?     @db.Decimal(8, 2)
   quartosMin Int?
   cidades    String[]
   bairros    String[]
-  ativo      Boolean    @default(true)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-
-  tenantId String
-  tenant   Tenant       @relation(fields: [tenantId], references: [id])
-  matches  Match[]
-  tipos    TipoImovel[] @relation("PerfilTipos")
+  ativo      Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  tenantId   String
+  clienteId  String
+  matches    Match[]
+  cliente    Cliente      @relation(fields: [clienteId], references: [id])
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  tipos      TipoImovel[] @relation("PerfilTipos")
 
   @@index([tenantId, ativo, finalidade])
   @@index([tenantId, clienteId])
   @@map("perfis_busca")
 }
 
-// ─────────────────────────────────────────
-// Etapas do pipeline (customizáveis por tenant)
-// ─────────────────────────────────────────
 model PipelineEtapa {
-  id        String   @id @default(cuid())
-  nome      String
-  cor       String   @db.VarChar(7)
-  ordem     Int
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenantId String
-  tenant   Tenant           @relation(fields: [tenantId], references: [id])
-  matches  Match[]
-  historicoOrigem  MatchHistorico[] @relation("HistoricoOrigem")
+  id               String           @id @default(cuid())
+  nome             String
+  cor              String           @db.VarChar(7)
+  ordem            Int
+  ativo            Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  tenantId         String
   historicoDestino MatchHistorico[] @relation("HistoricoDestino")
+  historicoOrigem  MatchHistorico[] @relation("HistoricoOrigem")
+  matches          Match[]
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, nome])
   @@index([tenantId, ordem])
+  @@index([tenantId, ordem], map: "idx_pipeline_etapas_tenantid_ordem")
   @@map("pipeline_etapas")
 }
 
-// ─────────────────────────────────────────
-// Registro de matches gerados
-// ─────────────────────────────────────────
 model Match {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Calculado na criação do match e recalculado quando o imóvel ou perfil são editados.
-  // Evita cálculo em runtime a cada listagem.
-  leadScore Int @default(50)
-
-  perfilId String
-  perfil   PerfilBusca @relation(fields: [perfilId], references: [id])
-
-  imovelId String
-  imovel   Imovel @relation(fields: [imovelId], references: [id])
-
-  etapaId String
-  etapa   PipelineEtapa @relation(fields: [etapaId], references: [id])
-
+  id         String           @id @default(cuid())
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  perfilId   String
+  imovelId   String
+  tenantId   String
+  etapaId    String
   corretorId String?
-  corretor   User?   @relation("MatchCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
-
-  tenantId String
-  tenant    Tenant           @relation(fields: [tenantId], references: [id])
-  historico MatchHistorico[]
-  visitas   Visita[]
-  comissoes ComissaoVenda[]
+  leadScore  Int              @default(50)
+  comissoes  ComissaoVenda[]
+  historico  MatchHistorico[]
+  corretor   User?            @relation("MatchCorretor", fields: [corretorId], references: [id])
+  etapa      PipelineEtapa    @relation(fields: [etapaId], references: [id])
+  imovel     Imovel           @relation(fields: [imovelId], references: [id])
+  perfil     PerfilBusca      @relation(fields: [perfilId], references: [id])
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  visitas    Visita[]
 
   @@unique([perfilId, imovelId])
   @@index([tenantId])
@@ -277,84 +215,49 @@ model Match {
   @@map("matches")
 }
 
-// ─────────────────────────────────────────
-// Histórico de movimentação do pipeline
-// ─────────────────────────────────────────
-enum MatchHistoricoTipo {
-  MATCH_CRIADO
-  ETAPA_ALTERADA
-  CORRETOR_ATRIBUIDO
-  CORRETOR_REMOVIDO
-}
-
 model MatchHistorico {
-  id              String             @id @default(cuid())
-  matchId         String
-  tenantId        String
-  tipo            MatchHistoricoTipo
-  etapaOrigemId   String?
-  etapaDestinoId  String?
-  userId          String?
-  createdAt       DateTime           @default(now())
-
-  match        Match          @relation(fields: [matchId],        references: [id], onDelete: Cascade)
-  etapaOrigem  PipelineEtapa? @relation("HistoricoOrigem",  fields: [etapaOrigemId],  references: [id], onDelete: SetNull)
-  etapaDestino PipelineEtapa? @relation("HistoricoDestino", fields: [etapaDestinoId], references: [id], onDelete: SetNull)
-  usuario      User?          @relation(fields: [userId],         references: [id], onDelete: SetNull)
+  id             String             @id @default(cuid())
+  matchId        String
+  tenantId       String
+  tipo           MatchHistoricoTipo
+  etapaOrigemId  String?
+  etapaDestinoId String?
+  userId         String?
+  createdAt      DateTime           @default(now())
+  etapaDestino   PipelineEtapa?     @relation("HistoricoDestino", fields: [etapaDestinoId], references: [id])
+  etapaOrigem    PipelineEtapa?     @relation("HistoricoOrigem", fields: [etapaOrigemId], references: [id])
+  match          Match              @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  usuario        User?              @relation(fields: [userId], references: [id])
 
   @@index([matchId])
   @@index([tenantId])
   @@map("match_historico")
 }
 
-// ─────────────────────────────────────────
-// Agendamento de visitas
-// ─────────────────────────────────────────
-enum VisitaStatus {
-  AGENDADA
-  CONFIRMADA
-  REALIZADA
-  CANCELADA
-}
-
 model Visita {
-  id         String       @id @default(cuid())
-  tenantId   String
-  matchId    String?
-  imovelId   String
-  clienteId  String
-  corretorId String?
-  dataHora   DateTime
-  duracaoMin Int          @default(60)
-  status     VisitaStatus @default(AGENDADA)
-  observacoes String?     @db.Text
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-
-  tenant   Tenant   @relation(fields: [tenantId],   references: [id])
-  imovel   Imovel   @relation(fields: [imovelId],   references: [id])
-  cliente  Cliente  @relation(fields: [clienteId],  references: [id])
-  corretor User?    @relation("VisitaCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
-  match    Match?   @relation(fields: [matchId],    references: [id], onDelete: SetNull)
+  id          String       @id @default(cuid())
+  tenantId    String
+  matchId     String?
+  imovelId    String
+  corretorId  String?
+  dataHora    DateTime
+  duracaoMin  Int          @default(60)
+  status      VisitaStatus @default(AGENDADA)
+  observacoes String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  clienteId   String
+  cliente     Cliente      @relation(fields: [clienteId], references: [id])
+  corretor    User?        @relation("VisitaCorretor", fields: [corretorId], references: [id])
+  imovel      Imovel       @relation(fields: [imovelId], references: [id])
+  match       Match?       @relation(fields: [matchId], references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
   @@index([tenantId, clienteId])
   @@index([tenantId, corretorId])
   @@index([tenantId, dataHora])
   @@map("visitas")
-}
-
-// ─────────────────────────────────────────
-// Comissões geradas no fechamento de vendas
-// ─────────────────────────────────────────
-enum ComissaoTipo {
-  IMOBILIARIA
-  CORRETOR
-}
-
-enum ComissaoStatus {
-  PENDENTE
-  PAGO
 }
 
 model ComissaoVenda {
@@ -371,15 +274,56 @@ model ComissaoVenda {
   dataPagamento DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-
-  tenant   Tenant  @relation(fields: [tenantId],   references: [id])
-  match    Match   @relation(fields: [matchId],    references: [id], onDelete: Cascade)
-  imovel   Imovel  @relation(fields: [imovelId],   references: [id])
-  corretor User?   @relation("ComissaoCorretor", fields: [corretorId], references: [id], onDelete: SetNull)
+  corretor      User?          @relation("ComissaoCorretor", fields: [corretorId], references: [id])
+  imovel        Imovel         @relation(fields: [imovelId], references: [id])
+  match         Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
 
   @@unique([matchId, tipo])
   @@index([tenantId])
   @@index([tenantId, corretorId])
   @@index([tenantId, status])
   @@map("comissoes_venda")
+}
+
+enum Role {
+  ADMIN
+  CORRETOR
+}
+
+enum Finalidade {
+  ALUGUEL
+  VENDA
+}
+
+enum StatusImovel {
+  DISPONIVEL
+  RESERVADO
+  ALUGADO
+  VENDIDO
+  INATIVO
+}
+
+enum MatchHistoricoTipo {
+  MATCH_CRIADO
+  ETAPA_ALTERADA
+  CORRETOR_ATRIBUIDO
+  CORRETOR_REMOVIDO
+}
+
+enum VisitaStatus {
+  AGENDADA
+  CONFIRMADA
+  REALIZADA
+  CANCELADA
+}
+
+enum ComissaoTipo {
+  IMOBILIARIA
+  CORRETOR
+}
+
+enum ComissaoStatus {
+  PENDENTE
+  PAGO
 }

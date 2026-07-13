@@ -74,22 +74,19 @@ export class ChatsService {
 
     const clientes = await this.prisma.cliente.findMany({
       where: { tenantId, ativo: true },
-      select: {
-        id: true, nome: true, email: true, whatsapp: true, telefone: true,
+      include: {
         corretor: { select: { id: true, name: true } },
         perfis: {
           take: 1,
           orderBy: { updatedAt: 'desc' },
-          select: {
-            id: true, tipoNegocio: true, precoMin: true, precoMax: true,
+          include: {
             matches: {
               take: 1,
               orderBy: { updatedAt: 'desc' },
-              select: {
-                id: true, score: true, etapa: true, updatedAt: true,
+              include: {
                 imovel: {
                   select: {
-                    id: true, titulo: true, preco: true, area: true, quartos: true, vagas: true,
+                    id: true, titulo: true, preco: true, areaM2: true, quartos: true, vagas: true,
                     cidade: { select: { nome: true } },
                   },
                 },
