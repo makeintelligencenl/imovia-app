@@ -132,12 +132,9 @@ app.use((req: Request, res: Response, next: () => void) => {
 const sseTransports: Map<string, SSEServerTransport> = new Map()
 
 app.get('/sse', async (req: Request, res: Response) => {
-  // Desativa buffering do proxy (Railway/nginx) para SSE funcionar
-  res.setHeader('Content-Type', 'text/event-stream')
-  res.setHeader('Cache-Control', 'no-cache, no-transform')
-  res.setHeader('Connection', 'keep-alive')
+  // X-Accel-Buffering: no desativa buffer do nginx/Railway para SSE
+  // Não chamar flushHeaders() — o SSEServerTransport chama writeHead() internamente
   res.setHeader('X-Accel-Buffering', 'no')
-  res.flushHeaders()
 
   // MCP spec exige URI completa no endpoint event (não caminho relativo)
   const proto = (req.headers['x-forwarded-proto'] as string) || 'https'
