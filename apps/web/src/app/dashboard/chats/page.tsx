@@ -49,12 +49,14 @@ function fmtPreco(n: number) {
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function initials(name: string) {
+function initials(name: string | null | undefined) {
+  if (!name) return '?'
   return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
 }
 
 const AVATAR_COLORS = ['#7c3aed','#059669','#dc2626','#d97706','#0891b2','#be185d','#1d4ed8','#065f46']
-function avatarColor(id: string) {
+function avatarColor(id: string | null | undefined) {
+  if (!id) return AVATAR_COLORS[0]
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   return AVATAR_COLORS[h % AVATAR_COLORS.length]
