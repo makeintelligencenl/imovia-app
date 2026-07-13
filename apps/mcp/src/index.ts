@@ -124,7 +124,7 @@ app.use((_req: Request, res: Response, next: () => void) => {
 
 const sseTransports: Map<string, SSEServerTransport> = new Map()
 
-app.get('/sse', async (_req: Request, res: Response) => {
+app.get('/sse', async (req: Request, res: Response) => {
   // Desativa buffering do proxy (Railway/nginx) para SSE funcionar
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache, no-transform')
@@ -132,7 +132,12 @@ app.get('/sse', async (_req: Request, res: Response) => {
   res.setHeader('X-Accel-Buffering', 'no')
   res.flushHeaders()
 
-  const transport = new SSEServerTransport('/messages', res)
+  // MCP spec exige URI completa no endpoint event (não caminho relativo)
+  const proto = (req.headers['x-forwarded-proto'] as string) || 'https'
+  const host  = (req.headers['x-forwarded-host'] as string) || req.headers.host || 'localhost'
+  const messagesUrl = `${proto}://${host}/messages`
+
+  const transport = new SSEServerTransport(messagesUrl, res)
   sseTransports.set(transport.sessionId, transport)
 
   // Keep-alive a cada 15s para evitar timeout do proxy
