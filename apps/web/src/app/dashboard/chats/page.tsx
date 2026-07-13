@@ -37,8 +37,8 @@ interface GptMessage {
 
 interface MatchInfo {
   cliente: { id: string; nome: string; email: string; whatsapp: string | null; corretor: { id: string; name: string } | null }
-  perfil:  { id: string; tipoNegocio: string; precoMin: number | null; precoMax: number | null } | null
-  match:   { id: string; score: number; etapa: string; updatedAt: string; imovel: { id: string; titulo: string; preco: number; areaM2: number | null; quartos: number | null; vagas: number | null; cidade: { nome: string } } } | null
+  perfil:  { id: string; finalidade: string; precoMin: number | null; precoMax: number | null } | null
+  match:   { id: string; leadScore: number; etapa: string; updatedAt: string; imovel: { id: string; titulo: string; preco: number; areaM2: number | null; quartos: number | null; vagas: number | null; cidade: { nome: string } } } | null
 }
 
 function fmt(n: number) {
@@ -354,7 +354,7 @@ export default function ChatsPage() {
                   <div className="h-16 bg-secondary/40 flex items-center justify-center relative">
                     <MapPin className="h-6 w-6 text-muted-foreground/30" />
                     <span className="absolute top-1.5 right-1.5 text-[10px] font-bold bg-green-500/20 text-green-500 border border-green-500/30 rounded px-1.5 py-0.5">
-                      {Math.round(matchInfo.match.score)}%
+                      {Math.round(matchInfo.match.leadScore)}%
                     </span>
                   </div>
                   <div className="p-2 space-y-1">
@@ -403,7 +403,7 @@ export default function ChatsPage() {
                   <InfoRow label="Nome"     value={matchInfo.cliente.nome} />
                   {matchInfo.perfil && (
                     <>
-                      <InfoRow label="Tipo"    value={matchInfo.perfil.tipoNegocio === 'COMPRA' ? 'Compra' : 'Aluguel'} />
+                      <InfoRow label="Tipo"    value={matchInfo.perfil.finalidade === 'COMPRA' ? 'Compra' : 'Aluguel'} />
                       {(matchInfo.perfil.precoMin || matchInfo.perfil.precoMax) && (
                         <InfoRow
                           label="Orçamento"
