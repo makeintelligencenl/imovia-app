@@ -111,11 +111,18 @@ function buildServer(): McpServer {
 const app = express()
 app.use(express.json())
 
-app.use((_req: Request, res: Response, next: () => void) => {
+app.use((req: Request, res: Response, next: () => void) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, mcp-session-id')
-  if (_req.method === 'OPTIONS') { res.sendStatus(200); return }
+  if (req.method === 'OPTIONS') { res.sendStatus(200); return }
+
+  const accessKey = process.env.MCP_ACCESS_KEY
+  if (accessKey) {
+    const header = req.headers['x-api-key'] || (req.headers['authorization'] ?? '').replace('Bearer ', '')
+    if (header !== accessKey) { res.status(401).json({ error: 'Não autorizado' }); return }
+  }
+
   next()
 })
 
