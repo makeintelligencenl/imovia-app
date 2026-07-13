@@ -1,0 +1,62 @@
+import { Controller, Get, Post, Param, Query, Body, Request, UseGuards } from '@nestjs/common'
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
+import { ChatsService } from './chats.service'
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { RolesGuard, Roles } from '../auth/guards/roles.guard'
+
+@ApiTags('chats')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
+@Controller('chats')
+export class ChatsController {
+  constructor(private readonly chatsService: ChatsService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Lista chats do GPT Maker' })
+  listar(
+    @Query('page')     page?:     string,
+    @Query('pageSize') pageSize?: string,
+    @Query('agentId')  agentId?:  string,
+    @Query('search')   search?:   string,
+  ) {
+    return this.chatsService.listarChats({ page, pageSize, agentId, search })
+  }
+
+  @Get(':chatId/messages')
+  @ApiOperation({ summary: 'Lista mensagens de um chat' })
+  mensagens(
+    @Param('chatId')   chatId:    string,
+    @Query('page')     page?:     string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.chatsService.listarMensagens(chatId, { page, pageSize })
+  }
+
+  @Post(':chatId/messages')
+  @ApiOperation({ summary: 'Envia mensagem em um chat' })
+  enviar(@Param('chatId') chatId: string, @Body('message') message: string) {
+    return this.chatsService.enviarMensagem(chatId, message)
+  }
+
+  @Post(':chatId/assume')
+  @ApiOperation({ summary: 'Assume atendimento humano (pausa IA)' })
+  assumir(@Param('chatId') chatId: string) {
+    return this.chatsService.assumirAtendimento(chatId)
+  }
+
+  @Post(':chatId/end')
+  @ApiOperation({ summary: 'Encerra atendimento humano (retorna IA)' })
+  encerrar(@Param('chatId') chatId: string) {
+    return this.chatsService.encerrarAtendimento(chatId)
+  }
+
+  @Get(':chatId/match-info')
+  @ApiOperation({ summary: 'Retorna match associado ao chat pelo telefone do lead' })
+  matchInfo(
+    @Request() req: any,
+    @Query('phone') phone: string,
+  ) {
+    return this.chatsService.infoMatch(req.user.tenantId, phone)
+  }
+}

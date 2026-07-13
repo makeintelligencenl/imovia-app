@@ -530,7 +530,7 @@ export class MatchingService {
   async relatorioCorretores(tenantId: string, periodo: string) {
     const { gte, lte } = this.periodoToRange(periodo)
 
-    const [etapas, corretores, matchesPeriodo, visitasPeriodo] = await Promise.all([
+    const [etapas, corretores, visitasPeriodo] = await Promise.all([
       this.prisma.pipelineEtapa.findMany({
         where: { tenantId, ativo: true },
         orderBy: { ordem: 'asc' },
@@ -540,10 +540,6 @@ export class MatchingService {
         where: { tenantId, role: 'CORRETOR', ativo: true },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
-      }),
-      this.prisma.match.findMany({
-        where: { tenantId, createdAt: { gte, lte } },
-        select: { id: true, corretorId: true, etapaId: true, createdAt: true, updatedAt: true },
       }),
       this.prisma.visita.findMany({
         where: { tenantId, createdAt: { gte, lte }, corretorId: { not: null } },
@@ -567,6 +563,19 @@ export class MatchingService {
           select: { matchId: true, match: { select: { corretorId: true } } },
         })
       : []
+
+    // Matches do período: criados no período OU envolvidos em conversões do período
+    const convMatchIds = conversoes.map(c => c.matchId)
+    const matchesPeriodo = await this.prisma.match.findMany({
+      where: {
+        tenantId,
+        OR: [
+          { createdAt: { gte, lte } },
+          ...(convMatchIds.length ? [{ id: { in: convMatchIds } }] : []),
+        ],
+      },
+      select: { id: true, corretorId: true, etapaId: true, createdAt: true, updatedAt: true },
+    })
 
     // Tempo médio por etapa (equipe toda)
     // Busca todos os eventos ETAPA_ALTERADA dos matches do período (sem filtro de data no histórico

@@ -232,7 +232,7 @@ export default function FinanceiroPage() {
                       className="flex items-center gap-1 mx-auto text-xs px-3 py-1 rounded-md bg-green-50 text-green-800 border border-green-200 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800 disabled:opacity-50 transition-colors"
                     >
                       <CheckCircle className="h-3 w-3" />
-                      {pagando === c.id ? '…' : 'Pagar'}
+                      {pagando === c.id ? '…' : 'Receber'}
                     </button>
                   ) : (
                     <span className="text-xs text-muted-foreground">

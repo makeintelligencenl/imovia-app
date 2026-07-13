@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, LayoutDashboard, Home, GitMerge, LogOut, ChevronLeft, ChevronRight, Settings2, CalendarDays, UserRound, BarChart2, DollarSign } from 'lucide-react'
+import { Building2, LayoutDashboard, Home, GitMerge, LogOut, ChevronLeft, ChevronRight, Settings2, CalendarDays, UserRound, BarChart2, DollarSign, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface UserInfo { name: string; email: string; role: string }
@@ -14,6 +14,7 @@ const NAV_ITEMS_BASE = [
   { href: '/dashboard/agenda',            label: 'Agenda',          icon: CalendarDays,    adminOnly: false },
   { href: '/dashboard/relatorios',         label: 'Relatórios',      icon: BarChart2,       adminOnly: true  },
   { href: '/dashboard/financeiro',         label: 'Financeiro',      icon: DollarSign,      adminOnly: true  },
+  { href: '/dashboard/chats',             label: 'Chats',           icon: MessageSquare,   adminOnly: true  },
   { href: '/dashboard/settings/pipeline', label: 'Configurações',   icon: Settings2,       adminOnly: true  },
 ]
 
