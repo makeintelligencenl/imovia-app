@@ -84,6 +84,7 @@ export class ChatsService {
               take: 1,
               orderBy: { updatedAt: 'desc' },
               include: {
+                etapa:  { select: { nome: true } },
                 imovel: {
                   select: {
                     id: true, titulo: true, preco: true, areaM2: true, quartos: true, vagas: true,
@@ -119,7 +120,7 @@ export class ChatsService {
       perfil: perfil
         ? {
             id:          perfil.id,
-            tipoNegocio: perfil.tipoNegocio,
+            finalidade:  perfil.finalidade,
             precoMin:    perfil.precoMin,
             precoMax:    perfil.precoMax,
           }
@@ -127,8 +128,8 @@ export class ChatsService {
       match: match
         ? {
             id:        match.id,
-            score:     match.score,
-            etapa:     match.etapa,
+            leadScore: match.leadScore,
+            etapa:     match.etapa.nome,
             updatedAt: match.updatedAt,
             imovel:    match.imovel,
           }
