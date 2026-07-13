@@ -116,22 +116,25 @@ app.use((req: Request, res: Response, next: () => void) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, mcp-session-id')
   if (req.method === 'OPTIONS') { res.sendStatus(200); return }
-
-  const accessKey = process.env.MCP_ACCESS_KEY
-  if (accessKey) {
-    const header = req.headers['x-api-key'] || (req.headers['authorization'] ?? '').replace('Bearer ', '')
-    if (header !== accessKey) { res.status(401).json({ error: 'Não autorizado' }); return }
-  }
-
   next()
 })
+
+// Auth aplicada apenas em /sse e /mcp — /messages não exige (sessionId já protege)
+function requireApiKey(req: Request, res: Response, next: () => void) {
+  const accessKey = process.env.MCP_ACCESS_KEY
+  if (accessKey) {
+    const header = (req.headers['x-api-key'] as string) || (req.headers['authorization'] ?? '').replace('Bearer ', '')
+    if (header !== accessKey) { res.status(401).json({ error: 'Não autorizado' }); return }
+  }
+  next()
+}
 
 // ── SSE (GET /sse + POST /messages) ──────────────────────────────────────────
 // Cada conexão SSE recebe uma instância própria do servidor MCP
 
 const sseTransports: Map<string, SSEServerTransport> = new Map()
 
-app.get('/sse', async (req: Request, res: Response) => {
+app.get('/sse', requireApiKey, async (req: Request, res: Response) => {
   // X-Accel-Buffering: no desativa buffer do nginx/Railway para SSE
   // Não chamar flushHeaders() — o SSEServerTransport chama writeHead() internamente
   res.setHeader('X-Accel-Buffering', 'no')
@@ -171,7 +174,7 @@ app.post('/messages', async (req: Request, res: Response) => {
 // ── Streamable HTTP (POST /mcp) ───────────────────────────────────────────────
 // Cada requisição recebe instância própria — modo stateless
 
-app.post('/mcp', async (req: Request, res: Response) => {
+app.post('/mcp', requireApiKey, async (req: Request, res: Response) => {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
   const server = buildServer()
   await server.connect(transport)
@@ -179,7 +182,7 @@ app.post('/mcp', async (req: Request, res: Response) => {
   res.on('close', () => transport.close())
 })
 
-app.get('/mcp', async (req: Request, res: Response) => {
+app.get('/mcp', requireApiKey, async (req: Request, res: Response) => {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
   const server = buildServer()
   await server.connect(transport)
