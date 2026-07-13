@@ -125,10 +125,23 @@ app.use((_req: Request, res: Response, next: () => void) => {
 const sseTransports: Map<string, SSEServerTransport> = new Map()
 
 app.get('/sse', async (_req: Request, res: Response) => {
+  // Desativa buffering do proxy (Railway/nginx) para SSE funcionar
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no')
+  res.flushHeaders()
+
   const transport = new SSEServerTransport('/messages', res)
   sseTransports.set(transport.sessionId, transport)
 
+  // Keep-alive a cada 15s para evitar timeout do proxy
+  const keepAlive = setInterval(() => {
+    if (!res.writableEnded) res.write(': ping\n\n')
+  }, 15000)
+
   res.on('close', () => {
+    clearInterval(keepAlive)
     sseTransports.delete(transport.sessionId)
   })
 
