@@ -38,7 +38,7 @@ interface GptMessage {
 interface MatchInfo {
   cliente: { id: string; nome: string; email: string; whatsapp: string | null; corretor: { id: string; name: string } | null }
   perfil:  { id: string; tipoNegocio: string; precoMin: number | null; precoMax: number | null } | null
-  match:   { id: string; score: number; etapa: string; updatedAt: string; imovel: { id: string; titulo: string; preco: number; area: number | null; quartos: number | null; vagas: number | null; cidade: { nome: string } } } | null
+  match:   { id: string; score: number; etapa: string; updatedAt: string; imovel: { id: string; titulo: string; preco: number; areaM2: number | null; quartos: number | null; vagas: number | null; cidade: { nome: string } } } | null
 }
 
 function fmt(n: number) {
@@ -363,10 +363,10 @@ export default function ChatsPage() {
                     <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-2.5 w-2.5" />{matchInfo.match.imovel.cidade.nome}
                     </p>
-                    {(matchInfo.match.imovel.area || matchInfo.match.imovel.quartos) && (
+                    {(matchInfo.match.imovel.areaM2 || matchInfo.match.imovel.quartos) && (
                       <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                         <Ruler className="h-2.5 w-2.5" />
-                        {matchInfo.match.imovel.area ? `${matchInfo.match.imovel.area}m²` : ''}
+                        {matchInfo.match.imovel.areaM2 ? `${matchInfo.match.imovel.areaM2}m²` : ''}
                         {matchInfo.match.imovel.quartos ? ` · ${matchInfo.match.imovel.quartos}q` : ''}
                         {matchInfo.match.imovel.vagas ? ` · ${matchInfo.match.imovel.vagas}v` : ''}
                       </p>
