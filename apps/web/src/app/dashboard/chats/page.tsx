@@ -285,9 +285,10 @@ export default function ChatsPage() {
     const q = search.toLowerCase()
     return getChatName(c, clientNames).toLowerCase().includes(q) || c.whatsappPhone.includes(q)
   }
-  const humanChats    = (filterMode === 'all' || filterMode === 'human')  ? activeChats.filter((c)  => !c.finished && c.humanTalk  && applySearch(c)) : []
-  const aiChats       = (filterMode === 'all' || filterMode === 'ai')     ? activeChats.filter((c)  => !c.finished && !c.humanTalk && applySearch(c)) : []
-  const finishedChats = (filterMode === 'all' || filterMode === 'finished') ? [...activeChats.filter((c) => c.finished && applySearch(c)), ...finishedList.filter((c) => applySearch(c))] : []
+  const finishedIds   = new Set(finishedList.map((c) => c.id))
+  const humanChats    = (filterMode === 'all' || filterMode === 'human')  ? activeChats.filter((c)  => !c.finished && !finishedIds.has(c.id) && c.humanTalk  && applySearch(c)) : []
+  const aiChats       = (filterMode === 'all' || filterMode === 'ai')     ? activeChats.filter((c)  => !c.finished && !finishedIds.has(c.id) && !c.humanTalk && applySearch(c)) : []
+  const finishedChats = (filterMode === 'all' || filterMode === 'finished') ? finishedList.filter((c) => applySearch(c)) : []
 
   if (!allowed) return null
 
