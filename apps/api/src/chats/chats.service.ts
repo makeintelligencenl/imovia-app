@@ -79,7 +79,7 @@ export class ChatsService {
   }
 
   async resolverChat(chatId: string) {
-    return this.gptFetch<unknown>(`/v2/chat/${chatId}/finish`, { method: 'PUT' })
+    return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'PUT' })
   }
 
   async editarMensagem(chatId: string, messageId: string, message: string) {
