@@ -32,12 +32,13 @@ export class BotController {
     description: 'Use este endpoint no MCP. Cria o cliente automaticamente e dispara o matching.',
   })
   async cadastrarLead(@Body() dto: BotCreateLeadDto) {
-    const { tenantId, clienteNome, clienteEmail, clienteWhatsapp, ...perfilData } = dto
+    const { tenantId, clienteNome, clienteEmail, clienteWhatsapp, chatId, ...perfilData } = dto
 
     const cliente = await this.clientesService.create(tenantId, {
       nome: clienteNome,
       email: clienteEmail,
       whatsapp: clienteWhatsapp,
+      ...(chatId ? { gptMakerChatId: chatId } : {}),
     })
 
     const perfil = await this.perfisService.create(tenantId, {

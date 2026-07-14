@@ -66,11 +66,10 @@ export class ChatsService {
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'POST' })
   }
 
-  async infoMatch(tenantId: string, whatsappPhone: string) {
-    if (!whatsappPhone) return null
+  async infoMatch(tenantId: string, whatsappPhone: string, chatId?: string) {
+    if (!whatsappPhone && !chatId) return null
 
-    // Normaliza: remove tudo que não for dígito para comparação parcial
-    const digits = whatsappPhone.replace(/\D/g, '')
+    const digits = whatsappPhone?.replace(/\D/g, '') ?? ''
 
     const clientes = await this.prisma.cliente.findMany({
       where: { tenantId, ativo: true },
@@ -98,11 +97,14 @@ export class ChatsService {
       },
     })
 
-    const cliente = clientes.find((c) => {
-      const w = (c.whatsapp ?? '').replace(/\D/g, '')
-      const t = (c.telefone ?? '').replace(/\D/g, '')
-      return w.endsWith(digits.slice(-10)) || t.endsWith(digits.slice(-10))
-    })
+    // Busca por chatId primeiro (exato), depois por WhatsApp/telefone
+    const cliente = clientes.find((c) => chatId && (c as any).gptMakerChatId === chatId)
+      ?? clientes.find((c) => {
+        if (!digits) return false
+        const w = (c.whatsapp ?? '').replace(/\D/g, '')
+        const t = (c.telefone ?? '').replace(/\D/g, '')
+        return w.endsWith(digits.slice(-10)) || t.endsWith(digits.slice(-10))
+      })
 
     if (!cliente) return null
 

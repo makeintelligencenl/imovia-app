@@ -55,11 +55,12 @@ model Cliente {
   id          String        @id @default(cuid())
   nome        String
   email       String
-  whatsapp    String?
-  telefone    String?
-  cpf         String?
-  observacoes String?
-  ativo       Boolean       @default(true)
+  whatsapp        String?
+  telefone        String?
+  cpf             String?
+  observacoes     String?
+  gptMakerChatId  String?
+  ativo           Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   tenantId    String
