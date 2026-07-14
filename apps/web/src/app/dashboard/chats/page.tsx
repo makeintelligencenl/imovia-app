@@ -135,15 +135,12 @@ export default function ChatsPage() {
       setLoadingMsgs(false)
     }
 
-    // Busca match associado pelo telefone
-    if (chat.whatsappPhone) {
-      try {
-        const info = await api.get<MatchInfo | null>(`/chats/${chat.id}/match-info?phone=${encodeURIComponent(chat.whatsappPhone)}`)
-        setMatchInfo(info)
-      } catch {
-        setMatchInfo(null)
-      }
-    } else {
+    // Busca match associado pelo chatId (sempre) com phone como fallback
+    try {
+      const phone = chat.whatsappPhone ? encodeURIComponent(chat.whatsappPhone) : ''
+      const info = await api.get<MatchInfo | null>(`/chats/${chat.id}/match-info?phone=${phone}`)
+      setMatchInfo(info)
+    } catch {
       setMatchInfo(null)
     }
   }
