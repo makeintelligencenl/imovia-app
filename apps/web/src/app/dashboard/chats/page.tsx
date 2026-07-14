@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Send, UserCheck, Bot, Phone, MapPin, Ruler, ExternalLink, LinkIcon, UserRound, Unlink } from 'lucide-react'
+import { Send, UserCheck, Bot, Phone, MapPin, Ruler, ExternalLink, LinkIcon, UserRound, Unlink, CheckCircle, MoreVertical, Pencil, Trash2, Users } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
 
@@ -93,12 +93,40 @@ export default function ChatsPage() {
   const [text,         setText]         = useState('')
   const [sending,      setSending]      = useState(false)
   const [toggling,     setToggling]     = useState(false)
+  const [resolving,    setResolving]    = useState(false)
 
   // match info
   const [matchInfo,    setMatchInfo]    = useState<MatchInfo | null | 'loading'>('loading')
 
   // mapa chatId → nome do cliente cadastrado
   const [clientNames,  setClientNames]  = useState<Record<string, string>>({})
+
+  // lista de corretores do tenant
+  const [corretores,   setCorretores]   = useState<{ id: string; name: string }[]>([])
+  const [assigningId,  setAssigningId]  = useState<string | null>(null)
+
+  // largura do painel de match (redimensionável)
+  const [panelWidth,   setPanelWidth]   = useState(224)
+  const dragging = useRef(false)
+
+  function onDragStart(e: React.MouseEvent) {
+    e.preventDefault()
+    dragging.current = true
+    const startX = e.clientX
+    const startW = panelWidth
+    function onMove(ev: MouseEvent) {
+      if (!dragging.current) return
+      const delta = startX - ev.clientX
+      setPanelWidth(Math.min(480, Math.max(160, startW + delta)))
+    }
+    function onUp() {
+      dragging.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -112,13 +140,15 @@ export default function ChatsPage() {
     if (!allowed) return
     setLoadingList(true)
     try {
-      const [data, names] = await Promise.all([
+      const [data, names, users] = await Promise.all([
         api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50'),
         api.get<Record<string, string>>('/chats/client-names').catch(() => ({})),
+        api.get<{ id: string; name: string }[]>('/users').catch(() => []),
       ])
       const list = Array.isArray(data) ? data : (data as { chats?: GptChat[] }).chats ?? []
       setChats(list)
       setClientNames(names)
+      setCorretores(Array.isArray(users) ? users : [])
     } catch {
       toast.error('Não foi possível carregar os chats.')
     } finally {
@@ -196,6 +226,36 @@ export default function ChatsPage() {
       toast.error('Não foi possível alterar o modo de atendimento.')
     } finally {
       setToggling(false)
+    }
+  }
+
+  async function handleAssignCorretor(corretorId: string) {
+    if (!matchInfo || matchInfo === 'loading' || !matchInfo.cliente) return
+    setAssigningId(corretorId)
+    try {
+      await api.patch(`/clientes/${matchInfo.cliente.id}`, { corretorId: corretorId || null })
+      const corretor = corretores.find((c) => c.id === corretorId) ?? null
+      setMatchInfo({ ...matchInfo, cliente: { ...matchInfo.cliente, corretor: corretor ? { id: corretor.id, name: corretor.name } : null } })
+      toast.success(corretor ? `Corretor ${corretor.name} atribuído.` : 'Corretor removido.')
+    } catch {
+      toast.error('Não foi possível atribuir o corretor.')
+    } finally {
+      setAssigningId(null)
+    }
+  }
+
+  async function handleResolve() {
+    if (!activeChat || resolving) return
+    setResolving(true)
+    try {
+      await api.post(`/chats/${activeChat.id}/resolve`, {})
+      setActiveChat({ ...activeChat, finished: true })
+      setChats((prev) => prev.filter((c) => c.id !== activeChat.id))
+      toast.success('Chat marcado como resolvido.')
+    } catch {
+      toast.error('Não foi possível marcar como resolvido.')
+    } finally {
+      setResolving(false)
     }
   }
 
@@ -312,6 +372,14 @@ export default function ChatsPage() {
                     <><UserCheck className="h-3.5 w-3.5" />{toggling ? '…' : 'Assumir atendimento'}</>
                   )}
                 </button>
+                <button
+                  onClick={handleResolve}
+                  disabled={resolving || activeChat.finished}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 bg-green-500/10 text-green-500 border-green-500/25 hover:bg-green-500/20"
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  {resolving ? '…' : activeChat.finished ? 'Resolvido' : 'Marcar como resolvido'}
+                </button>
               </div>
             </div>
 
@@ -322,7 +390,24 @@ export default function ChatsPage() {
               ) : messages.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-10">Nenhuma mensagem ainda.</p>
               ) : (
-                messages.map((m) => <MessageBubble key={m.id} msg={m} />)
+                messages.map((m) => (
+                  <MessageBubble
+                    key={m.id}
+                    msg={m}
+                    onEdit={async (newText) => {
+                      try {
+                        await api.put(`/chats/${activeChat.id}/messages/${m.id}`, { message: newText })
+                        setMessages((prev) => prev.map((x) => x.id === m.id ? { ...x, text: newText } : x))
+                      } catch { toast.error('Erro ao editar mensagem.') }
+                    }}
+                    onDelete={async () => {
+                      try {
+                        await api.delete(`/chats/${activeChat.id}/messages/${m.id}`)
+                        setMessages((prev) => prev.filter((x) => x.id !== m.id))
+                      } catch { toast.error('Erro ao excluir mensagem.') }
+                    }}
+                  />
+                ))
               )}
               <div ref={messagesEndRef} />
             </div>
@@ -351,7 +436,13 @@ export default function ChatsPage() {
       </div>
 
       {/* ── Painel info / match ── */}
-      <div className="w-56 shrink-0 border-l border-border bg-card overflow-y-auto">
+      {/* Alça de drag */}
+      <div
+        onMouseDown={onDragStart}
+        className="w-1 shrink-0 cursor-col-resize hover:bg-blue-500/40 transition-colors bg-border"
+        title="Arraste para redimensionar"
+      />
+      <div className="shrink-0 border-border bg-card overflow-y-auto" style={{ width: panelWidth }}>
         {activeChat ? (
           <>
             {/* Match */}
@@ -432,12 +523,32 @@ export default function ChatsPage() {
             )}
 
             {/* Telefone */}
-            <div className="p-3">
+            <div className="p-3 border-b border-border">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
                 <Phone className="h-3 w-3" /> Contato
               </p>
               <p className="text-xs">{activeChat.whatsappPhone || '—'}</p>
             </div>
+
+            {/* Atribuir corretor */}
+            {matchInfo && matchInfo !== 'loading' && matchInfo?.cliente && (
+              <div className="p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
+                  <Users className="h-3 w-3" /> Corretor responsável
+                </p>
+                <select
+                  value={matchInfo.cliente.corretor?.id ?? ''}
+                  disabled={assigningId !== null}
+                  onChange={(e) => handleAssignCorretor(e.target.value)}
+                  className="w-full text-xs bg-secondary/60 border border-border rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  <option value="">— Sem corretor —</option>
+                  {corretores.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -456,7 +567,7 @@ function ChatItem({ chat, active, onClick, clientNames }: { chat: GptChat; activ
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors border-l-2 ${
-        active ? 'bg-blue-500/8 border-blue-400' : 'border-transparent hover:bg-secondary/40'
+        active ? 'bg-blue-500/20 border-blue-400' : 'border-transparent hover:bg-secondary/40'
       }`}
     >
       <div
@@ -487,7 +598,16 @@ function ChatItem({ chat, active, onClick, clientNames }: { chat: GptChat; activ
   )
 }
 
-function MessageBubble({ msg }: { msg: GptMessage }) {
+function MessageBubble({ msg, onEdit, onDelete }: {
+  msg: GptMessage
+  onEdit: (newText: string) => Promise<void>
+  onDelete: () => Promise<void>
+}) {
+  const [menuOpen,   setMenuOpen]   = useState(false)
+  const [editing,    setEditing]    = useState(false)
+  const [editText,   setEditText]   = useState(msg.text)
+  const [saving,     setSaving]     = useState(false)
+
   const isUser   = msg.role === 'user'
   // GPT Maker pode retornar mensagens de corretor humano com role 'human' ou
   // role 'assistant' + userName preenchido
@@ -512,20 +632,101 @@ function MessageBubble({ msg }: { msg: GptMessage }) {
   // Agente IA e corretor humano ficam à direita; cliente fica à esquerda
   const isRight = isAgent || isHuman
 
+  async function handleSaveEdit() {
+    if (!editText.trim() || editText === msg.text) { setEditing(false); return }
+    setSaving(true)
+    await onEdit(editText.trim())
+    setSaving(false)
+    setEditing(false)
+  }
+
   return (
-    <div className={`flex flex-col max-w-[70%] ${isRight ? 'self-end items-end ml-auto' : 'self-start items-start'}`}>
+    <div
+      className={`group flex flex-col max-w-[70%] relative ${isRight ? 'self-end items-end ml-auto' : 'self-start items-start'}`}
+      onMouseLeave={() => setMenuOpen(false)}
+    >
       <p className="text-[10px] text-muted-foreground mb-0.5">
         {isUser ? 'Cliente' : isHuman ? (msg.userName ?? 'Corretor') : 'IA'}
         {isAgent && <span className="ml-1 text-[10px] bg-green-500/15 text-green-500 rounded px-1">IA</span>}
         {isHuman && <span className="ml-1 text-[10px] bg-amber-500/15 text-amber-500 rounded px-1">Você</span>}
         {' · '}{msg.time ? new Date(msg.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
       </p>
-      <div className={`px-3 py-2 rounded-xl text-sm leading-relaxed ${
-        isUser  ? 'bg-secondary rounded-br-sm' :
-        isHuman ? 'bg-amber-500/20 border border-amber-500/25 rounded-bl-sm' :
-                  'bg-blue-600/85 text-white rounded-bl-sm'
-      }`}>
-        {msg.text || <span className="italic text-muted-foreground text-xs">mensagem sem texto</span>}
+
+      <div className="flex items-end gap-1">
+        {/* Botão de menu — aparece no hover, à esquerda de msgs da direita */}
+        {isRight && (
+          <div className="relative mb-1">
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center hover:bg-secondary text-muted-foreground"
+            >
+              <MoreVertical className="h-3.5 w-3.5" />
+            </button>
+            {menuOpen && (
+              <div className="absolute bottom-7 right-0 z-20 bg-card border border-border rounded-lg shadow-lg py-1 w-36">
+                <button
+                  onClick={() => { setMenuOpen(false); setEditing(true); setEditText(msg.text) }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-secondary transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" /> Editar
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onDelete() }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Excluir
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className={`px-3 py-2 rounded-xl text-sm leading-relaxed ${
+          isUser  ? 'bg-secondary rounded-br-sm' :
+          isHuman ? 'bg-amber-500/20 border border-amber-500/25 rounded-bl-sm' :
+                    'bg-blue-600/85 text-white rounded-bl-sm'
+        }`}>
+          {editing ? (
+            <div className="flex flex-col gap-1 min-w-[160px]">
+              <textarea
+                autoFocus
+                rows={2}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="text-sm bg-transparent border border-white/30 rounded px-2 py-1 outline-none resize-none w-full"
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() } if (e.key === 'Escape') setEditing(false) }}
+              />
+              <div className="flex gap-1 justify-end">
+                <button onClick={() => setEditing(false)} className="text-[10px] px-2 py-0.5 rounded hover:bg-white/10">Cancelar</button>
+                <button onClick={handleSaveEdit} disabled={saving} className="text-[10px] px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 disabled:opacity-50">{saving ? '…' : 'Salvar'}</button>
+              </div>
+            </div>
+          ) : (
+            msg.text || <span className="italic text-muted-foreground text-xs">mensagem sem texto</span>
+          )}
+        </div>
+
+        {/* Botão de menu para msgs da esquerda (cliente) */}
+        {!isRight && (
+          <div className="relative mb-1">
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-full flex items-center justify-center hover:bg-secondary text-muted-foreground"
+            >
+              <MoreVertical className="h-3.5 w-3.5" />
+            </button>
+            {menuOpen && (
+              <div className="absolute bottom-7 left-0 z-20 bg-card border border-border rounded-lg shadow-lg py-1 w-36">
+                <button
+                  onClick={() => { setMenuOpen(false); onDelete() }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Excluir
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -78,6 +78,21 @@ export class ChatsService {
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'PUT' })
   }
 
+  async resolverChat(chatId: string) {
+    return this.gptFetch<unknown>(`/v2/chat/${chatId}/finish`, { method: 'PUT' })
+  }
+
+  async editarMensagem(chatId: string, messageId: string, message: string) {
+    return this.gptFetch<unknown>(`/v2/chat/${chatId}/message/${messageId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ message }),
+    })
+  }
+
+  async excluirMensagem(chatId: string, messageId: string) {
+    return this.gptFetch<unknown>(`/v2/chat/${chatId}/message/${messageId}`, { method: 'DELETE' })
+  }
+
   async infoMatch(tenantId: string, whatsappPhone: string, chatId?: string) {
     if (!whatsappPhone && !chatId) return null
 

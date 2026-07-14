@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Body, Request, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Param, Query, Body, Request, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { ChatsService } from './chats.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -49,6 +49,31 @@ export class ChatsController {
   @ApiOperation({ summary: 'Encerra atendimento humano (retorna IA)' })
   encerrar(@Param('chatId') chatId: string) {
     return this.chatsService.encerrarAtendimento(chatId)
+  }
+
+  @Post(':chatId/resolve')
+  @ApiOperation({ summary: 'Marca o chat como resolvido/finalizado' })
+  resolver(@Param('chatId') chatId: string) {
+    return this.chatsService.resolverChat(chatId)
+  }
+
+  @Put(':chatId/messages/:messageId')
+  @ApiOperation({ summary: 'Edita uma mensagem' })
+  editarMensagem(
+    @Param('chatId')    chatId:    string,
+    @Param('messageId') messageId: string,
+    @Body('message')    message:   string,
+  ) {
+    return this.chatsService.editarMensagem(chatId, messageId, message)
+  }
+
+  @Delete(':chatId/messages/:messageId')
+  @ApiOperation({ summary: 'Exclui uma mensagem' })
+  excluirMensagem(
+    @Param('chatId')    chatId:    string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.chatsService.excluirMensagem(chatId, messageId)
   }
 
   @Get('client-names')
