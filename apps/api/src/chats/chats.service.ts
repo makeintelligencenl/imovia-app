@@ -97,8 +97,12 @@ export class ChatsService {
       },
     })
 
-    // Busca por chatId primeiro (exato), depois por WhatsApp/telefone
-    const cliente = clientes.find((c) => chatId && (c as any).gptMakerChatId === chatId)
+    // Busca por chatId (exato ou o chatId é sufixo do gptMakerChatId), depois por WhatsApp
+    const cliente = clientes.find((c) => {
+      if (!chatId) return false
+      const saved = (c as any).gptMakerChatId as string | null
+      return saved === chatId || (!!saved && saved.includes(chatId))
+    })
       ?? clientes.find((c) => {
         if (!digits) return false
         const w = (c.whatsapp ?? '').replace(/\D/g, '')
