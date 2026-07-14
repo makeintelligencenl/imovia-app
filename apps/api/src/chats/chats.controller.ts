@@ -19,8 +19,9 @@ export class ChatsController {
     @Query('pageSize') pageSize?: string,
     @Query('agentId')  agentId?:  string,
     @Query('search')   search?:   string,
+    @Query('finished') finished?: string,
   ) {
-    return this.chatsService.listarChats({ page, pageSize, agentId, search })
+    return this.chatsService.listarChats({ page, pageSize, agentId, search, finished })
   }
 
   @Get(':chatId/messages')
