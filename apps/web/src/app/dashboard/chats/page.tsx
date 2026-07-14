@@ -139,7 +139,7 @@ export default function ChatsPage() {
   const fetchChats = useCallback(async (mode?: 'all' | 'human' | 'ai' | 'finished') => {
     if (!allowed) return
     setLoadingList(true)
-    const isFinished = (mode ?? filterMode) === 'finished'
+    const isFinished = mode === 'finished'
     try {
       const url = isFinished ? '/chats?pageSize=50&finished=true' : '/chats?pageSize=50'
       const [data, names, users] = await Promise.all([
@@ -156,7 +156,7 @@ export default function ChatsPage() {
     } finally {
       setLoadingList(false)
     }
-  }, [allowed, filterMode])
+  }, [allowed])
 
   useEffect(() => { fetchChats() }, [fetchChats])
 
@@ -300,12 +300,12 @@ export default function ChatsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full text-xs bg-secondary/60 border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <div className="flex gap-1 flex-wrap">
-            {([['all','Todos'],['human','Humano'],['ai','IA'],['finished','Finalizados']] as const).map(([m, label]) => (
+          <div className="flex gap-0.5">
+            {([['all','Todos'],['human','Humano'],['ai','IA'],['finished','Final.']] as const).map(([m, label]) => (
               <button
                 key={m}
                 onClick={() => { setFilterMode(m); fetchChats(m) }}
-                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${filterMode === m ? 'bg-blue-500/15 text-blue-400 font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`text-[11px] px-2 py-1 rounded-md transition-colors whitespace-nowrap ${filterMode === m ? 'bg-blue-500/15 text-blue-400 font-medium' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 {label}
               </button>
