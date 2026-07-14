@@ -26,7 +26,7 @@ interface GptChat {
 interface GptMessage {
   id:          string
   text:        string
-  role:        'user' | 'assistant' | 'human'
+  role:        'user' | 'assistant' | 'human' | 'system'
   type:        string
   time:        string
   imageUrl?:   string
