@@ -35,12 +35,13 @@ export class ChatsService {
     return res.json() as Promise<T>
   }
 
-  async listarChats(query?: { page?: string; pageSize?: string; agentId?: string; search?: string }) {
+  async listarChats(query?: { page?: string; pageSize?: string; agentId?: string; search?: string; finished?: string }) {
     const qs = new URLSearchParams()
     if (query?.page)     qs.set('page',     query.page)
     if (query?.pageSize) qs.set('pageSize', query.pageSize)
     if (query?.agentId)  qs.set('agentId',  query.agentId)
     if (query?.search)   qs.set('query',    query.search)
+    if (query?.finished) qs.set('finished', query.finished)
     return this.gptFetch<unknown>(`/v2/workspace/${this.workspaceId}/chats?${qs.toString()}`)
   }
 

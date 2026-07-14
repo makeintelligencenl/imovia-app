@@ -84,7 +84,7 @@ export default function ChatsPage() {
   const [chats,       setChats]       = useState<GptChat[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [search,      setSearch]      = useState('')
-  const [filterMode,  setFilterMode]  = useState<'all' | 'human' | 'ai'>('all')
+  const [filterMode,  setFilterMode]  = useState<'all' | 'human' | 'ai' | 'finished'>('all')
 
   // conversa ativa
   const [activeChat,   setActiveChat]   = useState<GptChat | null>(null)
@@ -136,12 +136,14 @@ export default function ChatsPage() {
     setAllowed(true)
   }, [router])
 
-  const fetchChats = useCallback(async () => {
+  const fetchChats = useCallback(async (mode?: 'all' | 'human' | 'ai' | 'finished') => {
     if (!allowed) return
     setLoadingList(true)
+    const isFinished = (mode ?? filterMode) === 'finished'
     try {
+      const url = isFinished ? '/chats?pageSize=50&finished=true' : '/chats?pageSize=50'
       const [data, names, users] = await Promise.all([
-        api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50'),
+        api.get<{ chats?: GptChat[] } | GptChat[]>(url),
         api.get<Record<string, string>>('/chats/client-names').catch(() => ({})),
         api.get<{ id: string; name: string }[]>('/users').catch(() => []),
       ])
@@ -154,7 +156,7 @@ export default function ChatsPage() {
     } finally {
       setLoadingList(false)
     }
-  }, [allowed])
+  }, [allowed, filterMode])
 
   useEffect(() => { fetchChats() }, [fetchChats])
 
@@ -249,8 +251,9 @@ export default function ChatsPage() {
     setResolving(true)
     try {
       await api.post(`/chats/${activeChat.id}/resolve`, {})
-      setActiveChat({ ...activeChat, finished: true })
-      setChats((prev) => prev.filter((c) => c.id !== activeChat.id))
+      const resolved = { ...activeChat, finished: true, humanTalk: false }
+      setActiveChat(resolved)
+      setChats((prev) => prev.map((c) => c.id === activeChat.id ? resolved : c))
       toast.success('Chat marcado como resolvido.')
     } catch {
       toast.error('Não foi possível marcar como resolvido.')
@@ -265,17 +268,21 @@ export default function ChatsPage() {
 
   // Filtros
   const filteredChats = chats.filter((c) => {
+    if (filterMode === 'finished') return c.finished
+    if (c.finished) return false   // oculta finalizados nas outras abas
     if (filterMode === 'human' && !c.humanTalk) return false
     if (filterMode === 'ai'    &&  c.humanTalk) return false
     if (search) {
       const q = search.toLowerCase()
-      return c.name.toLowerCase().includes(q) || c.whatsappPhone.includes(q)
+      const name = getChatName(c, clientNames).toLowerCase()
+      return name.includes(q) || c.whatsappPhone.includes(q)
     }
     return true
   })
 
-  const humanChats = filteredChats.filter((c) => c.humanTalk)
-  const aiChats    = filteredChats.filter((c) => !c.humanTalk)
+  const humanChats    = filteredChats.filter((c) => c.humanTalk && !c.finished)
+  const aiChats       = filteredChats.filter((c) => !c.humanTalk && !c.finished)
+  const finishedChats = filteredChats.filter((c) => c.finished)
 
   if (!allowed) return null
 
@@ -293,14 +300,14 @@ export default function ChatsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full text-xs bg-secondary/60 border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <div className="flex gap-1">
-            {(['all','human','ai'] as const).map((m) => (
+          <div className="flex gap-1 flex-wrap">
+            {([['all','Todos'],['human','Humano'],['ai','IA'],['finished','Finalizados']] as const).map(([m, label]) => (
               <button
                 key={m}
-                onClick={() => setFilterMode(m)}
+                onClick={() => { setFilterMode(m); fetchChats(m) }}
                 className={`text-xs px-2.5 py-1 rounded-md transition-colors ${filterMode === m ? 'bg-blue-500/15 text-blue-400 font-medium' : 'text-muted-foreground hover:text-foreground'}`}
               >
-                {m === 'all' ? 'Todos' : m === 'human' ? 'Humano' : 'IA'}
+                {label}
               </button>
             ))}
           </div>
@@ -313,16 +320,27 @@ export default function ChatsPage() {
             <p className="text-xs text-muted-foreground text-center py-8">Nenhum chat encontrado.</p>
           ) : (
             <>
-              {humanChats.length > 0 && (
+              {filterMode === 'finished' ? (
+                finishedChats.length > 0 ? (
+                  <>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Finalizados</p>
+                    {finishedChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
+                  </>
+                ) : null
+              ) : (
                 <>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Em atendimento humano</p>
-                  {humanChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
-                </>
-              )}
-              {aiChats.length > 0 && (
-                <>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Atendimento IA</p>
-                  {aiChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
+                  {humanChats.length > 0 && (
+                    <>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Em atendimento humano</p>
+                      {humanChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
+                    </>
+                  )}
+                  {aiChats.length > 0 && (
+                    <>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Atendimento IA</p>
+                      {aiChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -577,17 +595,16 @@ function ChatItem({ chat, active, onClick, clientNames }: { chat: GptChat; activ
         {initials(getChatName(chat, clientNames) || chat.whatsappPhone)}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium truncate">{getChatName(chat, clientNames) || 'Visitante'}</span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
-            chat.humanTalk
-              ? 'bg-amber-500/15 text-amber-500'
-              : 'bg-green-500/15 text-green-500'
-          }`}>
-            {chat.humanTalk ? 'Humano' : 'IA'}
-          </span>
+        <span className="text-xs font-medium truncate block">{getChatName(chat, clientNames) || 'Visitante'}</span>
+        <div className="flex items-center gap-1 mt-0.5">
+          {chat.finished ? (
+            <span className="text-[10px] font-medium text-green-500">Finalizado ✓</span>
+          ) : chat.humanTalk ? (
+            <span className="text-[10px] font-medium text-amber-500">Em atendimento</span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">Em espera</span>
+          )}
         </div>
-        <p className="text-[11px] text-muted-foreground truncate">{chat.whatsappPhone}</p>
       </div>
       {chat.unReadCount > 0 && (
         <span className="h-4 min-w-[16px] px-1 bg-blue-600 text-white text-[10px] font-semibold rounded-full flex items-center justify-center shrink-0">
