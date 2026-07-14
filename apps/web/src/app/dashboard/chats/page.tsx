@@ -87,7 +87,7 @@ export default function ChatsPage() {
   const [search,       setSearch]       = useState('')
   const [filterMode,   setFilterMode]   = useState<'all' | 'human' | 'ai' | 'finished'>('all')
   // chats visíveis depende do modo
-  const chats = filterMode === 'finished' ? finishedList : activeChats
+  const chats = filterMode === 'all' ? [...activeChats, ...finishedList] : filterMode === 'finished' ? finishedList : activeChats
 
   // conversa ativa
   const [activeChat,   setActiveChat]   = useState<GptChat | null>(null)
@@ -144,17 +144,22 @@ export default function ChatsPage() {
     setLoadingList(true)
     try {
       if (mode === 'finished') {
+        // busca só finalizados
         const data = await api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50&finished=true')
         const list = Array.isArray(data) ? data : (data as { chats?: GptChat[] }).chats ?? []
         setFinishedList(list)
       } else {
-        const [data, names, users] = await Promise.all([
+        // busca ativos e finalizados em paralelo
+        const [dataActive, dataFinished, names, users] = await Promise.all([
           api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50'),
+          api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50&finished=true').catch(() => []),
           api.get<Record<string, string>>('/chats/client-names').catch(() => ({})),
           api.get<{ id: string; name: string }[]>('/users').catch(() => []),
         ])
-        const list = Array.isArray(data) ? data : (data as { chats?: GptChat[] }).chats ?? []
-        setActiveChats(list)
+        const active   = Array.isArray(dataActive)   ? dataActive   : (dataActive   as { chats?: GptChat[] }).chats ?? []
+        const finished = Array.isArray(dataFinished)  ? dataFinished : (dataFinished as { chats?: GptChat[] }).chats ?? []
+        setActiveChats(active)
+        setFinishedList(finished)
         setClientNames(names)
         setCorretores(Array.isArray(users) ? users : [])
       }
@@ -275,22 +280,14 @@ export default function ChatsPage() {
   }
 
   // Filtros
-  const filteredChats = chats.filter((c) => {
-    if (filterMode === 'finished') return c.finished
-    if (c.finished) return false   // oculta finalizados nas outras abas
-    if (filterMode === 'human' && !c.humanTalk) return false
-    if (filterMode === 'ai'    &&  c.humanTalk) return false
-    if (search) {
-      const q = search.toLowerCase()
-      const name = getChatName(c, clientNames).toLowerCase()
-      return name.includes(q) || c.whatsappPhone.includes(q)
-    }
-    return true
-  })
-
-  const humanChats    = filteredChats.filter((c) => c.humanTalk && !c.finished)
-  const aiChats       = filteredChats.filter((c) => !c.humanTalk && !c.finished)
-  const finishedChats = filteredChats.filter((c) => c.finished)
+  const applySearch = (c: GptChat) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return getChatName(c, clientNames).toLowerCase().includes(q) || c.whatsappPhone.includes(q)
+  }
+  const humanChats    = (filterMode === 'all' || filterMode === 'human')  ? activeChats.filter((c)  => c.humanTalk  && applySearch(c)) : []
+  const aiChats       = (filterMode === 'all' || filterMode === 'ai')     ? activeChats.filter((c)  => !c.humanTalk && applySearch(c)) : []
+  const finishedChats = (filterMode === 'all' || filterMode === 'finished') ? finishedList.filter((c) => applySearch(c)) : []
 
   if (!allowed) return null
 
@@ -329,31 +326,26 @@ export default function ChatsPage() {
         <div className="flex-1 overflow-y-auto">
           {loadingList ? (
             <p className="text-xs text-muted-foreground text-center py-8">Carregando…</p>
-          ) : filteredChats.length === 0 ? (
+          ) : humanChats.length === 0 && aiChats.length === 0 && finishedChats.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-8">Nenhum chat encontrado.</p>
           ) : (
             <>
-              {filterMode === 'finished' ? (
-                finishedChats.length > 0 ? (
-                  <>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Finalizados</p>
-                    {finishedChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
-                  </>
-                ) : null
-              ) : (
+              {humanChats.length > 0 && (
                 <>
-                  {humanChats.length > 0 && (
-                    <>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Em atendimento humano</p>
-                      {humanChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
-                    </>
-                  )}
-                  {aiChats.length > 0 && (
-                    <>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Atendimento IA</p>
-                      {aiChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
-                    </>
-                  )}
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Em atendimento humano</p>
+                  {humanChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
+                </>
+              )}
+              {aiChats.length > 0 && (
+                <>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Atendimento IA</p>
+                  {aiChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
+                </>
+              )}
+              {finishedChats.length > 0 && (
+                <>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Finalizados</p>
+                  {finishedChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
                 </>
               )}
             </>
