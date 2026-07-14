@@ -489,8 +489,10 @@ function ChatItem({ chat, active, onClick, clientNames }: { chat: GptChat; activ
 
 function MessageBubble({ msg }: { msg: GptMessage }) {
   const isUser   = msg.role === 'user'
-  const isHuman  = msg.role === 'human'
-  const isAgent  = msg.role === 'assistant'
+  // GPT Maker pode retornar mensagens de corretor humano com role 'human' ou
+  // role 'assistant' + userName preenchido
+  const isHuman  = msg.role === 'human' || (msg.role === 'assistant' && !!msg.userName)
+  const isAgent  = msg.role === 'assistant' && !msg.userName
   const isSystem = msg.type === 'NOTIFICATION' || msg.role === 'system'
 
   // Evento de sistema (NOTIFICATION): exibe como separador centralizado
