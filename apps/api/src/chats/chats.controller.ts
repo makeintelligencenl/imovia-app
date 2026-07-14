@@ -51,6 +51,12 @@ export class ChatsController {
     return this.chatsService.encerrarAtendimento(chatId)
   }
 
+  @Get('client-names')
+  @ApiOperation({ summary: 'Retorna mapa de gptMakerChatId → nome do cliente' })
+  clientNames(@Request() req: any) {
+    return this.chatsService.clientNamesByChatId(req.user.tenantId)
+  }
+
   @Get(':chatId/match-info')
   @ApiOperation({ summary: 'Retorna match associado ao chat pelo chatId ou telefone do lead' })
   matchInfo(

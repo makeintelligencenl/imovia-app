@@ -58,6 +58,18 @@ export class ChatsService {
     })
   }
 
+  async clientNamesByChatId(tenantId: string): Promise<Record<string, string>> {
+    const clientes = await this.prisma.cliente.findMany({
+      where: { tenantId, ativo: true, NOT: { gptMakerChatId: null } },
+      select: { gptMakerChatId: true, nome: true },
+    })
+    const map: Record<string, string> = {}
+    for (const c of clientes) {
+      if (c.gptMakerChatId) map[c.gptMakerChatId] = c.nome
+    }
+    return map
+  }
+
   async assumirAtendimento(chatId: string) {
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/start-human`, { method: 'PUT' })
   }
