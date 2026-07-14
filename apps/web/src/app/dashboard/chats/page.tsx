@@ -62,6 +62,13 @@ function avatarColor(id: string | null | undefined) {
   return AVATAR_COLORS[h % AVATAR_COLORS.length]
 }
 
+function getChatName(chat: GptChat, clientNames: Record<string, string>): string {
+  // Busca exata pelo chatId, depois por includes (sufixo)
+  if (clientNames[chat.id]) return clientNames[chat.id]
+  const found = Object.entries(clientNames).find(([k]) => chat.id.includes(k) || k.includes(chat.id))
+  return found ? found[1] : (chat.name || chat.whatsappPhone || '')
+}
+
 const ETAPA_LABELS: Record<string, string> = {
   NOVO: 'Novo', CONTATO: 'Contato', VISITA: 'Visita agendada',
   PROPOSTA: 'Proposta', NEGOCIACAO: 'Em negociação', FECHADO: 'Fechado', PERDIDO: 'Perdido',
@@ -90,6 +97,9 @@ export default function ChatsPage() {
   // match info
   const [matchInfo,    setMatchInfo]    = useState<MatchInfo | null | 'loading'>('loading')
 
+  // mapa chatId → nome do cliente cadastrado
+  const [clientNames,  setClientNames]  = useState<Record<string, string>>({})
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -102,10 +112,13 @@ export default function ChatsPage() {
     if (!allowed) return
     setLoadingList(true)
     try {
-      const data = await api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50')
-      // GPT Maker pode retornar { chats: [] } ou [] diretamente
+      const [data, names] = await Promise.all([
+        api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50'),
+        api.get<Record<string, string>>('/chats/client-names').catch(() => ({})),
+      ])
       const list = Array.isArray(data) ? data : (data as { chats?: GptChat[] }).chats ?? []
       setChats(list)
+      setClientNames(names)
     } catch {
       toast.error('Não foi possível carregar os chats.')
     } finally {
@@ -243,13 +256,13 @@ export default function ChatsPage() {
               {humanChats.length > 0 && (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Em atendimento humano</p>
-                  {humanChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} />)}
+                  {humanChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
                 </>
               )}
               {aiChats.length > 0 && (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pt-3 pb-1">Atendimento IA</p>
-                  {aiChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} />)}
+                  {aiChats.map((c) => <ChatItem key={c.id} chat={c} active={activeChat?.id === c.id} onClick={() => selectChat(c)} clientNames={clientNames} />)}
                 </>
               )}
             </>
@@ -272,10 +285,10 @@ export default function ChatsPage() {
                   className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
                   style={{ background: avatarColor(activeChat.id) }}
                 >
-                  {initials(activeChat.name || activeChat.whatsappPhone)}
+                  {initials(getChatName(activeChat, clientNames) || activeChat.whatsappPhone)}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold leading-tight">{activeChat.name || 'Sem nome'}</p>
+                  <p className="text-sm font-semibold leading-tight">{getChatName(activeChat, clientNames) || 'Visitante'}</p>
                   <p className="text-xs text-muted-foreground">{activeChat.whatsappPhone} · {activeChat.agentName}</p>
                 </div>
               </div>
@@ -438,7 +451,7 @@ export default function ChatsPage() {
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 
-function ChatItem({ chat, active, onClick }: { chat: GptChat; active: boolean; onClick: () => void }) {
+function ChatItem({ chat, active, onClick, clientNames }: { chat: GptChat; active: boolean; onClick: () => void; clientNames: Record<string, string> }) {
   return (
     <button
       onClick={onClick}
@@ -450,11 +463,11 @@ function ChatItem({ chat, active, onClick }: { chat: GptChat; active: boolean; o
         className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
         style={{ background: avatarColor(chat.id) }}
       >
-        {initials(chat.name || chat.whatsappPhone)}
+        {initials(getChatName(chat, clientNames) || chat.whatsappPhone)}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium truncate">{chat.name || 'Sem nome'}</span>
+          <span className="text-xs font-medium truncate">{getChatName(chat, clientNames) || 'Visitante'}</span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
             chat.humanTalk
               ? 'bg-amber-500/15 text-amber-500'
