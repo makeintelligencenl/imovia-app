@@ -59,11 +59,11 @@ export class ChatsService {
   }
 
   async assumirAtendimento(chatId: string) {
-    return this.gptFetch<unknown>(`/v2/chat/${chatId}/start-human`, { method: 'POST' })
+    return this.gptFetch<unknown>(`/v2/chat/${chatId}/start-human`, { method: 'PUT' })
   }
 
   async encerrarAtendimento(chatId: string) {
-    return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'POST' })
+    return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'PUT' })
   }
 
   async infoMatch(tenantId: string, whatsappPhone: string, chatId?: string) {
