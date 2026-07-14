@@ -507,8 +507,11 @@ function MessageBubble({ msg }: { msg: GptMessage }) {
     )
   }
 
+  // Agente IA e corretor humano ficam à direita; cliente fica à esquerda
+  const isRight = isAgent || isHuman
+
   return (
-    <div className={`flex flex-col max-w-[70%] ${isUser ? 'self-end items-end ml-auto' : 'self-start items-start'}`}>
+    <div className={`flex flex-col max-w-[70%] ${isRight ? 'self-end items-end ml-auto' : 'self-start items-start'}`}>
       <p className="text-[10px] text-muted-foreground mb-0.5">
         {isUser ? 'Cliente' : isHuman ? (msg.userName ?? 'Corretor') : 'IA'}
         {isAgent && <span className="ml-1 text-[10px] bg-green-500/15 text-green-500 rounded px-1">IA</span>}
@@ -516,9 +519,9 @@ function MessageBubble({ msg }: { msg: GptMessage }) {
         {' · '}{msg.time ? new Date(msg.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
       </p>
       <div className={`px-3 py-2 rounded-xl text-sm leading-relaxed ${
-        isUser  ? 'bg-blue-500/15 rounded-br-sm' :
-        isHuman ? 'bg-green-900/30 border border-amber-500/20 rounded-bl-sm' :
-                  'bg-secondary rounded-bl-sm'
+        isUser  ? 'bg-secondary rounded-br-sm' :
+        isHuman ? 'bg-amber-500/20 border border-amber-500/25 rounded-bl-sm' :
+                  'bg-blue-600/85 text-white rounded-bl-sm'
       }`}>
         {msg.text || <span className="italic text-muted-foreground text-xs">mensagem sem texto</span>}
       </div>
