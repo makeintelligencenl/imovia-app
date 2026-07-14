@@ -81,10 +81,13 @@ export default function ChatsPage() {
   const [allowed, setAllowed] = useState(false)
 
   // lista
-  const [chats,       setChats]       = useState<GptChat[]>([])
-  const [loadingList, setLoadingList] = useState(true)
-  const [search,      setSearch]      = useState('')
-  const [filterMode,  setFilterMode]  = useState<'all' | 'human' | 'ai' | 'finished'>('all')
+  const [activeChats,  setActiveChats]  = useState<GptChat[]>([])   // chats não-finalizados
+  const [finishedList, setFinishedList] = useState<GptChat[]>([])   // chats finalizados
+  const [loadingList,  setLoadingList]  = useState(true)
+  const [search,       setSearch]       = useState('')
+  const [filterMode,   setFilterMode]   = useState<'all' | 'human' | 'ai' | 'finished'>('all')
+  // chats visíveis depende do modo
+  const chats = filterMode === 'finished' ? finishedList : activeChats
 
   // conversa ativa
   const [activeChat,   setActiveChat]   = useState<GptChat | null>(null)
@@ -139,18 +142,22 @@ export default function ChatsPage() {
   const fetchChats = useCallback(async (mode?: 'all' | 'human' | 'ai' | 'finished') => {
     if (!allowed) return
     setLoadingList(true)
-    const isFinished = mode === 'finished'
     try {
-      const url = isFinished ? '/chats?pageSize=50&finished=true' : '/chats?pageSize=50'
-      const [data, names, users] = await Promise.all([
-        api.get<{ chats?: GptChat[] } | GptChat[]>(url),
-        api.get<Record<string, string>>('/chats/client-names').catch(() => ({})),
-        api.get<{ id: string; name: string }[]>('/users').catch(() => []),
-      ])
-      const list = Array.isArray(data) ? data : (data as { chats?: GptChat[] }).chats ?? []
-      setChats(list)
-      setClientNames(names)
-      setCorretores(Array.isArray(users) ? users : [])
+      if (mode === 'finished') {
+        const data = await api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50&finished=true')
+        const list = Array.isArray(data) ? data : (data as { chats?: GptChat[] }).chats ?? []
+        setFinishedList(list)
+      } else {
+        const [data, names, users] = await Promise.all([
+          api.get<{ chats?: GptChat[] } | GptChat[]>('/chats?pageSize=50'),
+          api.get<Record<string, string>>('/chats/client-names').catch(() => ({})),
+          api.get<{ id: string; name: string }[]>('/users').catch(() => []),
+        ])
+        const list = Array.isArray(data) ? data : (data as { chats?: GptChat[] }).chats ?? []
+        setActiveChats(list)
+        setClientNames(names)
+        setCorretores(Array.isArray(users) ? users : [])
+      }
     } catch {
       toast.error('Não foi possível carregar os chats.')
     } finally {
@@ -216,12 +223,12 @@ export default function ChatsPage() {
       if (activeChat.humanTalk) {
         await api.post(`/chats/${activeChat.id}/end`, {})
         setActiveChat({ ...activeChat, humanTalk: false })
-        setChats((prev) => prev.map((c) => c.id === activeChat.id ? { ...c, humanTalk: false } : c))
+        setActiveChats((prev) => prev.map((c) => c.id === activeChat.id ? { ...c, humanTalk: false } : c))
         toast.success('Atendimento devolvido à IA.')
       } else {
         await api.post(`/chats/${activeChat.id}/assume`, {})
         setActiveChat({ ...activeChat, humanTalk: true })
-        setChats((prev) => prev.map((c) => c.id === activeChat.id ? { ...c, humanTalk: true } : c))
+        setActiveChats((prev) => prev.map((c) => c.id === activeChat.id ? { ...c, humanTalk: true } : c))
         toast.success('Você assumiu o atendimento.')
       }
     } catch {
@@ -253,7 +260,8 @@ export default function ChatsPage() {
       await api.post(`/chats/${activeChat.id}/resolve`, {})
       const resolved = { ...activeChat, finished: true, humanTalk: false }
       setActiveChat(resolved)
-      setChats((prev) => prev.map((c) => c.id === activeChat.id ? resolved : c))
+      setActiveChats((prev) => prev.filter((c) => c.id !== activeChat.id))
+      setFinishedList((prev) => [resolved, ...prev])
       toast.success('Chat marcado como resolvido.')
     } catch {
       toast.error('Não foi possível marcar como resolvido.')
@@ -304,7 +312,12 @@ export default function ChatsPage() {
             {([['all','Todos'],['human','Humano'],['ai','IA'],['finished','Final.']] as const).map(([m, label]) => (
               <button
                 key={m}
-                onClick={() => { setFilterMode(m); fetchChats(m) }}
+                onClick={() => {
+                  setFilterMode(m)
+                  // só busca da API quando muda para/de 'finished'
+                  if (m === 'finished' && finishedList.length === 0) fetchChats('finished')
+                  else if (m !== 'finished' && filterMode === 'finished') fetchChats(m)
+                }}
                 className={`text-[11px] px-2 py-1 rounded-md transition-colors whitespace-nowrap ${filterMode === m ? 'bg-blue-500/15 text-blue-400 font-medium' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 {label}
