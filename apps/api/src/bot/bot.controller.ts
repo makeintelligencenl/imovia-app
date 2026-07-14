@@ -5,7 +5,9 @@ import { PerfisService } from '../perfis/perfis.service'
 import { MatchingService } from '../matching/matching.service'
 import { TiposService } from '../tipos/tipos.service'
 import { TenantsService } from '../tenants/tenants.service'
+import { ClientesService } from '../clientes/clientes.service'
 import { BotCreatePerfilDto } from './dto/bot-create-perfil.dto'
+import { BotCreateLeadDto } from './dto/bot-create-lead.dto'
 
 @ApiTags('bot')
 @ApiSecurity('x-bot-api-key')
@@ -17,7 +19,46 @@ export class BotController {
     private readonly matchingService: MatchingService,
     private readonly tiposService: TiposService,
     private readonly tenantsService: TenantsService,
+    private readonly clientesService: ClientesService,
   ) {}
+
+  // ─────────────────────────────────────────
+  // Ferramenta 0: Cadastrar lead completo (cliente + perfil numa chamada)
+  // Preferir este endpoint no MCP — recebe dados do cliente e cria tudo
+  // ─────────────────────────────────────────
+  @Post('lead')
+  @ApiOperation({
+    summary: 'Cadastra lead completo: cria cliente e perfil de busca numa chamada',
+    description: 'Use este endpoint no MCP. Cria o cliente automaticamente e dispara o matching.',
+  })
+  async cadastrarLead(@Body() dto: BotCreateLeadDto) {
+    const { tenantId, clienteNome, clienteEmail, clienteWhatsapp, ...perfilData } = dto
+
+    const cliente = await this.clientesService.create(tenantId, {
+      nome: clienteNome,
+      email: clienteEmail,
+      whatsapp: clienteWhatsapp,
+    })
+
+    const perfil = await this.perfisService.create(tenantId, {
+      clienteId: cliente.id,
+      ...perfilData,
+    })
+
+    return {
+      perfilId: perfil.id,
+      clienteId: cliente.id,
+      clienteNome: cliente.nome,
+      clienteEmail: cliente.email,
+      clienteWhatsapp: cliente.whatsapp,
+      finalidade: perfil.finalidade,
+      precoMin: perfil.precoMin,
+      precoMax: perfil.precoMax,
+      cidades: perfil.cidades,
+      tipos: perfil.tipos.map((t: { id: string; nome: string }) => ({ id: t.id, nome: t.nome })),
+      criadoEm: perfil.createdAt,
+    }
+  }
 
   // ─────────────────────────────────────────
   // Ferramenta 1: Cadastrar perfil de busca

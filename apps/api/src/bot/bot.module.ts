@@ -4,9 +4,10 @@ import { PerfisModule } from '../perfis/perfis.module'
 import { MatchingModule } from '../matching/matching.module'
 import { TiposModule } from '../tipos/tipos.module'
 import { TenantsModule } from '../tenants/tenants.module'
+import { ClientesModule } from '../clientes/clientes.module'
 
 @Module({
-  imports: [PerfisModule, MatchingModule, TiposModule, TenantsModule],
+  imports: [PerfisModule, MatchingModule, TiposModule, TenantsModule, ClientesModule],
   controllers: [BotController],
 })
 export class BotModule {}

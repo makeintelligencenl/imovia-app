@@ -59,7 +59,7 @@ function buildServer(): McpServer {
       bairros:         z.array(z.string()).optional().describe('Bairros específicos (opcional)'),
     },
     async (params) => {
-      const perfil = await callApi('POST', '/bot/perfil', { ...params, tenantId: TENANT_ID })
+      const perfil = await callApi('POST', '/bot/lead', { ...params, tenantId: TENANT_ID })
       const p = perfil as {
         perfilId: string; clienteNome: string; tipos: Array<{ nome: string }>
         finalidade: string; precoMin: number; precoMax: number; cidades: string[]
