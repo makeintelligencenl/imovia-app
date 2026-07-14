@@ -491,6 +491,21 @@ function MessageBubble({ msg }: { msg: GptMessage }) {
   const isUser   = msg.role === 'user'
   const isHuman  = msg.role === 'human'
   const isAgent  = msg.role === 'assistant'
+  const isSystem = msg.type === 'NOTIFICATION' || msg.role === 'system'
+
+  // Evento de sistema (NOTIFICATION): exibe como separador centralizado
+  if (isSystem) {
+    if (!msg.text && !msg.userName) return null
+    const label = msg.text || (msg.userName ? `Atendimento assumido por ${msg.userName}` : null)
+    if (!label) return null
+    return (
+      <div className="flex items-center gap-2 my-1">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[10px] text-muted-foreground shrink-0 px-1">{label}</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+    )
+  }
 
   return (
     <div className={`flex flex-col max-w-[70%] ${isUser ? 'self-end items-end ml-auto' : 'self-start items-start'}`}>
