@@ -21,6 +21,11 @@ export class BotCreateLeadDto {
   @IsOptional()
   clienteWhatsapp?: string
 
+  @ApiPropertyOptional({ description: 'ID do chat no GPT Maker — usado para vincular o match ao chat' })
+  @IsString()
+  @IsOptional()
+  chatId?: string
+
   // ── Perfil de busca ──
   @ApiProperty({ enum: ['ALUGUEL', 'VENDA'] })
   @IsEnum(['ALUGUEL', 'VENDA'])

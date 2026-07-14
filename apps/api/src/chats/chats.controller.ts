@@ -52,11 +52,12 @@ export class ChatsController {
   }
 
   @Get(':chatId/match-info')
-  @ApiOperation({ summary: 'Retorna match associado ao chat pelo telefone do lead' })
+  @ApiOperation({ summary: 'Retorna match associado ao chat pelo chatId ou telefone do lead' })
   matchInfo(
+    @Param('chatId') chatId: string,
     @Request() req: any,
     @Query('phone') phone: string,
   ) {
-    return this.chatsService.infoMatch(req.user.tenantId, phone)
+    return this.chatsService.infoMatch(req.user.tenantId, phone, chatId)
   }
 }

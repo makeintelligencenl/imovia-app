@@ -45,6 +45,7 @@ function buildServer(): McpServer {
     'cadastrar_perfil',
     'Cadastra o perfil de busca de um lead no ImovIA e dispara o matching automático com os imóveis disponíveis.',
     {
+      chatId:          z.string().optional().describe('ID do chat atual no GPT Maker — use a variável {{chat_id}} se disponível'),
       clienteNome:     z.string().describe('Nome completo do cliente/lead'),
       clienteEmail:    z.string().email().describe('E-mail do cliente'),
       clienteWhatsapp: z.string().optional().describe('WhatsApp com DDD, ex: +5511999999999'),
