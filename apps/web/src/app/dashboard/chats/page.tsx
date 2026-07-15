@@ -243,6 +243,7 @@ export default function ChatsPage() {
     try {
       if (activeChat.humanTalk) {
         await api.post(`/chats/${activeChat.id}/end`, {})
+        // atualiza apenas localmente — fetchChats marcaria o chat como finished
         setActiveChat({ ...activeChat, humanTalk: false })
         setActiveChats((prev) => prev.map((c) => c.id === activeChat.id ? { ...c, humanTalk: false } : c))
         toast.success('Atendimento devolvido à IA.')
@@ -251,8 +252,8 @@ export default function ChatsPage() {
         setActiveChat({ ...activeChat, humanTalk: true })
         setActiveChats((prev) => prev.map((c) => c.id === activeChat.id ? { ...c, humanTalk: true } : c))
         toast.success('Você assumiu o atendimento.')
+        fetchChats()
       }
-      fetchChats()
     } catch {
       toast.error('Não foi possível alterar o modo de atendimento.')
     } finally {
