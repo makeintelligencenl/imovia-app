@@ -234,6 +234,7 @@ export default function ChatsPage() {
         setActiveChats((prev) => prev.map((c) => c.id === activeChat.id ? { ...c, humanTalk: true } : c))
         toast.success('Você assumiu o atendimento.')
       }
+      fetchChats()
     } catch {
       toast.error('Não foi possível alterar o modo de atendimento.')
     } finally {
@@ -266,6 +267,7 @@ export default function ChatsPage() {
       setActiveChats((prev) => prev.filter((c) => c.id !== activeChat.id))
       setFinishedList((prev) => [resolved, ...prev])
       toast.success('Chat marcado como resolvido.')
+      fetchChats()
     } catch {
       toast.error('Não foi possível marcar como resolvido.')
     } finally {
