@@ -493,6 +493,88 @@ function MockAgenda() {
   )
 }
 
+/* ─── MOCKUP: Chats ─────────────────────────────────────────────── */
+function MockChats() {
+  const chats = [
+    { name: 'Ana Lima', status: 'Humano ativo', badge: 'human', time: '09:41', active: true },
+    { name: 'Visitante', status: 'Humano ativo', badge: 'human', time: '09:15', active: false },
+    { name: 'Carlos Melo', status: 'Agente IA', badge: 'ai', time: '08:52', active: false },
+    { name: 'Visitante', status: 'Agente IA', badge: 'ai', time: '08:30', active: false },
+  ]
+  const msgs = [
+    { side: 'left',  text: 'Olá! Busco um apto de 3 quartos em Ipatinga, até R$ 450k.' },
+    { side: 'right', text: 'Ótimo! Temos uma excelente opção no Cidade Nobre: 98 m², 3 quartos, R$ 420.000.' },
+    { side: 'left',  text: 'Perfeito! Posso agendar uma visita?' },
+    { side: 'right', text: 'Claro! Qual melhor dia para você? 😊', human: true },
+  ]
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden flex" style={{ height: 420 }}>
+      {/* lista */}
+      <div className="w-52 border-r border-slate-100 flex flex-col shrink-0">
+        <div className="px-3 pt-3 pb-2 border-b border-slate-100">
+          <p className="text-xs font-semibold text-slate-700 mb-2">Chats</p>
+          <div className="flex gap-1 mb-2">
+            {['Todos','Em atend.','Final.'].map((t, i) => (
+              <span key={t} className={`text-[10px] px-1.5 py-0.5 rounded ${i === 0 ? 'bg-blue-500/15 text-blue-600 font-medium' : 'text-slate-400'}`}>{t}</span>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 px-3 pt-2 pb-1">Humano</p>
+          {chats.filter(c => c.badge === 'human').map((c) => (
+            <div key={c.name + c.time} className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${c.active ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+              <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-[10px] font-semibold text-amber-700 shrink-0">{c.name[0]}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-800 truncate">{c.name}</p>
+                <p className="text-[10px] text-amber-500">Em atendimento</p>
+              </div>
+            </div>
+          ))}
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 px-3 pt-2 pb-1">Agente IA</p>
+          {chats.filter(c => c.badge === 'ai').map((c) => (
+            <div key={c.name + c.time} className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-semibold text-slate-500 shrink-0">?</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-800 truncate">{c.name}</p>
+                <p className="text-[10px] text-green-500">Agente IA</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* conversa */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-800">Ana Lima</p>
+            <p className="text-[10px] text-slate-400">+55 31 99999-1234 · BH Premium Imóveis</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1 text-[10px] text-amber-500"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />Humano ativo</span>
+            <span className="text-[10px] px-2 py-1 rounded-md border border-green-300 text-green-600 bg-green-50">Marcar como resolvido</span>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 bg-slate-50">
+          {msgs.map((m, i) => (
+            <div key={i} className={`flex ${m.side === 'right' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[75%] px-3 py-2 rounded-xl text-[11px] leading-relaxed ${m.side === 'right' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}>
+                {m.human && <p className="text-[9px] text-blue-200 mb-0.5 font-medium">Tiago Lana · Corretor</p>}
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-3 py-2 border-t border-slate-100 flex items-center gap-2">
+          <input readOnly className="flex-1 text-[11px] bg-slate-100 rounded-lg px-3 py-1.5 outline-none text-slate-400" placeholder="Digite uma mensagem…" />
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+            <svg className="w-3.5 h-3.5 text-white fill-current" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── MAIN PAGE ─────────────────────────────────────────────────── */
 export default function LandingPage() {
   const features = [
@@ -545,6 +627,11 @@ export default function LandingPage() {
       icon: CalendarDays,
       title: 'Agenda de Visitas',
       desc: 'Agende visitas diretamente do match no pipeline. Calendário compartilhado com visitas, retornos e propostas por corretor ou equipe.',
+    },
+    {
+      icon: MessageSquare,
+      title: 'Gestão de Conversas',
+      desc: 'Acompanhe em tempo real todas as conversas do Agente IA. Assuma o chat com 1 clique, marque como resolvido e veja o perfil do cliente no painel lateral.',
     },
     {
       icon: Shield,
@@ -622,6 +709,7 @@ export default function LandingPage() {
             <a href="#agente-ia" className="hover:text-slate-900 transition-colors">Agente IA</a>
             <a href="#clientes" className="hover:text-slate-900 transition-colors">Clientes</a>
             <a href="#agenda" className="hover:text-slate-900 transition-colors">Agenda</a>
+            <a href="#chats" className="hover:text-slate-900 transition-colors">Chats</a>
             <a href="#funcionalidades" className="hover:text-slate-900 transition-colors">Funcionalidades</a>
             <a href="#diferenciais" className="hover:text-slate-900 transition-colors">Diferenciais</a>
           </div>
@@ -1037,6 +1125,40 @@ export default function LandingPage() {
             </div>
             <div className="lg:w-3/5 w-full">
               <MockAgenda />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CHATS ───────────────────────────────────────────────── */}
+      <section id="chats" className="py-24 bg-white overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="lg:w-2/5">
+              <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">Gestão de Conversas</p>
+              <h2 className="text-3xl font-bold text-slate-900 mb-4">O corretor entra na conversa quando quiser</h2>
+              <p className="text-slate-500 leading-relaxed mb-6">
+                Acompanhe em tempo real todas as conversas do Agente IA. Quando identificar o momento certo, o corretor assume o chat com um clique — sem sair da plataforma.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Painel unificado: Todos, Em atendimento e Finalizados',
+                  'Subseções Humano e Agente IA em cada filtro',
+                  'Assumir atendimento com 1 clique',
+                  'Marcar conversa como resolvida',
+                  'Reativar atendimento em conversas finalizadas',
+                  'Painel lateral com match, Lead Score e dados do cliente',
+                  'Atribuir corretor responsável diretamente no chat',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="lg:w-3/5 w-full">
+              <MockChats />
             </div>
           </div>
         </div>
