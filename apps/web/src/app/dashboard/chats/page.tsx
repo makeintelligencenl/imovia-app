@@ -219,6 +219,24 @@ export default function ChatsPage() {
     }
   }
 
+  async function handleIniciarAtendimento() {
+    if (!activeChat || toggling) return
+    setToggling(true)
+    try {
+      await api.post(`/chats/${activeChat.id}/assume`, {})
+      const reactivated = { ...activeChat, finished: false, humanTalk: true }
+      setActiveChat(reactivated)
+      setFinishedList((prev) => prev.filter((c) => c.id !== activeChat.id))
+      setActiveChats((prev) => [reactivated, ...prev.filter((c) => c.id !== activeChat.id)])
+      toast.success('Atendimento iniciado.')
+      fetchChats()
+    } catch {
+      toast.error('Não foi possível iniciar o atendimento.')
+    } finally {
+      setToggling(false)
+    }
+  }
+
   async function handleToggleHuman() {
     if (!activeChat || toggling) return
     setToggling(true)
@@ -404,33 +422,46 @@ export default function ChatsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${activeChat.humanTalk ? 'bg-amber-400' : 'bg-green-400'}`} />
-                  <span className="text-xs text-muted-foreground">{activeChat.humanTalk ? 'Humano ativo' : 'IA respondendo'}</span>
-                </div>
-                <button
-                  onClick={handleToggleHuman}
-                  disabled={toggling}
-                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 ${
-                    activeChat.humanTalk
-                      ? 'bg-red-500/10 text-red-400 border-red-500/25 hover:bg-red-500/20'
-                      : 'bg-amber-500/10 text-amber-400 border-amber-500/25 hover:bg-amber-500/20'
-                  }`}
-                >
-                  {activeChat.humanTalk ? (
-                    <><Bot className="h-3.5 w-3.5" />{toggling ? '…' : 'Devolver à IA'}</>
-                  ) : (
-                    <><UserCheck className="h-3.5 w-3.5" />{toggling ? '…' : 'Assumir atendimento'}</>
-                  )}
-                </button>
-                <button
-                  onClick={handleResolve}
-                  disabled={resolving || activeChat.finished}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 bg-green-500/10 text-green-500 border-green-500/25 hover:bg-green-500/20"
-                >
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  {resolving ? '…' : activeChat.finished ? 'Resolvido' : 'Marcar como resolvido'}
-                </button>
+                {activeChat.finished ? (
+                  <button
+                    onClick={handleIniciarAtendimento}
+                    disabled={toggling}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 bg-violet-500/10 text-violet-400 border-violet-500/25 hover:bg-violet-500/20"
+                  >
+                    <UserCheck className="h-3.5 w-3.5" />
+                    {toggling ? '…' : 'Iniciar atendimento'}
+                  </button>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${activeChat.humanTalk ? 'bg-amber-400' : 'bg-green-400'}`} />
+                      <span className="text-xs text-muted-foreground">{activeChat.humanTalk ? 'Humano ativo' : 'IA respondendo'}</span>
+                    </div>
+                    <button
+                      onClick={handleToggleHuman}
+                      disabled={toggling}
+                      className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 ${
+                        activeChat.humanTalk
+                          ? 'bg-red-500/10 text-red-400 border-red-500/25 hover:bg-red-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/25 hover:bg-amber-500/20'
+                      }`}
+                    >
+                      {activeChat.humanTalk ? (
+                        <><Bot className="h-3.5 w-3.5" />{toggling ? '…' : 'Devolver à IA'}</>
+                      ) : (
+                        <><UserCheck className="h-3.5 w-3.5" />{toggling ? '…' : 'Assumir atendimento'}</>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleResolve}
+                      disabled={resolving}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 bg-green-500/10 text-green-500 border-green-500/25 hover:bg-green-500/20"
+                    >
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      {resolving ? '…' : 'Marcar como resolvido'}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
