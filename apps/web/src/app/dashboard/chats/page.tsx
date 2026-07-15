@@ -283,17 +283,21 @@ export default function ChatsPage() {
     const q = search.toLowerCase()
     return getChatName(c, clientNames).toLowerCase().includes(q) || c.whatsappPhone.includes(q)
   }
-  const finishedIds = new Set(finishedList.map((c) => c.id))
-  const activeOnly  = activeChats.filter((c) => !c.finished && !finishedIds.has(c.id))
+  // Todos os chats de ambas as listas, sem duplicatas
+  const allChatsMap = new Map<string, GptChat>()
+  for (const c of [...activeChats, ...finishedList]) allChatsMap.set(c.id, c)
+  const allChats = Array.from(allChatsMap.values())
 
-  // subseções humano / agente IA por modo
+  const activeOnly   = allChats.filter((c) => !c.finished)
+  const finishedOnly = allChats.filter((c) =>  c.finished)
+
   const showActive   = filterMode === 'all' || filterMode === 'active'
   const showFinished = filterMode === 'all' || filterMode === 'finished'
 
-  const humanActive    = showActive   ? activeOnly.filter((c) =>  c.humanTalk && applySearch(c)) : []
-  const aiActive       = showActive   ? activeOnly.filter((c) => !c.humanTalk && applySearch(c)) : []
-  const humanFinished  = showFinished ? finishedList.filter((c) =>  c.humanTalk && applySearch(c)) : []
-  const aiFinished     = showFinished ? finishedList.filter((c) => !c.humanTalk && applySearch(c)) : []
+  const humanActive    = showActive   ? activeOnly.filter((c)   =>  c.humanTalk && applySearch(c)) : []
+  const aiActive       = showActive   ? activeOnly.filter((c)   => !c.humanTalk && applySearch(c)) : []
+  const humanFinished  = showFinished ? finishedOnly.filter((c) =>  c.humanTalk && applySearch(c)) : []
+  const aiFinished     = showFinished ? finishedOnly.filter((c) => !c.humanTalk && applySearch(c)) : []
 
   const isEmpty = humanActive.length === 0 && aiActive.length === 0 && humanFinished.length === 0 && aiFinished.length === 0
 
@@ -314,7 +318,7 @@ export default function ChatsPage() {
             className="w-full text-xs bg-secondary/60 border border-border rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500"
           />
           <div className="flex gap-0.5">
-            {([['all','Todos'],['active','Em andamento'],['finished','Finalizados']] as const).map(([m, label]) => (
+            {([['all','Todos'],['active','Em atendimento'],['finished','Finalizados']] as const).map(([m, label]) => (
               <button
                 key={m}
                 onClick={() => setFilterMode(m)}
