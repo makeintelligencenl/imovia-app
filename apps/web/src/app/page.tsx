@@ -580,8 +580,8 @@ export default function LandingPage() {
   const features = [
     {
       icon: Bot,
-      title: 'Agente IA de pré-atendimento',
-      desc: 'Conversa com o cliente, qualifica o perfil de busca e registra tudo no sistema — 24h por dia, sem intervenção humana.',
+      title: 'Agente IA e Gestão de Conversas',
+      desc: 'O Agente IA atende, qualifica e registra o cliente 24h por dia. O corretor acompanha as conversas em tempo real, assume o chat quando quiser e marca como resolvido — tudo na mesma plataforma.',
     },
     {
       icon: Zap,
@@ -599,29 +599,19 @@ export default function LandingPage() {
       desc: 'Acompanhe cada match em 6 estágios: Identificado → Notificado → Interessado → Visita → Proposta → Concluído.',
     },
     {
-      icon: Users,
-      title: 'Perfis de busca detalhados',
-      desc: 'Cadastre as preferências do cliente: tipo, finalidade, faixa de preço, área mínima, quartos, cidades e bairros específicos.',
-    },
-    {
       icon: Home,
       title: 'Gestão completa de imóveis',
       desc: 'Cadastre imóveis com tipo, finalidade, preço, área, quartos, bairro, cidade, CEP e código de origem da imobiliária.',
     },
     {
       icon: UserRound,
-      title: 'Gestão de Clientes (CRM)',
-      desc: 'Ficha completa do cliente com múltiplos perfis de busca, histórico de matches e corretor responsável — tudo centralizado em uma única tela.',
+      title: 'CRM e Perfis de Busca',
+      desc: 'Ficha completa do cliente com múltiplos perfis de busca detalhados — tipo, faixa de preço, área, quartos, cidades e bairros. Histórico de matches e corretor responsável centralizados em uma única tela.',
     },
     {
       icon: CalendarDays,
       title: 'Agenda de Visitas',
       desc: 'Agende visitas diretamente do match no pipeline. Calendário compartilhado com visitas, retornos e propostas por corretor ou equipe.',
-    },
-    {
-      icon: MessageSquare,
-      title: 'Gestão de Conversas',
-      desc: 'Acompanhe em tempo real todas as conversas do Agente IA. Assuma o chat com 1 clique, marque como resolvido e veja o perfil do cliente no painel lateral.',
     },
     {
       icon: Shield,
