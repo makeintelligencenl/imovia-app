@@ -589,11 +589,6 @@ export default function LandingPage() {
       desc: 'Quando um imóvel é cadastrado, o sistema cruza automaticamente com todos os perfis de busca ativos e gera os matches — sem nenhuma ação manual.',
     },
     {
-      icon: Bell,
-      title: 'Notificação instantânea',
-      desc: 'O cliente é avisado por e-mail e WhatsApp assim que um imóvel compatível aparecer. Nada passa despercebido.',
-    },
-    {
       icon: BarChart3,
       title: 'Dashboard analítico',
       desc: 'Funil de negociação, distribuição por tipo, ticket médio, taxa de conversão — tudo em tempo real para tomada de decisão rápida.',
@@ -614,11 +609,6 @@ export default function LandingPage() {
       desc: 'Cadastre imóveis com tipo, finalidade, preço, área, quartos, bairro, cidade, CEP e código de origem da imobiliária.',
     },
     {
-      icon: TrendingUp,
-      title: 'Integra com seu ERP atual',
-      desc: 'Não é preciso trocar de sistema. O ImovIA conecta ao ERP da sua imobiliária via API, importando imóveis e sincronizando dados automaticamente.',
-    },
-    {
       icon: UserRound,
       title: 'Gestão de Clientes (CRM)',
       desc: 'Ficha completa do cliente com múltiplos perfis de busca, histórico de matches e corretor responsável — tudo centralizado em uma única tela.',
@@ -637,11 +627,6 @@ export default function LandingPage() {
       icon: Shield,
       title: 'Visão Admin vs. Corretor',
       desc: 'O Admin enxerga toda a carteira. O Corretor vê apenas seus clientes e matches — garantindo foco, privacidade e responsabilidade de atendimento.',
-    },
-    {
-      icon: MessageCircle,
-      title: 'WhatsApp pré-preenchido',
-      desc: 'Clique no número do cliente e abra o WhatsApp já com uma mensagem de saudação personalizada pronta — agilidade no primeiro contato.',
     },
   ]
 
