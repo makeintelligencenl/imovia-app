@@ -652,7 +652,6 @@ export default function LandingPage() {
   ]
 
   const comparisons = [
-    { feature: 'Integra com ERP existente (sem troca)',    nos: true,  zap: false },
     { feature: 'Agente IA de pré-atendimento 24/7',       nos: true,  zap: false },
     { feature: 'Qualificação automática de perfil',       nos: true,  zap: false },
     { feature: 'Matching automático ao cadastrar imóvel', nos: true,  zap: false },
@@ -682,9 +681,6 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-600">
             <a href="#como-funciona" className="hover:text-slate-900 transition-colors">Como funciona</a>
             <a href="#agente-ia" className="hover:text-slate-900 transition-colors">Agente IA</a>
-            <a href="#clientes" className="hover:text-slate-900 transition-colors">Clientes</a>
-            <a href="#agenda" className="hover:text-slate-900 transition-colors">Agenda</a>
-            <a href="#chats" className="hover:text-slate-900 transition-colors">Chats</a>
             <a href="#funcionalidades" className="hover:text-slate-900 transition-colors">Funcionalidades</a>
             <a href="#diferenciais" className="hover:text-slate-900 transition-colors">Diferenciais</a>
           </div>
@@ -710,7 +706,6 @@ export default function LandingPage() {
           {[
             { icon: Bot,       label: 'Agente IA 24h/dia',      color: 'bg-blue-500/10   text-blue-300   border-blue-500/20'   },
             { icon: Zap,       label: 'Match automático',        color: 'bg-green-500/10  text-green-300  border-green-500/20'  },
-            { icon: Shield,    label: 'Integra com seu ERP',     color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' },
             { icon: Handshake, label: 'Corretor foca em fechar', color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
           ].map(({ icon: Icon, label, color }) => (
             <div key={label} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border whitespace-nowrap ${color}`}>
@@ -732,8 +727,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-slate-400 text-lg mb-8 leading-relaxed">
-              Pré-atendimento com IA, matching automático e notificação instantânea —
-              sem trocar o ERP que você já usa.
+              Pré-atendimento com IA, matching automático e corretor focado em fechar negócios.
             </p>
 
             {/* CTAs */}
@@ -1225,7 +1219,6 @@ export default function LandingPage() {
           {/* benefícios rápidos */}
           <div className="flex flex-wrap justify-center gap-3 mb-10">
             {[
-              '✓ Sem trocar seu ERP',
               '✓ Atendimento 24h/dia',
               '✓ Corretor só entra no momento certo',
               '✓ CRM + Agenda integrados',
