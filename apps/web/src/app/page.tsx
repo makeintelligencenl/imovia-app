@@ -943,6 +943,28 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── FUNCIONALIDADES ─────────────────────────────────────── */}
+      <section id="funcionalidades" className="py-24 bg-[#0F172A] text-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <p className="text-blue-400 font-semibold text-sm uppercase tracking-widest mb-3">Plataforma completa</p>
+            <h2 className="text-4xl font-bold mb-4">Tudo que sua imobiliária precisa</h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Desenvolvido especificamente para o mercado imobiliário brasileiro.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {features.map((f) => (
+              <div key={f.title} className="bg-white/5 hover:bg-white/10 transition-colors rounded-2xl p-5 border border-white/10">
+                <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
+                  <f.icon className="h-5 w-5 text-blue-400" />
+                </div>
+                <h3 className="font-bold text-white mb-2 text-sm">{f.title}</h3>
+                <p className="text-slate-400 text-xs leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── SCREENS: IMOVEIS ────────────────────────────────────── */}
       <section className="py-24 bg-white overflow-hidden">
         <div className="max-w-6xl mx-auto px-6">
@@ -1129,28 +1151,6 @@ export default function LandingPage() {
             <div className="lg:w-3/5 w-full">
               <MockChats />
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FUNCIONALIDADES ─────────────────────────────────────── */}
-      <section id="funcionalidades" className="py-24 bg-[#0F172A] text-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <p className="text-blue-400 font-semibold text-sm uppercase tracking-widest mb-3">Plataforma completa</p>
-            <h2 className="text-4xl font-bold mb-4">Tudo que sua imobiliária precisa</h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Desenvolvido especificamente para o mercado imobiliário brasileiro.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {features.map((f) => (
-              <div key={f.title} className="bg-white/5 hover:bg-white/10 transition-colors rounded-2xl p-5 border border-white/10">
-                <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
-                  <f.icon className="h-5 w-5 text-blue-400" />
-                </div>
-                <h3 className="font-bold text-white mb-2 text-sm">{f.title}</h3>
-                <p className="text-slate-400 text-xs leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>
