@@ -33,31 +33,39 @@ export function invalidateCache(prefix?: string) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-// S1 FIX: getToken() removido — o JWT agora viaja no HttpOnly cookie automaticamente.
-// Não há mais acesso ao token via JavaScript (elimina vetor XSS).
-
 function redirectToLogin(reason: 'expired' | 'unauthorized' = 'expired') {
   clearSession()
   if (typeof window !== 'undefined') {
-    // S4 FIX: encodeURIComponent garante que o valor não quebre a URL nem injete parâmetros extras
     window.location.href = `/login?expired=1&reason=${encodeURIComponent(reason)}`
   }
 }
 
+// Tenta renovar o access_token usando o refresh_token (HttpOnly cookie).
+// Retorna true se conseguiu, false se o refresh_token também expirou.
+let _refreshing: Promise<boolean> | null = null
+async function tryRefresh(): Promise<boolean> {
+  if (_refreshing) return _refreshing
+  _refreshing = fetch(`${API_BASE}/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+    .then((r) => r.ok)
+    .catch(() => false)
+    .finally(() => { _refreshing = null })
+  return _refreshing
+}
+
 export async function apiRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  // Verifica timeout por inatividade antes de disparar a requisição
   if (isSessionExpired()) {
     redirectToLogin('expired')
     throw new Error('Sessão expirada')
   }
 
-  // ── Serve do cache em GETs frescos (evita round-trip desnecessário) ──
   if (method === 'GET') {
     const cached = getCached<T>(path)
     if (cached !== null) return cached
   }
 
-  // Invalidação cirúrgica por recurso
   if (method !== 'GET') {
     const resource = '/' + path.replace(/^\//, '').split(/[/?]/)[0]
     const CASCADE: Record<string, string[]> = {
@@ -74,8 +82,6 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     toInvalidate.forEach(r => invalidateCache(r))
   }
 
-  // S1 FIX: `credentials: 'include'` envia o HttpOnly cookie em cada request.
-  // O header Authorization com Bearer foi removido — o browser gerencia o cookie.
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     credentials: 'include',
@@ -83,9 +89,27 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     body: body ? JSON.stringify(body) : undefined,
   })
 
+  // access_token expirado → tenta renovar silenciosamente e retry uma vez
   if (res.status === 401) {
-    redirectToLogin('unauthorized')
-    throw new Error('Não autorizado')
+    const refreshed = await tryRefresh()
+    if (!refreshed) {
+      redirectToLogin('unauthorized')
+      throw new Error('Não autorizado')
+    }
+    // Retry com o novo access_token (cookie já foi setado pelo /auth/refresh)
+    const retry = await fetch(`${API_BASE}${path}`, {
+      method,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    if (!retry.ok) {
+      if (retry.status === 401) redirectToLogin('unauthorized')
+      throw new Error(`HTTP ${retry.status}`)
+    }
+    const retryData = (await retry.json()) as T
+    if (method === 'GET') setCached(path, retryData)
+    return retryData
   }
 
   if (!res.ok) {

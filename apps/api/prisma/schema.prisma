@@ -45,10 +45,24 @@ model User {
   comissoes         ComissaoVenda[]  @relation("ComissaoCorretor")
   historico         MatchHistorico[]
   matchesAssociados Match[]          @relation("MatchCorretor")
+  refreshTokens     RefreshToken[]
   tenant            Tenant           @relation(fields: [tenantId], references: [id])
   visitas           Visita[]         @relation("VisitaCorretor")
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 model Cliente {
