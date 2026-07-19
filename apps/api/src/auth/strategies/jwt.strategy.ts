@@ -9,7 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 // Bearer header (MCP, integrações externas, Swagger). A ordem importa:
 // o cookie tem prioridade por ser mais seguro.
 function extractJwt(req: Request): string | null {
-  const fromCookie = req?.cookies?.['access_token']
+  const fromCookie = req?.cookies?.['auth_token']
   if (fromCookie) return fromCookie
   // Fallback: Authorization: Bearer <token>
   const authHeader = req?.headers?.authorization
