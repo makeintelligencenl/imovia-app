@@ -73,11 +73,15 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     toInvalidate.forEach(r => invalidateCache(r))
   }
 
-  // S1 FIX: `credentials: 'include'` envia o HttpOnly cookie em cada request.
+  // Cookie HttpOnly (desktop) + Authorization Bearer (mobile — Safari iOS bloqueia cookies cross-origin)
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('auth_token') : null
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: body ? JSON.stringify(body) : undefined,
   })
 
