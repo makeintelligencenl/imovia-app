@@ -1,19 +1,20 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Home, GitMerge, CalendarDays, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, Home, GitMerge, CalendarDays, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ITEMS = [
-  { href: '/dashboard',          label: 'Início',   icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/imoveis',  label: 'Imóveis',  icon: Home,            exact: false },
-  { href: '/dashboard/matches',  label: 'Matches',  icon: GitMerge,        exact: false },
-  { href: '/dashboard/agenda',   label: 'Agenda',   icon: CalendarDays,    exact: false },
+  { href: '/dashboard',               label: 'Início',        icon: LayoutDashboard, exact: true  },
+  { href: '/dashboard/imoveis',       label: 'Imóveis',       icon: Home,            exact: false },
+  { href: '/dashboard/matches',       label: 'Matches',       icon: GitMerge,        exact: false },
+  { href: '/dashboard/agenda',        label: 'Agenda',        icon: CalendarDays,    exact: false },
+  { href: '/dashboard/notificacoes',  label: 'Alertas',       icon: Bell,            exact: false },
 ]
 
 interface Props { onMoreClick: () => void }
 
-export function MobileBottomNav({ onMoreClick }: Props) {
+export function MobileBottomNav({ onMoreClick: _ }: Props) {
   const pathname = usePathname()
 
   return (
@@ -44,13 +45,6 @@ export function MobileBottomNav({ onMoreClick }: Props) {
           </Link>
         )
       })}
-      <button
-        onClick={onMoreClick}
-        className="flex flex-col items-center gap-1 px-3 py-1 rounded-lg text-slate-500"
-      >
-        <MoreHorizontal className="h-5 w-5" />
-        <span className="text-[10px] font-medium">Mais</span>
-      </button>
     </nav>
   )
 }
