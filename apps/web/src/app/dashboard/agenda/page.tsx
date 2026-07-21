@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react'
 import {
   ChevronLeft, ChevronRight, Plus, X, Trash2, CalendarDays,
-  Clock, MapPin, User, AlignLeft, UserRound,
+  Clock, MapPin, User, AlignLeft, UserRound, CheckCircle2,
 } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
@@ -436,9 +437,20 @@ export default function AgendaPage() {
                   </span>
                 )}
               </div>
-              <button onClick={() => setModalOpen(false)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600">
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {modalMode === 'edit' && editTarget?.status === 'AGENDADA' && (
+                  <Link
+                    href={`/dashboard/visitas/${editTarget.id}/checkin`}
+                    className="md:hidden flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Check-in
+                  </Link>
+                )}
+                <button onClick={() => setModalOpen(false)} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Body */}
