@@ -22,7 +22,7 @@ import { ChatsModule } from './chats/chats.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // Máx 10 tentativas de login por minuto por IP
+    // Max 10 tentativas de login por minuto por IP
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
     PrismaModule,
     AuthModule,
