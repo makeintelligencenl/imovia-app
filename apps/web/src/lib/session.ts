@@ -50,6 +50,7 @@ export function isSessionExpired(): boolean {
 export function clearSession(): void {
   if (typeof window === 'undefined') return
   sessionStorage.removeItem('user')
+  sessionStorage.removeItem('auth_token')
   localStorage.removeItem(ACTIVITY_KEY)
 
   // S1 FIX: chama /auth/logout para que o servidor faça clearCookie do HttpOnly cookie.

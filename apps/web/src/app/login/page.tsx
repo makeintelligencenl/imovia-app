@@ -43,9 +43,10 @@ function LoginForm() {
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      // S1 FIX: token removido do sessionStorage — agora vive apenas no HttpOnly cookie.
-      // Apenas os dados não-sensíveis do usuário (id, name, role) ficam no sessionStorage.
       sessionStorage.setItem('user', JSON.stringify(data.user))
+      // Token salvo para fallback via Authorization header em mobile
+      // (Safari iOS bloqueia cookies cross-origin mesmo com sameSite: none)
+      if (data.token) sessionStorage.setItem('auth_token', data.token)
       // Limpa todo o cache em memória para que dados de sessões anteriores
       // não sejam exibidos ao novo usuário (ex: dashboard de outro corretor)
       invalidateCache()
