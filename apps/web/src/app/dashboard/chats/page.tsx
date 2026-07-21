@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Send, UserCheck, Bot, Phone, MapPin, Ruler, ExternalLink, LinkIcon, UserRound, Unlink, CheckCircle, MoreVertical, Pencil, Trash2, Users } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
+import { MobileBlock } from '@/components/layout/mobile-block'
 
 // ── Tipos GPT Maker ───────────────────────────────────────────────────────────
 
@@ -325,6 +326,7 @@ export default function ChatsPage() {
   if (!allowed) return null
 
   return (
+    <MobileBlock>
     <div className="flex h-[calc(100vh-4rem)] -m-6 overflow-hidden">
 
       {/* ── Lista de chats ── */}
@@ -634,6 +636,7 @@ export default function ChatsPage() {
         )}
       </div>
     </div>
+    </MobileBlock>
   )
 }
 

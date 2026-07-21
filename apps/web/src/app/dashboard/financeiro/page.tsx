@@ -5,6 +5,7 @@ import { CheckCircle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
+import { MobileBlock } from '@/components/layout/mobile-block'
 
 interface Resumo {
   totalImobiliaria: number
@@ -100,6 +101,7 @@ export default function FinanceiroPage() {
   if (!allowed) return null
 
   return (
+    <MobileBlock>
     <div className="space-y-6">
       {/* Cabeçalho */}
       <div className="flex items-start justify-between">
@@ -250,5 +252,6 @@ export default function FinanceiroPage() {
         Cada venda gera 2 registros — um para a imobiliária e um para o corretor.
       </p>
     </div>
+    </MobileBlock>
   )
 }

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Settings2, Users, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MobileBlock } from '@/components/layout/mobile-block'
 
 const TABS = [
   { href: '/dashboard/settings/pipeline',   label: 'Funil de Vendas', icon: Settings2  },
@@ -14,6 +15,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const pathname = usePathname()
 
   return (
+    <MobileBlock>
     <div className="space-y-6">
       {/* ── Cabeçalho ── */}
       <div>
@@ -48,5 +50,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       {/* ── Conteúdo da aba ── */}
       {children}
     </div>
+    </MobileBlock>
   )
 }
