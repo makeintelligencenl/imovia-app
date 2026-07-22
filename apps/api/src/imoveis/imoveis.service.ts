@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException, Logger } f
 import { Prisma, Finalidade, StatusImovel } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { MatchingService } from '../matching/matching.service'
+import { GeocodingService } from './geocoding.service'
 import { CreateImovelDto } from './dto/create-imovel.dto'
 
 @Injectable()
@@ -11,9 +12,17 @@ export class ImoveisService {
   constructor(
     private prisma: PrismaService,
     private matchingService: MatchingService,
+    private geocoding: GeocodingService,
   ) {}
 
   async create(tenantId: string, dto: CreateImovelDto) {
+    let latitude  = dto.latitude
+    let longitude = dto.longitude
+    if (dto.cep && (latitude == null || longitude == null)) {
+      const coords = await this.geocoding.geocodificarCep(dto.cep)
+      if (coords) { latitude = coords.latitude; longitude = coords.longitude }
+    }
+
     const imovel = await this.prisma.imovel.create({
       data: {
         titulo: dto.titulo,
@@ -29,8 +38,8 @@ export class ImoveisService {
         estado: dto.estado,
         cep: dto.cep,
         codigoOrigem: dto.codigoOrigem,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
+        latitude,
+        longitude,
         descricao: dto.descricao,
         tenantId,
       },
@@ -73,6 +82,12 @@ export class ImoveisService {
   async update(tenantId: string, id: string, data: Partial<CreateImovelDto>) {
     await this.findById(tenantId, id)
     const { tipoId, finalidade, ...rest } = data
+
+    if (data.cep && data.latitude == null && data.longitude == null) {
+      const coords = await this.geocoding.geocodificarCep(data.cep)
+      if (coords) { rest.latitude = coords.latitude; rest.longitude = coords.longitude }
+    }
+
     const updated = await this.prisma.imovel.update({
       where: { id },
       data: {
