@@ -4,12 +4,12 @@ import { CreateEtapaDto, UpdateEtapaDto, ReorderEtapasDto } from './dto/pipeline
 
 // Etapas padrão criadas automaticamente para novos tenants
 export const ETAPAS_PADRAO = [
-  { nome: 'Novo',            cor: '#6B7280', ordem: 1 },
-  { nome: 'Contatado',       cor: '#3B82F6', ordem: 2 },
-  { nome: 'Visita Agendada', cor: '#F59E0B', ordem: 3 },
-  { nome: 'Em Negociação',   cor: '#F97316', ordem: 4 },
-  { nome: 'Fechado',         cor: '#10B981', ordem: 5 },
-  { nome: 'Encerrado',       cor: '#EF4444', ordem: 6 },
+  { nome: 'Novo',            cor: '#6B7280', ordem: 1, tipo: 'PADRAO'    as const },
+  { nome: 'Contatado',       cor: '#3B82F6', ordem: 2, tipo: 'PADRAO'    as const },
+  { nome: 'Visita Agendada', cor: '#F59E0B', ordem: 3, tipo: 'VISITA'    as const },
+  { nome: 'Em Negociação',   cor: '#F97316', ordem: 4, tipo: 'PADRAO'    as const },
+  { nome: 'Fechado',         cor: '#10B981', ordem: 5, tipo: 'FECHADO'   as const },
+  { nome: 'Encerrado',       cor: '#EF4444', ordem: 6, tipo: 'ENCERRADO' as const },
 ]
 
 @Injectable()

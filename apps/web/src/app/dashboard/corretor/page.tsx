@@ -291,8 +291,8 @@ export default function CorretorDashboardPage() {
 
   // ── Derived: pipeline (vem do summary pré-computado no servidor) ──────────
   const etapas         = summary?.etapas         ?? []
-  const etapaEncerrada = etapas.at(-1) ?? null
-  const etapaFechado   = etapas.at(-2) ?? null
+  const etapaEncerrada = etapas.find((e: any) => e.tipo === 'ENCERRADO') ?? etapas.at(-1) ?? null
+  const etapaFechado   = etapas.find((e: any) => e.tipo === 'FECHADO')   ?? etapas.at(-2) ?? null
   const emNegociacao   = summary?.emNegociacao   ?? 0
   const mesFechados    = summary?.mesFechados    ?? 0
   const topOportunidades = summary?.topOportunidades ?? []

@@ -176,9 +176,8 @@ export default function DashboardPage() {
   const vendidos    = imoveis.filter((i) => ['VENDIDO', 'ALUGADO'].includes(i.status)).length
   const matchesHoje = matches.filter((m) => new Date(m.createdAt).toDateString() === hoje).length
 
-  // Ultima etapa = Encerrado (cancelado/perdido) — penultima = Fechado (conversao real)
-  const etapaEncerrada = etapas.length >= 1 ? etapas[etapas.length - 1] : null
-  const etapaFechado   = etapas.length >= 2 ? etapas[etapas.length - 2] : null
+  const etapaEncerrada = etapas.find((e: any) => e.tipo === 'ENCERRADO') ?? (etapas.length >= 1 ? etapas[etapas.length - 1] : null)
+  const etapaFechado   = etapas.find((e: any) => e.tipo === 'FECHADO')   ?? (etapas.length >= 2 ? etapas[etapas.length - 2] : null)
   const convertidos    = etapaFechado ? matches.filter((m) => m.etapaId === etapaFechado.id).length : 0
   const taxaConv       = matches.length ? Math.round(convertidos / matches.length * 100) : 0
 

@@ -91,6 +91,8 @@ export class MatchingService {
     if (!imovel) return
 
     const etapaEncerrada = await this.prisma.pipelineEtapa.findFirst({
+      where: { tenantId, ativo: true, tipo: 'ENCERRADO' },
+    }) ?? await this.prisma.pipelineEtapa.findFirst({
       where: { tenantId, ativo: true }, orderBy: { ordem: 'desc' },
     })
     if (!etapaEncerrada) return
@@ -243,11 +245,11 @@ export class MatchingService {
     const etapas = await this.prisma.pipelineEtapa.findMany({
       where:   { tenantId, ativo: true },
       orderBy: { ordem: 'asc' },
-      select:  { id: true, nome: true, cor: true, ordem: true },
+      select:  { id: true, nome: true, cor: true, ordem: true, tipo: true },
     })
 
-    const etapaEncerrada    = etapas.at(-1)
-    const etapaFechado      = etapas.at(-2)
+    const etapaEncerrada    = etapas.find(e => e.tipo === 'ENCERRADO') ?? etapas.at(-1)
+    const etapaFechado      = etapas.find(e => e.tipo === 'FECHADO')   ?? etapas.at(-2)
     const etapasExcluidas   = [etapaFechado?.id, etapaEncerrada?.id].filter(Boolean) as string[]
     const etapasIniciaisIds = etapas
       .filter(e => e.ordem <= 2 && e.id !== etapaEncerrada?.id && e.id !== etapaFechado?.id)
