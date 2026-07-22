@@ -37,19 +37,15 @@ export class ImoveisService {
       include: { tipo: true, cidade: { include: { estado: true } } },
     })
 
-    // BUG #4 FIX: fire-and-forget com log completo (mensagem + stack) para facilitar
-    // diagnóstico quando o matching falha silenciosamente em produção.
-    // Mantém fire-and-forget intencional para não bloquear a resposta ao cliente.
-    this.matchingService
-      .executarMatching(tenantId, imovel.id)
-      .catch((err: Error) =>
-        this.logger.error(
-          `[create] Matching falhou para imóvel ${imovel.id}: ${err.message}`,
-          err.stack,
-        ),
-      )
+    let matchesEncontrados = 0
+    try {
+      const resultado = await this.matchingService.executarMatching(tenantId, imovel.id)
+      matchesEncontrados = resultado.matchesEncontrados
+    } catch (err: any) {
+      this.logger.error(`[create] Matching falhou para imóvel ${imovel.id}: ${err.message}`, err.stack)
+    }
 
-    return imovel
+    return { ...imovel, matchesEncontrados }
   }
 
   async findAll(tenantId: string, filters?: { tipoId?: string; finalidade?: string; status?: string }) {

@@ -229,24 +229,17 @@ function ImoveisContent() {
     }
     try {
       if (formMode === 'criar') {
-        // Captura contagem de matches antes de criar
-        const matchesAntes = await api.get<any[]>('/matches')
-        const qtdAntes = matchesAntes.length
-
-        const criado = await api.post<{ id: string; titulo: string }>('/imoveis', payload)
+        const criado = await api.post<{ id: string; titulo: string; matchesEncontrados: number }>('/imoveis', payload)
         setFormMode(null)
         load()
-        toast.success('Imóvel cadastrado! Verificando matches...')
 
-        await new Promise((r) => setTimeout(r, 1800))
-
-        const matchesDepois = await api.get<any[]>('/matches')
-        const novos = matchesDepois.length - qtdAntes
-        if (novos > 0) {
+        if (criado.matchesEncontrados > 0) {
           const params = new URLSearchParams({ imovelId: criado.id, label: payload.titulo })
           setMatchHref(`/dashboard/matches?${params.toString()}`)
           celebrateMatch()
-          setMatchCount(novos)
+          setMatchCount(criado.matchesEncontrados)
+        } else {
+          toast.success('Imóvel cadastrado com sucesso!')
         }
       } else {
         await api.patch(`/imoveis/${editId}`, payload)

@@ -30,22 +30,6 @@ export class TenantsController {
     return this.tenantsService.findAll()
   }
 
-  // Corretor só pode ver o próprio tenant
-  @Get(':id')
-  findOne(@Param('id') id: string, @Request() req: any) {
-    if (req.user.role !== 'ADMIN' && req.user.tenantId !== id) {
-      return this.tenantsService.findById(req.user.tenantId)
-    }
-    return this.tenantsService.findById(id)
-  }
-
-  // Atualização restrita a ADMIN
-  @Patch(':id')
-  @Roles('ADMIN')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateTenantDto>) {
-    return this.tenantsService.update(id, dto)
-  }
-
   // Diagnóstico temporário — verifica se RLS está ativo no banco
   @Get('_rls-status')
   @Roles('ADMIN')
@@ -65,5 +49,21 @@ export class TenantsController {
       rlsEfetivo:   !roleRow.rolbypassrls,
       tabelas:      tables,
     }
+  }
+
+  // Corretor só pode ver o próprio tenant
+  @Get(':id')
+  findOne(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role !== 'ADMIN' && req.user.tenantId !== id) {
+      return this.tenantsService.findById(req.user.tenantId)
+    }
+    return this.tenantsService.findById(id)
+  }
+
+  // Atualização restrita a ADMIN
+  @Patch(':id')
+  @Roles('ADMIN')
+  update(@Param('id') id: string, @Body() dto: Partial<CreateTenantDto>) {
+    return this.tenantsService.update(id, dto)
   }
 }
