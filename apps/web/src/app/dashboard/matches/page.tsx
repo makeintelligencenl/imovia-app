@@ -599,15 +599,16 @@ function MatchesContent() {
     const etapa = etapas.find((e) => e.id === etapaId)
     if (!etapa) return
 
-    // Penúltima etapa = Fechado; intercepta para mostrar modal de comissão
+    // Etapa FECHADO intercepta para mostrar modal de comissão
     const etapasSorted = [...etapas].sort((a, b) => a.ordem - b.ordem)
-    const isFechado = etapasSorted.at(-2)?.id === etapaId
+    const etapaFechado = etapasSorted.find((e: any) => e.tipo === 'FECHADO') ?? etapasSorted.at(-2)
+    const isFechado = etapaFechado?.id === etapaId
     if (isFechado && oldMatch.imovel.finalidade === 'VENDA') {
       setFecharVenda({ matchId, etapaId })
       return
     }
 
-    const isVisitaEtapa = etapa.nome.toLowerCase().includes('visita')
+    const isVisitaEtapa = (etapa as any).tipo === 'VISITA' || etapa.nome.toLowerCase().includes('visita')
 
     setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, etapaId, etapa } : m))
 

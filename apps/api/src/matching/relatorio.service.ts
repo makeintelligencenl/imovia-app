@@ -12,7 +12,7 @@ export class RelatorioService {
       this.prisma.pipelineEtapa.findMany({
         where: { tenantId, ativo: true },
         orderBy: { ordem: 'asc' },
-        select: { id: true, nome: true, cor: true, ordem: true },
+        select: { id: true, nome: true, cor: true, ordem: true, tipo: true },
       }),
       this.prisma.user.findMany({
         where: { tenantId, role: 'CORRETOR', ativo: true },
@@ -25,8 +25,8 @@ export class RelatorioService {
       }),
     ])
 
-    const etapaFechado   = etapas.at(-2)
-    const etapaEncerrada = etapas.at(-1)
+    const etapaFechado   = etapas.find(e => e.tipo === 'FECHADO')   ?? etapas.at(-2)
+    const etapaEncerrada = etapas.find(e => e.tipo === 'ENCERRADO') ?? etapas.at(-1)
     const etapasFinais   = [etapaFechado?.id, etapaEncerrada?.id].filter(Boolean) as string[]
 
     const conversoes = etapaFechado

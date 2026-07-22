@@ -1,4 +1,5 @@
-import { IsString, IsHexColor, IsInt, IsOptional, IsBoolean, Min, MaxLength } from 'class-validator'
+import { IsString, IsHexColor, IsInt, IsOptional, IsBoolean, IsEnum, Min, MaxLength } from 'class-validator'
+import { EtapaTipo } from '@prisma/client'
 
 export class CreateEtapaDto {
   @IsString()
@@ -11,6 +12,10 @@ export class CreateEtapaDto {
   @IsInt()
   @Min(1)
   ordem: number
+
+  @IsOptional()
+  @IsEnum(EtapaTipo)
+  tipo?: EtapaTipo
 }
 
 export class UpdateEtapaDto {
@@ -27,6 +32,10 @@ export class UpdateEtapaDto {
   @IsInt()
   @Min(1)
   ordem?: number
+
+  @IsOptional()
+  @IsEnum(EtapaTipo)
+  tipo?: EtapaTipo
 
   @IsOptional()
   @IsBoolean()

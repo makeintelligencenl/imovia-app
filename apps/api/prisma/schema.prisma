@@ -185,11 +185,19 @@ model PerfilBusca {
   @@map("perfis_busca")
 }
 
+enum EtapaTipo {
+  PADRAO
+  VISITA
+  FECHADO
+  ENCERRADO
+}
+
 model PipelineEtapa {
   id               String           @id @default(cuid())
   nome             String
   cor              String           @db.VarChar(7)
   ordem            Int
+  tipo             EtapaTipo        @default(PADRAO)
   ativo            Boolean          @default(true)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
