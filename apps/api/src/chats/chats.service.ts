@@ -79,8 +79,9 @@ export class ChatsService {
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'PUT' })
   }
 
-  async resolverChat(chatId: string) {
-    return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'PUT' })
+  // Alias — ambas as rotas (/end e /resolve) fazem a mesma operação no GPT Maker
+  resolverChat(chatId: string) {
+    return this.encerrarAtendimento(chatId)
   }
 
   async editarMensagem(chatId: string, messageId: string, message: string) {
@@ -99,44 +100,52 @@ export class ChatsService {
 
     const digits = whatsappPhone?.replace(/\D/g, '') ?? ''
 
-    const clientes = await this.prisma.cliente.findMany({
-      where: { tenantId, ativo: true },
-      include: {
-        corretor: { select: { id: true, name: true } },
-        perfis: {
-          take: 1,
-          orderBy: { updatedAt: 'desc' },
-          include: {
-            matches: {
-              take: 1,
-              orderBy: { updatedAt: 'desc' },
-              include: {
-                etapa:  { select: { nome: true } },
-                imovel: {
-                  select: {
-                    id: true, titulo: true, preco: true, areaM2: true, quartos: true, vagas: true,
-                    cidade: { select: { nome: true } },
-                  },
+    // Campos necessários para montar o retorno — reutilizados nas duas queries
+    const clienteInclude = {
+      corretor: { select: { id: true, name: true } },
+      perfis: {
+        take: 1,
+        orderBy: { updatedAt: 'desc' } as const,
+        include: {
+          matches: {
+            take: 1,
+            orderBy: { updatedAt: 'desc' } as const,
+            include: {
+              etapa:  { select: { nome: true } },
+              imovel: {
+                select: {
+                  id: true, titulo: true, preco: true, areaM2: true, quartos: true, vagas: true,
+                  cidade: { select: { nome: true } },
                 },
               },
             },
           },
         },
       },
-    })
+    }
 
-    // Busca por chatId (exato ou o chatId é sufixo do gptMakerChatId), depois por WhatsApp
-    const cliente = clientes.find((c) => {
-      if (!chatId) return false
-      const saved = (c as any).gptMakerChatId as string | null
-      return saved === chatId || (!!saved && saved.includes(chatId))
-    })
-      ?? clientes.find((c) => {
-        if (!digits) return false
-        const w = (c.whatsapp ?? '').replace(/\D/g, '')
-        const t = (c.telefone ?? '').replace(/\D/g, '')
-        return w.endsWith(digits.slice(-10)) || t.endsWith(digits.slice(-10))
-      })
+    // 1. Lookup por chatId usando índice em gptMakerChatId (O(log n))
+    const clientePorChat = chatId
+      ? await this.prisma.cliente.findFirst({
+          where:   { tenantId, ativo: true, gptMakerChatId: { contains: chatId } },
+          include: clienteInclude,
+        })
+      : null
+
+    // 2. Fallback por número de telefone — procura nos últimos 10 dígitos (O(log n) via índice de phone, se existir)
+    const cliente = clientePorChat ?? (digits
+      ? await this.prisma.cliente.findFirst({
+          where: {
+            tenantId,
+            ativo: true,
+            OR: [
+              { whatsapp: { contains: digits.slice(-10) } },
+              { telefone: { contains: digits.slice(-10) } },
+            ],
+          },
+          include: clienteInclude,
+        })
+      : null)
 
     if (!cliente) return null
 

@@ -37,6 +37,8 @@ export class FinanceiroController {
   }
 
   @Post('fechar-venda')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Registra etapa Fechado + comissões confirmadas pelo usuário' })
   fecharVenda(
     @Request() req: any,
@@ -50,7 +52,7 @@ export class FinanceiroController {
       valorCorretor:    number
     },
   ) {
-    return this.financeiroService.fecharVenda(req.user.tenantId, req.user.sub, dto)
+    return this.financeiroService.fecharVenda(req.user.tenantId, req.user.id, dto)
   }
 
   @Get('resumo')

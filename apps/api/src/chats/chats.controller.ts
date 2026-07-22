@@ -6,13 +6,15 @@ import { RolesGuard, Roles } from '../auth/guards/roles.guard'
 
 @ApiTags('chats')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@UseGuards(JwtAuthGuard)
 @Controller('chats')
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}
 
+  // ADMIN only — listagem geral de todos os chats da imobiliária
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Lista chats do GPT Maker' })
   listar(
     @Query('page')     page?:     string,
@@ -24,6 +26,7 @@ export class ChatsController {
     return this.chatsService.listarChats({ page, pageSize, agentId, search, finished })
   }
 
+  // ADMIN + CORRETOR — operações de atendimento
   @Get(':chatId/messages')
   @ApiOperation({ summary: 'Lista mensagens de um chat' })
   mensagens(
@@ -58,7 +61,10 @@ export class ChatsController {
     return this.chatsService.resolverChat(chatId)
   }
 
+  // ADMIN only — edição/exclusão de mensagens e configurações
   @Put(':chatId/messages/:messageId')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Edita uma mensagem' })
   editarMensagem(
     @Param('chatId')    chatId:    string,
@@ -69,6 +75,8 @@ export class ChatsController {
   }
 
   @Delete(':chatId/messages/:messageId')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Exclui uma mensagem' })
   excluirMensagem(
     @Param('chatId')    chatId:    string,
@@ -78,11 +86,14 @@ export class ChatsController {
   }
 
   @Get('client-names')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Retorna mapa de gptMakerChatId → nome do cliente' })
   clientNames(@Request() req: any) {
     return this.chatsService.clientNamesByChatId(req.user.tenantId)
   }
 
+  // ADMIN + CORRETOR — consulta match do lead pelo chat
   @Get(':chatId/match-info')
   @ApiOperation({ summary: 'Retorna match associado ao chat pelo chatId ou telefone do lead' })
   matchInfo(

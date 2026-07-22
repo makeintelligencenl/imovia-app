@@ -87,6 +87,7 @@ model Cliente {
   @@index([tenantId])
   @@index([tenantId, email])
   @@index([tenantId, corretorId])
+  @@index([tenantId, gptMakerChatId])
   @@map("clientes")
 }
 
