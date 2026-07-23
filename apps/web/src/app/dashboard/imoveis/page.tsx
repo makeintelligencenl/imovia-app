@@ -87,6 +87,9 @@ function ImoveisContent() {
   const [filtroTipo, setFiltroTipo]           = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
   const [filtroStatus, setFiltroStatus]       = useState('__todos__')
+  const [filtroEstado, setFiltroEstado]       = useState('__todos__')
+  const [filtroCidadeId, setFiltroCidadeId]   = useState('__todas__')
+  const [cidadesFiltro, setCidadesFiltro]     = useState<Cidade[]>([])
 
   // Modais
   const [formMode, setFormMode]       = useState<'criar' | 'editar' | null>(null)
@@ -132,6 +135,13 @@ function ImoveisContent() {
     setCidades(data)
   }
 
+  // Carrega cidades para o filtro quando o estado do filtro muda
+  async function carregarCidadesFiltro(estadoId: number) {
+    if (!estadoId) { setCidadesFiltro([]); return }
+    const data = await api.get<Cidade[]>(`/localidades/cidades?estadoId=${estadoId}`)
+    setCidadesFiltro(data)
+  }
+
   useEffect(() => { load() }, [semMatchParam]) // re-load se o filtro mudar
 
   // -- Filtro client-side --
@@ -145,6 +155,8 @@ function ImoveisContent() {
     if (filtroTipo !== '__todos__' && i.tipoId !== filtroTipo) return false
     if (filtroFinalidade !== '__todas__' && i.finalidade !== filtroFinalidade) return false
     if (filtroStatus !== '__todos__' && i.status !== filtroStatus) return false
+    if (filtroEstado !== '__todos__' && i.cidade.estado.sigla !== filtroEstado) return false
+    if (filtroCidadeId !== '__todas__' && String(i.cidadeId) !== filtroCidadeId) return false
     return true
   })
 
@@ -153,6 +165,9 @@ function ImoveisContent() {
     setFiltroTipo('__todos__')
     setFiltroFinalidade('__todas__')
     setFiltroStatus('__todos__')
+    setFiltroEstado('__todos__')
+    setFiltroCidadeId('__todas__')
+    setCidadesFiltro([])
     setPage(1)
   }
 
@@ -161,12 +176,25 @@ function ImoveisContent() {
   const handleFiltroTipo = (v: string) => { setFiltroTipo(v); setPage(1) }
   const handleFiltroFinalidade = (v: string) => { setFiltroFinalidade(v); setPage(1) }
   const handleFiltroStatus = (v: string) => { setFiltroStatus(v); setPage(1) }
+  const handleFiltroEstado = (sigla: string) => {
+    setFiltroEstado(sigla)
+    setFiltroCidadeId('__todas__')
+    setPage(1)
+    if (sigla !== '__todos__') {
+      const est = estados.find((e) => e.sigla === sigla)
+      if (est) carregarCidadesFiltro(est.id)
+    } else {
+      setCidadesFiltro([])
+    }
+  }
+  const handleFiltroCidade = (v: string) => { setFiltroCidadeId(v); setPage(1) }
 
   // Itens da página atual
   const imovelPaginado = imovelFiltrado.slice((page - 1) * pageSize, page * pageSize)
 
   const filtrosAtivos =
-    filtroTexto || filtroTipo !== '__todos__' || filtroFinalidade !== '__todas__' || filtroStatus !== '__todos__'
+    filtroTexto || filtroTipo !== '__todos__' || filtroFinalidade !== '__todas__' || filtroStatus !== '__todos__' ||
+    filtroEstado !== '__todos__' || filtroCidadeId !== '__todas__'
 
   // Criar / Editar
   function abrirCriar() {
@@ -353,7 +381,7 @@ function ImoveisContent() {
       {/* Filtros */}
       <Card className="shadow-sm rounded-xl">
         <CardContent className="pt-4 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 items-end">
             <div className="lg:col-span-2 space-y-1">
               <Label className="text-xs">Buscar</Label>
               <div className="relative">
@@ -395,6 +423,34 @@ function ImoveisContent() {
                   <SelectItem value="__todos__">Todos</SelectItem>
                   {Object.entries(STATUS_LABELS).map(([v, l]) => (
                     <SelectItem key={v} value={v}>{l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Estado</Label>
+              <Select value={filtroEstado} onValueChange={handleFiltroEstado}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__todos__">Todos</SelectItem>
+                  {estados.map((e) => (
+                    <SelectItem key={e.id} value={e.sigla}>{e.sigla}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Cidade</Label>
+              <Select
+                value={filtroCidadeId}
+                onValueChange={handleFiltroCidade}
+                disabled={filtroEstado === '__todos__'}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="__todas__">Todas</SelectItem>
+                  {cidadesFiltro.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
