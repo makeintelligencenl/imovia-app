@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Search, X, MessageCircle, UserRound, GitMerge, Eye } from 'lucide-react'
+import { Plus, Pencil, Trash2, MessageCircle, UserRound, Eye, SlidersHorizontal, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,17 +56,23 @@ const FINALIDADE_BADGE: Record<string, string> = {
   ALUGUEL: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
 }
 
-export default function ClientesPage() {
-  const [clientes,   setClientes]   = useState<Cliente[]>([])
-  const [corretores, setCorretores] = useState<CorretorResumido[]>([])
-  const [userSession, setUserSession] = useState<UserSession | null>(null)
-  const [loading,    setLoading]    = useState(true)
-  const [search,     setSearch]     = useState('')
+const FILTRO_VAZIO = { nome: '', cpf: '', telefone: '' }
 
-  const [formMode, setFormMode] = useState<'criar' | 'editar' | null>(null)
-  const [formData, setFormData] = useState({ ...BLANK_FORM })
-  const [editId,   setEditId]   = useState<string | null>(null)
-  const [saving,   setSaving]   = useState(false)
+export default function ClientesPage() {
+  const [clientes,    setClientes]    = useState<Cliente[]>([])
+  const [corretores,  setCorretores]  = useState<CorretorResumido[]>([])
+  const [userSession, setUserSession] = useState<UserSession | null>(null)
+  const [loading,     setLoading]     = useState(true)
+
+  // Painel de filtros
+  const [painelAberto,    setPainelAberto]    = useState(false)
+  const [filtrosAplicados, setFiltrosAplicados] = useState({ ...FILTRO_VAZIO })
+  const [staged,          setStaged]          = useState({ ...FILTRO_VAZIO })
+
+  const [formMode,     setFormMode]     = useState<'criar' | 'editar' | null>(null)
+  const [formData,     setFormData]     = useState({ ...BLANK_FORM })
+  const [editId,       setEditId]       = useState<string | null>(null)
+  const [saving,       setSaving]       = useState(false)
 
   const [deleteTarget, setDeleteTarget] = useState<Cliente | null>(null)
   const [deleting,     setDeleting]     = useState(false)
@@ -76,7 +82,6 @@ export default function ClientesPage() {
 
   const isAdmin = userSession?.role === 'ADMIN'
 
-  // Sessão do usuário logado
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem('user')
@@ -87,10 +92,9 @@ export default function ClientesPage() {
     } catch {}
   }, [])
 
-  async function load(q?: string) {
+  async function load() {
     try {
-      const params = q ? `?search=${encodeURIComponent(q)}` : ''
-      const data   = await api.get<Cliente[]>(`/clientes${params}`)
+      const data = await api.get<Cliente[]>('/clientes')
       setClientes(data)
     } finally {
       setLoading(false)
@@ -106,11 +110,47 @@ export default function ClientesPage() {
 
   useEffect(() => { load(); loadCorretores() }, [])
 
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => load(search), 300)
-    return () => clearTimeout(t)
-  }, [search])
+  // Filtro client-side
+  const clientesFiltrados = clientes.filter((c) => {
+    const { nome, cpf, telefone } = filtrosAplicados
+    if (nome && !c.nome.toLowerCase().includes(nome.toLowerCase())) return false
+    if (cpf && !(c.cpf ?? '').replace(/\D/g, '').includes(cpf.replace(/\D/g, ''))) return false
+    if (telefone) {
+      const tel = telefone.replace(/\D/g, '')
+      const matchWpp = (c.whatsapp ?? '').replace(/\D/g, '').includes(tel)
+      const matchTel = (c.telefone ?? '').replace(/\D/g, '').includes(tel)
+      if (!matchWpp && !matchTel) return false
+    }
+    return true
+  })
+
+  const filtrosAtivos = [
+    filtrosAplicados.nome     && { label: `Nome: ${filtrosAplicados.nome}`,     key: 'nome' },
+    filtrosAplicados.cpf      && { label: `CPF: ${filtrosAplicados.cpf}`,        key: 'cpf' },
+    filtrosAplicados.telefone && { label: `Telefone: ${filtrosAplicados.telefone}`, key: 'telefone' },
+  ].filter(Boolean) as { label: string; key: string }[]
+
+  function abrirPainel() {
+    setStaged({ ...filtrosAplicados })
+    setPainelAberto(true)
+  }
+
+  function aplicarFiltros() {
+    setFiltrosAplicados({ ...staged })
+    setPage(1)
+    setPainelAberto(false)
+  }
+
+  function limparFiltros() {
+    setFiltrosAplicados({ ...FILTRO_VAZIO })
+    setStaged({ ...FILTRO_VAZIO })
+    setPage(1)
+  }
+
+  function removerFiltro(key: string) {
+    setFiltrosAplicados((prev) => ({ ...prev, [key]: '' }))
+    setPage(1)
+  }
 
   function field(name: keyof typeof BLANK_FORM) {
     return {
@@ -164,7 +204,7 @@ export default function ClientesPage() {
         toast.success('Cliente atualizado.')
       }
       setFormMode(null)
-      load(search)
+      load()
     } catch {
       toast.error('Erro ao salvar cliente')
     } finally {
@@ -179,7 +219,7 @@ export default function ClientesPage() {
       await api.delete(`/clientes/${deleteTarget.id}`)
       toast.success('Cliente removido.')
       setDeleteTarget(null)
-      load(search)
+      load()
     } catch {
       toast.error('Erro ao remover cliente')
     } finally {
@@ -187,7 +227,7 @@ export default function ClientesPage() {
     }
   }
 
-  const paginados = clientes.slice((page - 1) * pageSize, page * pageSize)
+  const paginados = clientesFiltrados.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <div className="space-y-4">
@@ -196,36 +236,78 @@ export default function ClientesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {loading ? 'Carregando...' : `${clientes.length} cliente(s)`}
+            {loading ? 'Carregando...' : `${clientesFiltrados.length} cliente(s)`}
           </p>
         </div>
-        <Button onClick={abrirCriar} className="gap-2 shadow-sm">
-          <Plus className="h-4 w-4" /> Novo cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={painelAberto ? () => setPainelAberto(false) : abrirPainel}>
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtrar
+            {filtrosAtivos.length > 0 && (
+              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                {filtrosAtivos.length}
+              </span>
+            )}
+            {painelAberto ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </Button>
+          <Button onClick={abrirCriar} className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" /> Novo cliente
+          </Button>
+        </div>
       </div>
 
-      {/* Busca */}
-      <Card className="shadow-sm rounded-xl">
-        <CardContent className="pt-4 pb-3">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              className="pl-8"
-              placeholder="Nome, e-mail ou WhatsApp..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            />
-            {search && (
-              <button
-                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-                onClick={() => { setSearch(''); setPage(1) }}
-              >
-                <X className="h-4 w-4" />
+      {/* Tags de filtros ativos */}
+      {filtrosAtivos.length > 0 && !painelAberto && (
+        <div className="flex flex-wrap gap-2">
+          {filtrosAtivos.map((f) => (
+            <span key={f.key} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+              {f.label}
+              <button onClick={() => removerFiltro(f.key)} className="ml-1 text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" />
               </button>
-            )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Painel de filtros colapsável */}
+      {painelAberto && (
+        <Card className="shadow-sm rounded-xl border-primary/20">
+          <CardContent className="pt-4 pb-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <Label>Nome</Label>
+                <Input
+                  placeholder="Buscar por nome..."
+                  value={staged.nome}
+                  onChange={(e) => setStaged((p) => ({ ...p, nome: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>CPF</Label>
+                <Input
+                  placeholder="000.000.000-00"
+                  value={staged.cpf}
+                  onChange={(e) => setStaged((p) => ({ ...p, cpf: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Telefone / WhatsApp</Label>
+                <Input
+                  placeholder="(31) 9 9999-9999"
+                  value={staged.telefone}
+                  onChange={(e) => setStaged((p) => ({ ...p, telefone: e.target.value }))}
+                />
+              </div>
+            </div>
+          </CardContent>
+          <div className="flex items-center justify-end gap-2 px-5 py-3 mt-4 border-t bg-muted/40">
+            <Button variant="outline" size="sm" onClick={limparFiltros}>Limpar filtros</Button>
+            <Button variant="outline" size="sm" onClick={() => setPainelAberto(false)}>Cancelar</Button>
+            <Button size="sm" onClick={aplicarFiltros} className="px-6">Aplicar filtros</Button>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Tabela */}
       <Card className="shadow-sm rounded-xl overflow-hidden">
@@ -249,12 +331,12 @@ export default function ClientesPage() {
                     Carregando...
                   </TableCell>
                 </TableRow>
-              ) : clientes.length === 0 ? (
+              ) : clientesFiltrados.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-16 text-center">
                     <UserRound className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
                     <p className="text-sm text-muted-foreground">
-                      {search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado ainda.'}
+                      {filtrosAtivos.length > 0 ? 'Nenhum cliente encontrado com esses filtros.' : 'Nenhum cliente cadastrado ainda.'}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -333,7 +415,7 @@ export default function ClientesPage() {
             </TableBody>
           </Table>
           <TablePagination
-            total={clientes.length}
+            total={clientesFiltrados.length}
             page={page}
             pageSize={pageSize}
             onPageChange={setPage}
@@ -370,7 +452,6 @@ export default function ClientesPage() {
               <Input placeholder="123.456.789-00" {...field('cpf')} />
             </div>
 
-            {/* Corretor responsável — ADMIN vê todos; CORRETOR vê só ele mesmo */}
             <div className="sm:col-span-2 space-y-1">
               <Label>Corretor responsável</Label>
               <Select
