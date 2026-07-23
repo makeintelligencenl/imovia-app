@@ -1,7 +1,7 @@
 ﻿'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Search, X, AlertCircle, List, Map } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, AlertCircle, List, Map, SlidersHorizontal } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const MapaImoveis = dynamic(() => import('@/components/imoveis/MapaImoveis'), { ssr: false })
@@ -83,7 +83,6 @@ function ImoveisContent() {
   const [idsComMatch, setIdsComMatch] = useState<Set<string>>(new Set())
 
   // Filtros
-  const [filtroTexto, setFiltroTexto]         = useState('')
   const [filtroTipo, setFiltroTipo]           = useState('__todos__')
   const [filtroFinalidade, setFiltroFinalidade] = useState('__todas__')
   const [filtroStatus, setFiltroStatus]       = useState('__todos__')
@@ -156,10 +155,6 @@ function ImoveisContent() {
   const imovelFiltrado = imoveis.filter((i) => {
     // Filtro especial: apenas disponíveis sem match (vindo do dashboard)
     if (semMatchParam && (i.status !== 'DISPONIVEL' || idsComMatch.has(i.id))) return false
-    const texto = filtroTexto.toLowerCase()
-    if (texto && !i.titulo.toLowerCase().includes(texto) &&
-        !i.bairro.toLowerCase().includes(texto) &&
-        !i.cidade.nome.toLowerCase().includes(texto)) return false
     if (filtroTipo !== '__todos__' && i.tipoId !== filtroTipo) return false
     if (filtroFinalidade !== '__todas__' && i.finalidade !== filtroFinalidade) return false
     if (filtroStatus !== '__todos__' && i.status !== filtroStatus) return false
@@ -169,7 +164,6 @@ function ImoveisContent() {
   })
 
   function limparFiltros() {
-    setFiltroTexto('')
     setFiltroTipo('__todos__')
     setFiltroFinalidade('__todas__')
     setFiltroStatus('__todos__')
@@ -180,7 +174,6 @@ function ImoveisContent() {
   }
 
   // Reset página quando filtros mudam
-  const handleFiltroTexto = (v: string) => { setFiltroTexto(v); setPage(1) }
   const handleFiltroTipo = (v: string) => { setFiltroTipo(v); setPage(1) }
   const handleFiltroFinalidade = (v: string) => { setFiltroFinalidade(v); setPage(1) }
   const handleFiltroStatus = (v: string) => { setFiltroStatus(v); setPage(1) }
@@ -231,8 +224,16 @@ function ImoveisContent() {
   const imovelPaginado = imovelFiltrado.slice((page - 1) * pageSize, page * pageSize)
 
   const filtrosAtivos =
-    filtroTexto || filtroTipo !== '__todos__' || filtroFinalidade !== '__todas__' || filtroStatus !== '__todos__' ||
+    filtroTipo !== '__todos__' || filtroFinalidade !== '__todas__' || filtroStatus !== '__todos__' ||
     filtroEstado !== '__todos__' || filtroCidadeId !== '__todas__'
+
+  const ativos = [
+    filtroTipo !== '__todos__' ? tipos.find(t => t.id === filtroTipo)?.nome : null,
+    filtroFinalidade !== '__todas__' ? (filtroFinalidade === 'VENDA' ? 'Venda' : 'Aluguel') : null,
+    filtroStatus !== '__todos__' ? STATUS_LABELS[filtroStatus] : null,
+    filtroEstado !== '__todos__' ? filtroEstado : null,
+    filtroCidadeId !== '__todas__' ? cidadesFiltro.find(c => String(c.id) === filtroCidadeId)?.nome : null,
+  ].filter(Boolean) as string[]
 
   // Criar / Editar
   function abrirCriar() {
@@ -376,24 +377,22 @@ function ImoveisContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border overflow-hidden">
-            <Button
-              variant={vistaAtual === 'lista' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-none gap-1.5"
-              onClick={() => setVistaAtual('lista')}
-            >
-              <List className="h-4 w-4" /> Lista
-            </Button>
-            <Button
-              variant={vistaAtual === 'mapa' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-none gap-1.5"
-              onClick={() => setVistaAtual('mapa')}
-            >
-              <Map className="h-4 w-4" /> Mapa
-            </Button>
-          </div>
+          <Button
+            variant={painelAberto ? 'default' : ativos.length > 0 ? 'default' : 'outline'}
+            className="gap-2"
+            onClick={painelAberto ? () => setPainelAberto(false) : abrirPainel}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtrar
+            {ativos.length > 0 && (
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/25 text-xs font-bold">
+                {ativos.length}
+              </span>
+            )}
+            <svg className={`h-4 w-4 transition-transform ${painelAberto ? 'rotate-180' : ''}`} viewBox="0 0 16 16" fill="none">
+              <path d="M3 6l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </Button>
           <Button onClick={abrirCriar} className="gap-2 shadow-sm">
             <Plus className="h-4 w-4" /> Novo imóvel
           </Button>
@@ -418,61 +417,21 @@ function ImoveisContent() {
 
       {/* Filtros — Variante B */}
       {(() => {
-        const ativos = [
-          filtroTipo !== '__todos__' ? tipos.find(t => t.id === filtroTipo)?.nome : null,
-          filtroFinalidade !== '__todas__' ? (filtroFinalidade === 'VENDA' ? 'Venda' : 'Aluguel') : null,
-          filtroStatus !== '__todos__' ? STATUS_LABELS[filtroStatus] : null,
-          filtroEstado !== '__todos__' ? filtroEstado : null,
-          filtroCidadeId !== '__todas__' ? cidadesFiltro.find(c => String(c.id) === filtroCidadeId)?.nome : null,
-        ].filter(Boolean) as string[]
-
         return (
           <div className="space-y-2">
-            {/* Linha topo */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  placeholder="Buscar por título, bairro ou cidade..."
-                  value={filtroTexto}
-                  onChange={(e) => handleFiltroTexto(e.target.value)}
-                />
-              </div>
-
-              <Button
-                variant={painelAberto ? 'default' : ativos.length > 0 ? 'default' : 'outline'}
-                className="gap-2 shrink-0"
-                onClick={painelAberto ? () => setPainelAberto(false) : abrirPainel}
-              >
-                <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
-                  <path d="M1 4h14M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                Filtrar
-                {ativos.length > 0 && (
-                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/25 text-xs font-bold">
-                    {ativos.length}
+            {/* Tags dos filtros ativos (quando painel fechado) */}
+            {!painelAberto && ativos.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {ativos.map((label) => (
+                  <span key={label} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                    {label}
                   </span>
-                )}
-                <svg className={`h-4 w-4 transition-transform ${painelAberto ? 'rotate-180' : ''}`} viewBox="0 0 16 16" fill="none">
-                  <path d="M3 6l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </Button>
-
-              {/* Tags dos filtros ativos (quando painel fechado) */}
-              {!painelAberto && ativos.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {ativos.map((label) => (
-                    <span key={label} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-                      {label}
-                    </span>
-                  ))}
-                  <button onClick={limparFiltros} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 ml-1">
-                    <X className="h-3 w-3" /> Limpar
-                  </button>
-                </div>
-              )}
-            </div>
+                ))}
+                <button onClick={limparFiltros} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 ml-1">
+                  <X className="h-3 w-3" /> Limpar
+                </button>
+              </div>
+            )}
 
             {/* Painel expansível */}
             {painelAberto && (
@@ -568,18 +527,42 @@ function ImoveisContent() {
         )
       })()}
 
-      {/* Mapa */}
-      {vistaAtual === 'mapa' && (
-        <Card className="shadow-sm rounded-xl overflow-hidden">
+      {/* Lista / Mapa */}
+      <Card className="shadow-sm rounded-xl overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b">
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={vistaAtual === 'lista' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
+              onClick={() => setVistaAtual('lista')}
+            >
+              <List className="h-4 w-4" /> Lista
+            </Button>
+            <Button
+              variant={vistaAtual === 'mapa' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
+              onClick={() => setVistaAtual('mapa')}
+            >
+              <Map className="h-4 w-4" /> Mapa
+            </Button>
+          </div>
+          <span className="text-sm text-muted-foreground">
+            {loading ? '' : `${imovelFiltrado.length} imóvel(is)`}
+          </span>
+        </div>
+
+        {/* Mapa */}
+        {vistaAtual === 'mapa' && (
           <CardContent className="p-3">
             <MapaImoveis imoveis={imovelFiltrado as any} />
           </CardContent>
-        </Card>
-      )}
+        )}
 
-      {/* Tabela */}
-      {vistaAtual === 'lista' && <Card className="shadow-sm rounded-xl overflow-hidden">
-        <CardContent className="p-0">
+        {/* Tabela */}
+        {vistaAtual === 'lista' && <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -681,8 +664,8 @@ function ImoveisContent() {
             onPageChange={setPage}
             onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
           />
-        </CardContent>
-      </Card>}
+        </CardContent>}
+      </Card>
 
       {/* Modal Criar / Editar */}
       <Dialog open={formMode !== null} onOpenChange={(open) => !open && setFormMode(null)}>
