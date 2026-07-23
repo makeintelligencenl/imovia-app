@@ -18,29 +18,37 @@ export class ImoveisService {
   async create(tenantId: string, dto: CreateImovelDto) {
     let latitude  = dto.latitude
     let longitude = dto.longitude
-    if (dto.cep && (latitude == null || longitude == null)) {
-      const coords = await this.geocoding.geocodificarCep(dto.cep)
+    if (latitude == null || longitude == null) {
+      const coords = await this.geocoding.geocodificarEndereco({
+        logradouro: dto.logradouro,
+        numero:     dto.numero,
+        bairro:     dto.bairro,
+        cep:        dto.cep,
+      })
       if (coords) { latitude = coords.latitude; longitude = coords.longitude }
     }
 
     const imovel = await this.prisma.imovel.create({
       data: {
-        titulo: dto.titulo,
-        tipoId: dto.tipoId,
-        finalidade: dto.finalidade as Finalidade,
-        preco: dto.preco,
-        areaM2: dto.areaM2,
-        quartos: dto.quartos,
-        banheiros: dto.banheiros,
-        vagas: dto.vagas,
-        bairro: dto.bairro,
-        cidadeId: dto.cidadeId,
-        estado: dto.estado,
-        cep: dto.cep,
+        titulo:      dto.titulo,
+        tipoId:      dto.tipoId,
+        finalidade:  dto.finalidade as Finalidade,
+        preco:       dto.preco,
+        areaM2:      dto.areaM2,
+        quartos:     dto.quartos,
+        banheiros:   dto.banheiros,
+        vagas:       dto.vagas,
+        logradouro:  dto.logradouro,
+        numero:      dto.numero,
+        complemento: dto.complemento,
+        bairro:      dto.bairro,
+        cidadeId:    dto.cidadeId,
+        estado:      dto.estado,
+        cep:         dto.cep,
         codigoOrigem: dto.codigoOrigem,
         latitude,
         longitude,
-        descricao: dto.descricao,
+        descricao:   dto.descricao,
         tenantId,
       },
       include: { tipo: true, cidade: { include: { estado: true } } },
@@ -83,8 +91,13 @@ export class ImoveisService {
     await this.findById(tenantId, id)
     const { tipoId, finalidade, ...rest } = data
 
-    if (data.cep && data.latitude == null && data.longitude == null) {
-      const coords = await this.geocoding.geocodificarCep(data.cep)
+    if (data.latitude == null && data.longitude == null && (data.logradouro || data.cep)) {
+      const coords = await this.geocoding.geocodificarEndereco({
+        logradouro: data.logradouro,
+        numero:     data.numero,
+        bairro:     data.bairro,
+        cep:        data.cep,
+      })
       if (coords) { rest.latitude = coords.latitude; rest.longitude = coords.longitude }
     }
 

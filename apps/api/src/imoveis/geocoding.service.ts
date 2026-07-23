@@ -5,31 +5,52 @@ interface Coordenadas {
   longitude: number
 }
 
+interface EnderecoInput {
+  logradouro?: string
+  numero?:     string
+  bairro?:     string
+  cep?:        string
+}
+
 @Injectable()
 export class GeocodingService {
   private readonly logger = new Logger(GeocodingService.name)
   private lastRequestAt = 0
 
-  async geocodificarCep(cep: string): Promise<Coordenadas | null> {
+  async geocodificarEndereco(input: EnderecoInput): Promise<Coordenadas | null> {
     try {
-      const endereco = await this.cepParaEndereco(cep)
-      if (!endereco) return null
-      return await this.enderecoParaCoordenadas(endereco)
+      const query = await this.montarQuery(input)
+      if (!query) return null
+      return await this.enderecoParaCoordenadas(query)
     } catch (err: any) {
-      this.logger.warn(`Geocoding falhou para CEP ${cep}: ${err.message}`)
+      this.logger.warn(`Geocoding falhou: ${err.message}`)
       return null
     }
   }
 
-  private async cepParaEndereco(cep: string): Promise<string | null> {
-    const limpo = cep.replace(/\D/g, '')
-    const res = await fetch(`https://viacep.com.br/ws/${limpo}/json/`)
-    if (!res.ok) return null
-    const data = await res.json() as Record<string, string>
-    if (data.erro) return null
-    const partes = [data.logradouro, data.bairro, data.localidade, data.uf, 'Brasil']
-      .filter(Boolean)
-    return partes.join(', ')
+  private async montarQuery(input: EnderecoInput): Promise<string | null> {
+    // Se tiver logradouro, monta query direta (mais precisa)
+    if (input.logradouro) {
+      const partes = [
+        input.numero ? `${input.logradouro}, ${input.numero}` : input.logradouro,
+        input.bairro,
+        'Brasil',
+      ].filter(Boolean)
+      return partes.join(', ')
+    }
+
+    // Fallback: CEP → ViaCEP → query
+    if (input.cep) {
+      const limpo = input.cep.replace(/\D/g, '')
+      const res = await fetch(`https://viacep.com.br/ws/${limpo}/json/`)
+      if (!res.ok) return null
+      const data = await res.json() as Record<string, string>
+      if (data.erro) return null
+      const partes = [data.logradouro, data.bairro, data.localidade, data.uf, 'Brasil'].filter(Boolean)
+      return partes.join(', ')
+    }
+
+    return null
   }
 
   private async enderecoParaCoordenadas(endereco: string): Promise<Coordenadas | null> {

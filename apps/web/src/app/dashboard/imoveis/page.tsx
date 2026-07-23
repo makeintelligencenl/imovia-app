@@ -62,8 +62,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 const BLANK_FORM = {
   titulo: '', tipoId: '', finalidade: '', preco: '', areaM2: '',
-  quartos: '', banheiros: '', vagas: '', bairro: '', cidade: '',
-  estado: '', cep: '', codigoOrigem: '', descricao: '', urlImovel: '',
+  quartos: '', banheiros: '', vagas: '', logradouro: '', numero: '',
+  complemento: '', bairro: '', cidade: '', estado: '', cep: '',
+  codigoOrigem: '', descricao: '', urlImovel: '',
 }
 
 function ImoveisContent() {
@@ -184,6 +185,9 @@ function ImoveisContent() {
       quartos:       imovel.quartos != null ? String(imovel.quartos) : '',
       banheiros:     imovel.banheiros != null ? String(imovel.banheiros) : '',
       vagas:         imovel.vagas != null ? String(imovel.vagas) : '',
+      logradouro:    (imovel as any).logradouro ?? '',
+      numero:        (imovel as any).numero ?? '',
+      complemento:   (imovel as any).complemento ?? '',
       bairro:        imovel.bairro,
       cidade:        String(imovel.cidadeId),
       estado:        imovel.estado,
@@ -205,27 +209,30 @@ function ImoveisContent() {
   }
 
   async function handleSalvar() {
-    if (!formData.titulo || !formData.tipoId || !formData.finalidade || !formData.preco || !formData.areaM2 || !formData.bairro || !formData.cidade || !formData.estado || !Number(formData.cidade)) {
+    if (!formData.titulo || !formData.tipoId || !formData.finalidade || !formData.preco || !formData.areaM2 || !formData.logradouro || !formData.numero || !formData.bairro || !formData.cidade || !formData.estado || !Number(formData.cidade)) {
       toast.error('Preencha os campos obrigatórios')
       return
     }
     setSaving(true)
     const payload = {
-      titulo:     formData.titulo,
-      tipoId:     formData.tipoId,
-      finalidade: formData.finalidade,
-      preco:      Number(formData.preco),
-      areaM2:     Number(formData.areaM2),
-      quartos:    formData.quartos   ? Number(formData.quartos)   : undefined,
-      banheiros:  formData.banheiros ? Number(formData.banheiros) : undefined,
-      vagas:      formData.vagas     ? Number(formData.vagas)     : undefined,
-      bairro:        formData.bairro,
-      cidadeId:      Number(formData.cidade),
-      estado:        formData.estado,
-      cep:           formData.cep || undefined,
-      codigoOrigem:  formData.codigoOrigem || undefined,
-      descricao:     formData.descricao || undefined,
-      urlImovel:     formData.urlImovel || undefined,
+      titulo:      formData.titulo,
+      tipoId:      formData.tipoId,
+      finalidade:  formData.finalidade,
+      preco:       Number(formData.preco),
+      areaM2:      Number(formData.areaM2),
+      quartos:     formData.quartos   ? Number(formData.quartos)   : undefined,
+      banheiros:   formData.banheiros ? Number(formData.banheiros) : undefined,
+      vagas:       formData.vagas     ? Number(formData.vagas)     : undefined,
+      logradouro:  formData.logradouro,
+      numero:      formData.numero,
+      complemento: formData.complemento || undefined,
+      bairro:      formData.bairro,
+      cidadeId:    Number(formData.cidade),
+      estado:      formData.estado,
+      cep:         formData.cep || undefined,
+      codigoOrigem: formData.codigoOrigem || undefined,
+      descricao:   formData.descricao || undefined,
+      urlImovel:   formData.urlImovel || undefined,
     }
     try {
       if (formMode === 'criar') {
@@ -536,6 +543,18 @@ function ImoveisContent() {
             <div className="space-y-1">
               <Label>Vagas</Label>
               <Input type="number" min="0" placeholder="1" {...field('vagas')} />
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <Label>Logradouro *</Label>
+              <Input placeholder="Rua das Flores" {...field('logradouro')} />
+            </div>
+            <div className="space-y-1">
+              <Label>Número *</Label>
+              <Input placeholder="123" {...field('numero')} />
+            </div>
+            <div className="space-y-1">
+              <Label>Complemento</Label>
+              <Input placeholder="Apto 42" {...field('complemento')} />
             </div>
             <div className="space-y-1">
               <Label>Bairro *</Label>
