@@ -509,17 +509,10 @@ function ImoveisContent() {
                     </div>
                   </div>
                 </CardContent>
-                <div className="flex items-center justify-between px-5 py-3 mt-4 border-t bg-muted/40">
-                  <button
-                    onClick={() => { setStaged({ tipo: '__todos__', finalidade: '__todas__', status: '__todos__', estado: '__todos__', cidadeId: '__todas__' }); setCidadesStaged([]) }}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Limpar filtros
-                  </button>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setPainelAberto(false)}>Cancelar</Button>
-                    <Button size="sm" onClick={aplicarFiltros} className="px-6">Aplicar filtros</Button>
-                  </div>
+                <div className="flex items-center justify-end gap-2 px-5 py-3 mt-4 border-t bg-muted/40">
+                  <Button variant="outline" size="sm" onClick={() => { setStaged({ tipo: '__todos__', finalidade: '__todas__', status: '__todos__', estado: '__todos__', cidadeId: '__todas__' }); setCidadesStaged([]) }}>Limpar filtros</Button>
+                  <Button variant="outline" size="sm" onClick={() => setPainelAberto(false)}>Cancelar</Button>
+                  <Button size="sm" onClick={aplicarFiltros} className="px-6">Aplicar filtros</Button>
                 </div>
               </Card>
             )}
