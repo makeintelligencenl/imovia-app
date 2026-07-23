@@ -91,6 +91,14 @@ function ImoveisContent() {
   const [filtroCidadeId, setFiltroCidadeId]   = useState('__todas__')
   const [cidadesFiltro, setCidadesFiltro]     = useState<Cidade[]>([])
 
+  // Painel de filtros (variante B)
+  const [painelAberto, setPainelAberto] = useState(false)
+  const [staged, setStaged] = useState({
+    tipo: '__todos__', finalidade: '__todas__', status: '__todos__',
+    estado: '__todos__', cidadeId: '__todas__',
+  })
+  const [cidadesStaged, setCidadesStaged] = useState<Cidade[]>([])
+
   // Modais
   const [formMode, setFormMode]       = useState<'criar' | 'editar' | null>(null)
   const [formData, setFormData]       = useState({ ...BLANK_FORM })
@@ -188,6 +196,36 @@ function ImoveisContent() {
     }
   }
   const handleFiltroCidade = (v: string) => { setFiltroCidadeId(v); setPage(1) }
+
+  // Painel B — abrir (snapshot dos filtros atuais para staged)
+  function abrirPainel() {
+    setStaged({
+      tipo: filtroTipo, finalidade: filtroFinalidade, status: filtroStatus,
+      estado: filtroEstado, cidadeId: filtroCidadeId,
+    })
+    setCidadesStaged(cidadesFiltro)
+    setPainelAberto(true)
+  }
+
+  // Painel B — aplicar staged nos filtros reais
+  function aplicarFiltros() {
+    handleFiltroTipo(staged.tipo)
+    handleFiltroFinalidade(staged.finalidade)
+    handleFiltroStatus(staged.status)
+    if (staged.estado !== filtroEstado) handleFiltroEstado(staged.estado)
+    handleFiltroCidade(staged.cidadeId)
+    setPainelAberto(false)
+  }
+
+  async function stagedEstadoChange(sigla: string) {
+    setStaged((s) => ({ ...s, estado: sigla, cidadeId: '__todas__' }))
+    if (!sigla || sigla === '__todos__') { setCidadesStaged([]); return }
+    const est = estados.find((e) => e.sigla === sigla)
+    if (est) {
+      const data = await api.get<Cidade[]>(`/localidades/cidades?estadoId=${est.id}`)
+      setCidadesStaged(data)
+    }
+  }
 
   // Itens da página atual
   const imovelPaginado = imovelFiltrado.slice((page - 1) * pageSize, page * pageSize)
@@ -378,94 +416,157 @@ function ImoveisContent() {
         </div>
       )}
 
-      {/* Filtros */}
-      <Card className="shadow-sm rounded-xl">
-        <CardContent className="pt-4 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 items-end">
-            <div className="lg:col-span-2 space-y-1">
-              <Label className="text-xs">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* Filtros — Variante B */}
+      {(() => {
+        const ativos = [
+          filtroTipo !== '__todos__' ? tipos.find(t => t.id === filtroTipo)?.nome : null,
+          filtroFinalidade !== '__todas__' ? (filtroFinalidade === 'VENDA' ? 'Venda' : 'Aluguel') : null,
+          filtroStatus !== '__todos__' ? STATUS_LABELS[filtroStatus] : null,
+          filtroEstado !== '__todos__' ? filtroEstado : null,
+          filtroCidadeId !== '__todas__' ? cidadesFiltro.find(c => String(c.id) === filtroCidadeId)?.nome : null,
+        ].filter(Boolean) as string[]
+
+        return (
+          <div className="space-y-2">
+            {/* Linha topo */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  className="pl-8"
-                  placeholder="Título, bairro ou cidade..."
+                  className="pl-9"
+                  placeholder="Buscar por título, bairro ou cidade..."
                   value={filtroTexto}
                   onChange={(e) => handleFiltroTexto(e.target.value)}
                 />
               </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Tipo</Label>
-              <Select value={filtroTipo} onValueChange={handleFiltroTipo}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todos__">Todos os tipos</SelectItem>
-                  {tipos.map((t) => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Finalidade</Label>
-              <Select value={filtroFinalidade} onValueChange={handleFiltroFinalidade}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todas__">Todas</SelectItem>
-                  <SelectItem value="VENDA">Venda</SelectItem>
-                  <SelectItem value="ALUGUEL">Aluguel</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Status</Label>
-              <Select value={filtroStatus} onValueChange={handleFiltroStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todos__">Todos</SelectItem>
-                  {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                    <SelectItem key={v} value={v}>{l}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Estado</Label>
-              <Select value={filtroEstado} onValueChange={handleFiltroEstado}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todos__">Todos</SelectItem>
-                  {estados.map((e) => (
-                    <SelectItem key={e.id} value={e.sigla}>{e.sigla}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Cidade</Label>
-              <Select
-                value={filtroCidadeId}
-                onValueChange={handleFiltroCidade}
-                disabled={filtroEstado === '__todos__'}
+
+              <Button
+                variant={painelAberto ? 'default' : ativos.length > 0 ? 'default' : 'outline'}
+                className="gap-2 shrink-0"
+                onClick={painelAberto ? () => setPainelAberto(false) : abrirPainel}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="max-h-60">
-                  <SelectItem value="__todas__">Todas</SelectItem>
-                  {cidadesFiltro.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
+                <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
+                  <path d="M1 4h14M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Filtrar
+                {ativos.length > 0 && (
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/25 text-xs font-bold">
+                    {ativos.length}
+                  </span>
+                )}
+                <svg className={`h-4 w-4 transition-transform ${painelAberto ? 'rotate-180' : ''}`} viewBox="0 0 16 16" fill="none">
+                  <path d="M3 6l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </Button>
+
+              {/* Tags dos filtros ativos (quando painel fechado) */}
+              {!painelAberto && ativos.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {ativos.map((label) => (
+                    <span key={label} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                      {label}
+                    </span>
                   ))}
-                </SelectContent>
-              </Select>
+                  <button onClick={limparFiltros} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 ml-1">
+                    <X className="h-3 w-3" /> Limpar
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Painel expansível */}
+            {painelAberto && (
+              <Card className="shadow-sm rounded-xl overflow-hidden">
+                <CardContent className="pt-5 pb-0">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo</Label>
+                      <Select value={staged.tipo} onValueChange={(v) => setStaged((s) => ({ ...s, tipo: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__todos__">Todos os tipos</SelectItem>
+                          {tipos.map((t) => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Finalidade</Label>
+                      <div className="flex gap-1.5">
+                        {(['__todas__', 'VENDA', 'ALUGUEL'] as const).map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => setStaged((s) => ({ ...s, finalidade: v }))}
+                            className={`flex-1 py-2 text-xs rounded-lg border font-semibold transition-all
+                              ${staged.finalidade === v
+                                ? v === 'VENDA' ? 'bg-violet-600 text-white border-violet-600'
+                                  : v === 'ALUGUEL' ? 'bg-orange-500 text-white border-orange-500'
+                                  : 'bg-foreground text-background border-foreground'
+                                : 'bg-background text-muted-foreground border-border hover:border-foreground/40'}`}
+                          >
+                            {v === '__todas__' ? 'Todas' : v === 'VENDA' ? 'Venda' : 'Aluguel'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</Label>
+                      <Select value={staged.status} onValueChange={(v) => setStaged((s) => ({ ...s, status: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__todos__">Todos</SelectItem>
+                          {Object.entries(STATUS_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado</Label>
+                      <Select value={staged.estado} onValueChange={stagedEstadoChange}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__todos__">Todos</SelectItem>
+                          {estados.map((e) => <SelectItem key={e.id} value={e.sigla}>{e.sigla} — {e.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cidade</Label>
+                      <Select
+                        value={staged.cidadeId}
+                        onValueChange={(v) => setStaged((s) => ({ ...s, cidadeId: v }))}
+                        disabled={staged.estado === '__todos__' || cidadesStaged.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={staged.estado !== '__todos__' ? 'Todas' : 'Selecione o estado'} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          <SelectItem value="__todas__">Todas</SelectItem>
+                          {cidadesStaged.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+                <div className="flex items-center justify-between px-5 py-3 mt-4 border-t bg-muted/40">
+                  <button
+                    onClick={() => { setStaged({ tipo: '__todos__', finalidade: '__todas__', status: '__todos__', estado: '__todos__', cidadeId: '__todas__' }); setCidadesStaged([]) }}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Limpar filtros
+                  </button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setPainelAberto(false)}>Cancelar</Button>
+                    <Button size="sm" onClick={aplicarFiltros} className="px-6">Aplicar filtros</Button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
-          {filtrosAtivos && (
-            <button
-              onClick={limparFiltros}
-              className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3 w-3" /> Limpar filtros
-            </button>
-          )}
-        </CardContent>
-      </Card>
+        )
+      })()}
 
       {/* Mapa */}
       {vistaAtual === 'mapa' && (
