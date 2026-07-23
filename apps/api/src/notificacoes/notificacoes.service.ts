@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { EmailService } from './email.service'
 import { WhatsappService } from './whatsapp.service'
+import { PerfilComCliente, ImovelInput } from '../matching/types'
 
 @Injectable()
 export class NotificacoesService {
@@ -11,19 +12,19 @@ export class NotificacoesService {
     private whatsappService: WhatsappService,
   ) {}
 
-  async enviarNotificacaoMatch(perfil: any, imovel: any) {
+  async enviarNotificacaoMatch(perfil: PerfilComCliente, imovel: ImovelInput) {
     const promises: Promise<void>[] = []
-    const cliente = perfil.cliente ?? perfil  // compatibilidade
+    const { cliente } = perfil
 
     if (cliente.email) {
       promises.push(
-        this.emailService.enviarMatchEmail(cliente.email, cliente.nome ?? cliente.clienteNome, imovel),
+        this.emailService.enviarMatchEmail(cliente.email, cliente.nome ?? '', imovel),
       )
     }
 
-    if (cliente.whatsapp) {
+    if (cliente.telefone) {
       promises.push(
-        this.whatsappService.enviarMatchWhatsapp(cliente.whatsapp, cliente.nome ?? cliente.clienteNome, imovel),
+        this.whatsappService.enviarMatchWhatsapp(cliente.telefone, cliente.nome ?? '', imovel),
       )
     }
 

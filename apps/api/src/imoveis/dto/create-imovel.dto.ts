@@ -39,6 +39,21 @@ export class CreateImovelDto {
   @IsOptional()
   vagas?: number
 
+  @ApiPropertyOptional({ example: 'Rua das Flores' })
+  @IsString()
+  @IsOptional()
+  logradouro?: string
+
+  @ApiPropertyOptional({ example: '123' })
+  @IsString()
+  @IsOptional()
+  numero?: string
+
+  @ApiPropertyOptional({ example: 'Apto 42' })
+  @IsString()
+  @IsOptional()
+  complemento?: string
+
   @ApiProperty({ example: 'Jardins' })
   @IsString()
   bairro: string

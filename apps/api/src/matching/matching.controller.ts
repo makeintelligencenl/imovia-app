@@ -3,6 +3,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { MatchingService } from './matching.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard, Roles } from '../auth/guards/roles.guard'
+import { MoverEtapaDto } from './dto/mover-etapa.dto'
+import { AssociarCorretorDto } from './dto/associar-corretor.dto'
 
 @ApiTags('matching')
 @ApiBearerAuth()
@@ -51,9 +53,9 @@ export class MatchingController {
   moverEtapa(
     @Request() req: any,
     @Param('id') id: string,
-    @Body('etapaId') etapaId: string,
+    @Body() dto: MoverEtapaDto,
   ) {
-    return this.matchingService.moverEtapa(req.user.tenantId, id, etapaId, req.user.id)
+    return this.matchingService.moverEtapa(req.user.tenantId, id, dto.etapaId, req.user.id)
   }
 
   @Patch(':id/corretor')
@@ -63,9 +65,9 @@ export class MatchingController {
   associarCorretor(
     @Request() req: any,
     @Param('id') id: string,
-    @Body('corretorId') corretorId: string | null,
+    @Body() dto: AssociarCorretorDto,
   ) {
-    return this.matchingService.associarCorretor(req.user.tenantId, id, corretorId ?? null)
+    return this.matchingService.associarCorretor(req.user.tenantId, id, dto.corretorId ?? null)
   }
 
   @Get(':id/historico')

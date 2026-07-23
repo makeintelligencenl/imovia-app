@@ -131,6 +131,9 @@ model Imovel {
   quartos      Int?
   banheiros    Int?
   vagas        Int?
+  logradouro   String?
+  numero       String?
+  complemento  String?
   bairro       String
   estado       String          @db.Char(2)
   latitude     Decimal?        @db.Decimal(10, 7)

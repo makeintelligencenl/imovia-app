@@ -5,6 +5,7 @@ import { PipelineService } from '../pipeline/pipeline.service'
 import { ScoringService } from './scoring.service'
 import { CompatibilidadeService } from './compatibilidade.service'
 import { RelatorioService } from './relatorio.service'
+import { ImovelInput, PerfilComCliente } from './types'
 
 const CORRETOR_SELECT = { id: true, name: true, email: true } as const
 
@@ -51,7 +52,8 @@ export class MatchingService {
     if (!perfil) return { matchesEncontrados: 0 }
 
     const imoveisCompativeis = await this.prisma.imovel.findMany({
-      where: { tenantId, ...this.compatibilidade.imovelWhere(perfil) },
+      where:   { tenantId, ...this.compatibilidade.imovelWhere(perfil) },
+      include: { cidade: true },
     })
 
     const resultados = await Promise.all(
@@ -63,7 +65,7 @@ export class MatchingService {
   }
 
   // ─── Cria o match na primeira etapa — P2002 = concorrência, ignorar ──────
-  private async gerarMatch(perfil: any, imovel: any, tenantId: string): Promise<boolean> {
+  private async gerarMatch(perfil: PerfilComCliente, imovel: ImovelInput, tenantId: string): Promise<boolean> {
     const primeiraEtapa = await this.pipeline.primeiraEtapa(tenantId)
     const leadScore     = this.scoring.compute({ perfil, imovel })
 

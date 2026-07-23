@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException, Logger } f
 import { Prisma, Finalidade, StatusImovel } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { MatchingService } from '../matching/matching.service'
+import { GeocodingService } from './geocoding.service'
 import { CreateImovelDto } from './dto/create-imovel.dto'
 
 @Injectable()
@@ -11,45 +12,57 @@ export class ImoveisService {
   constructor(
     private prisma: PrismaService,
     private matchingService: MatchingService,
+    private geocoding: GeocodingService,
   ) {}
 
   async create(tenantId: string, dto: CreateImovelDto) {
+    let latitude  = dto.latitude
+    let longitude = dto.longitude
+    if (latitude == null || longitude == null) {
+      const coords = await this.geocoding.geocodificarEndereco({
+        logradouro: dto.logradouro,
+        numero:     dto.numero,
+        bairro:     dto.bairro,
+        cep:        dto.cep,
+      })
+      if (coords) { latitude = coords.latitude; longitude = coords.longitude }
+    }
+
     const imovel = await this.prisma.imovel.create({
       data: {
-        titulo: dto.titulo,
-        tipoId: dto.tipoId,
-        finalidade: dto.finalidade as Finalidade,
-        preco: dto.preco,
-        areaM2: dto.areaM2,
-        quartos: dto.quartos,
-        banheiros: dto.banheiros,
-        vagas: dto.vagas,
-        bairro: dto.bairro,
-        cidadeId: dto.cidadeId,
-        estado: dto.estado,
-        cep: dto.cep,
+        titulo:      dto.titulo,
+        tipoId:      dto.tipoId,
+        finalidade:  dto.finalidade as Finalidade,
+        preco:       dto.preco,
+        areaM2:      dto.areaM2,
+        quartos:     dto.quartos,
+        banheiros:   dto.banheiros,
+        vagas:       dto.vagas,
+        logradouro:  dto.logradouro,
+        numero:      dto.numero,
+        complemento: dto.complemento,
+        bairro:      dto.bairro,
+        cidadeId:    dto.cidadeId,
+        estado:      dto.estado,
+        cep:         dto.cep,
         codigoOrigem: dto.codigoOrigem,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        descricao: dto.descricao,
+        latitude,
+        longitude,
+        descricao:   dto.descricao,
         tenantId,
       },
       include: { tipo: true, cidade: { include: { estado: true } } },
     })
 
-    // BUG #4 FIX: fire-and-forget com log completo (mensagem + stack) para facilitar
-    // diagnóstico quando o matching falha silenciosamente em produção.
-    // Mantém fire-and-forget intencional para não bloquear a resposta ao cliente.
-    this.matchingService
-      .executarMatching(tenantId, imovel.id)
-      .catch((err: Error) =>
-        this.logger.error(
-          `[create] Matching falhou para imóvel ${imovel.id}: ${err.message}`,
-          err.stack,
-        ),
-      )
+    let matchesEncontrados = 0
+    try {
+      const resultado = await this.matchingService.executarMatching(tenantId, imovel.id)
+      matchesEncontrados = resultado.matchesEncontrados
+    } catch (err: any) {
+      this.logger.error(`[create] Matching falhou para imóvel ${imovel.id}: ${err.message}`, err.stack)
+    }
 
-    return imovel
+    return { ...imovel, matchesEncontrados }
   }
 
   async findAll(tenantId: string, filters?: { tipoId?: string; finalidade?: string; status?: string }) {
@@ -77,6 +90,17 @@ export class ImoveisService {
   async update(tenantId: string, id: string, data: Partial<CreateImovelDto>) {
     await this.findById(tenantId, id)
     const { tipoId, finalidade, ...rest } = data
+
+    if (data.latitude == null && data.longitude == null && (data.logradouro || data.cep)) {
+      const coords = await this.geocoding.geocodificarEndereco({
+        logradouro: data.logradouro,
+        numero:     data.numero,
+        bairro:     data.bairro,
+        cep:        data.cep,
+      })
+      if (coords) { rest.latitude = coords.latitude; rest.longitude = coords.longitude }
+    }
+
     const updated = await this.prisma.imovel.update({
       where: { id },
       data: {
