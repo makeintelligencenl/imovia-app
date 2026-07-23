@@ -39,13 +39,15 @@ export class CreateImovelDto {
   @IsOptional()
   vagas?: number
 
-  @ApiProperty({ example: 'Rua das Flores' })
+  @ApiPropertyOptional({ example: 'Rua das Flores' })
   @IsString()
-  logradouro: string
+  @IsOptional()
+  logradouro?: string
 
-  @ApiProperty({ example: '123' })
+  @ApiPropertyOptional({ example: '123' })
   @IsString()
-  numero: string
+  @IsOptional()
+  numero?: string
 
   @ApiPropertyOptional({ example: 'Apto 42' })
   @IsString()
