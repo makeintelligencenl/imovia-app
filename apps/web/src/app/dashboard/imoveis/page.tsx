@@ -1,7 +1,10 @@
 ﻿'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Search, X, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X, AlertCircle, List, Map } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const MapaImoveis = dynamic(() => import('@/components/imoveis/MapaImoveis'), { ssr: false })
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -90,6 +93,7 @@ function ImoveisContent() {
   const [formData, setFormData]       = useState({ ...BLANK_FORM })
   const [editId, setEditId]           = useState<string | null>(null)
   const [saving, setSaving]           = useState(false)
+  const [vistaAtual, setVistaAtual]   = useState<'lista' | 'mapa'>('lista')
   const [deleteTarget, setDeleteTarget] = useState<Imovel | null>(null)
   const [deleting, setDeleting]       = useState(false)
   const [matchCount, setMatchCount]     = useState(0)
@@ -305,9 +309,29 @@ function ImoveisContent() {
             {loading ? 'Carregando...' : `${imovelFiltrado.length} de ${imoveis.length} imóvel(is)`}
           </p>
         </div>
-        <Button onClick={abrirCriar} className="gap-2 shadow-sm">
-          <Plus className="h-4 w-4" /> Novo imóvel
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={vistaAtual === 'lista' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
+              onClick={() => setVistaAtual('lista')}
+            >
+              <List className="h-4 w-4" /> Lista
+            </Button>
+            <Button
+              variant={vistaAtual === 'mapa' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
+              onClick={() => setVistaAtual('mapa')}
+            >
+              <Map className="h-4 w-4" /> Mapa
+            </Button>
+          </div>
+          <Button onClick={abrirCriar} className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" /> Novo imóvel
+          </Button>
+        </div>
       </div>
 
       {/* Banner: filtro vindo do Dashboard */}
@@ -387,8 +411,17 @@ function ImoveisContent() {
         </CardContent>
       </Card>
 
+      {/* Mapa */}
+      {vistaAtual === 'mapa' && (
+        <Card className="shadow-sm rounded-xl overflow-hidden">
+          <CardContent className="p-3">
+            <MapaImoveis imoveis={imovelFiltrado as any} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabela */}
-      <Card className="shadow-sm rounded-xl overflow-hidden">
+      {vistaAtual === 'lista' && <Card className="shadow-sm rounded-xl overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -492,7 +525,7 @@ function ImoveisContent() {
             onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
           />
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Modal Criar / Editar */}
       <Dialog open={formMode !== null} onOpenChange={(open) => !open && setFormMode(null)}>
