@@ -18,6 +18,7 @@ import { VisitasModule } from './visitas/visitas.module'
 import { ClientesModule } from './clientes/clientes.module'
 import { FinanceiroModule } from './financeiro/financeiro.module'
 import { ChatsModule } from './chats/chats.module'
+import { DemoRequestsModule } from './demo-requests/demo-requests.module'
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ChatsModule } from './chats/chats.module'
     VisitasModule,
     FinanceiroModule,
     ChatsModule,
+    DemoRequestsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

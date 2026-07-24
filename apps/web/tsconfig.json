@@ -17,9 +17,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@corretor/shared": [
-        "../../packages/shared/src/index.ts"
       ]
     },
     "allowJs": true,

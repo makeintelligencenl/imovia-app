@@ -6,6 +6,7 @@ import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { TenantsModule } from '../tenants/tenants.module'
+import { CommonModule } from '../common/common.module'
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { TenantsModule } from '../tenants/tenants.module'
       }),
     }),
     TenantsModule,
+    CommonModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

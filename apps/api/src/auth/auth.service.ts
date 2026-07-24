@@ -1,15 +1,17 @@
-import { Injectable, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
 import * as bcrypt from 'bcryptjs'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { TurnstileService } from '../common/turnstile.service'
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private turnstile: TurnstileService,
   ) {}
 
   async register(
@@ -34,22 +36,8 @@ export class AuthService {
     return { user }
   }
 
-  private async verifyTurnstile(token: string): Promise<void> {
-    const secret = process.env.TURNSTILE_SECRET_KEY
-    if (!secret) return // sem chave configurada, pula verificação (dev)
-
-    const body = new URLSearchParams({ secret, response: token })
-    const res  = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    body.toString(),
-    })
-    const json = await res.json() as { success: boolean }
-    if (!json.success) throw new BadRequestException('Verificação de segurança falhou')
-  }
-
   async login(dto: LoginDto) {
-    await this.verifyTurnstile(dto.cfTurnstileToken)
+    await this.turnstile.verify(dto.cfTurnstileToken)
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } })
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw new UnauthorizedException('Credenciais inválidas')

@@ -8,10 +8,7 @@
     "incremental": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "strictPropertyInitialization": false,
-    "paths": {
-      "@corretor/shared": ["../../packages/shared/src/index.ts"]
-    }
+    "strictPropertyInitialization": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

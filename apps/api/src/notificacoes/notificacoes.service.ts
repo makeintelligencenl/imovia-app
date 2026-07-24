@@ -35,4 +35,12 @@ export class NotificacoesService {
       }
     })
   }
+
+  async enviarNotificacaoDemoRequest(dados: { nome: string; email: string; telefone: string; empresa: string }) {
+    try {
+      await this.emailService.enviarDemoRequestEmail(dados)
+    } catch (err) {
+      this.logger.error(`Falha ao enviar notificação de demo request: ${err}`)
+    }
+  }
 }
