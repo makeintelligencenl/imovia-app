@@ -1,7 +1,7 @@
-import { IsUUID, IsOptional } from 'class-validator'
+import { IsUUID, ValidateIf } from 'class-validator'
 
 export class AssociarCorretorDto {
-  @IsOptional()
+  @ValidateIf((o) => o.corretorId !== null)
   @IsUUID()
   corretorId: string | null
 }
