@@ -807,23 +807,23 @@ function MatchesContent() {
           </Button>
 
           {/* Toggle de view */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
-            <button
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
               onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
             >
-              <LayoutList className="h-3.5 w-3.5" /> Tabela
-            </button>
-            <button
+              <LayoutList className="h-4 w-4" /> Tabela
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
               onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'kanban' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
             >
-              <Columns3 className="h-3.5 w-3.5" /> Kanban
-            </button>
+              <Columns3 className="h-4 w-4" /> Kanban
+            </Button>
           </div>
         </div>
       </div>
