@@ -689,7 +689,7 @@ export default function LandingPage() {
               <Link href="/login">Entrar</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link href="/login">Solicitar demonstração <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+              <Link href="/solicitar-demo">Solicitar demonstração <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
             </Button>
           </div>
         </div>
@@ -733,7 +733,7 @@ export default function LandingPage() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 mb-10 justify-center">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white" asChild>
-                <Link href="/login">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
+                <Link href="/solicitar-demo">Solicitar demonstração <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
               <a href="#como-funciona"
                 className="inline-flex items-center justify-center h-10 px-8 rounded-md text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors whitespace-nowrap">
@@ -1231,7 +1231,7 @@ export default function LandingPage() {
           </div>
 
           <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-10 shadow-xl shadow-blue-900/40" asChild>
-            <Link href="/login">Solicitar uma demonstração do ImovIA <ArrowRight className="h-4 w-4 ml-2" /></Link>
+            <Link href="/solicitar-demo">Solicitar uma demonstração do ImovIA <ArrowRight className="h-4 w-4 ml-2" /></Link>
           </Button>
 
         </div>

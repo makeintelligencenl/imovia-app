@@ -35,6 +35,44 @@ export class EmailService {
     }
   }
 
+  async enviarDemoRequestEmail(dados: { nome: string; email: string; telefone: string; empresa: string }) {
+    const resendKey = this.config.get('RESEND_API_KEY')
+    const to = this.config.get('DEMO_NOTIFICATION_EMAIL')
+    if (!resendKey || !to) {
+      this.logger.warn(
+        `Notificação de demo desabilitada (RESEND_API_KEY/DEMO_NOTIFICATION_EMAIL ausente). Lead: ${dados.email}`,
+      )
+      return
+    }
+
+    try {
+      await this.resend.emails.send({
+        from: this.config.get('EMAIL_FROM', 'noreply@corretorInteligente.com.br'),
+        to,
+        subject: `Nova solicitação de demonstração — ${dados.empresa}`,
+        html: this.buildDemoRequestHtml(dados),
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.logger.error(`Falha ao enviar email de demo request (${dados.email}): ${message}`)
+      throw err
+    }
+  }
+
+  private buildDemoRequestHtml(dados: { nome: string; email: string; telefone: string; empresa: string }): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Nova solicitação de demonstração</h2>
+        <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p><strong>Nome:</strong> ${dados.nome}</p>
+          <p><strong>Empresa:</strong> ${dados.empresa}</p>
+          <p><strong>Email:</strong> ${dados.email}</p>
+          <p><strong>Telefone:</strong> ${dados.telefone}</p>
+        </div>
+      </div>
+    `
+  }
+
   private buildEmailHtml(nome: string, imovel: any, preco: string, finalidade: string): string {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
