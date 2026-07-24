@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import {
   GitMerge, Search, X, Home, Users, LayoutList, Columns3,
   MessageCircle, Clock, Link2, ArrowRight, UserCheck, UserMinus,
+  SlidersHorizontal, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -18,6 +19,7 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TablePagination } from '@/components/ui/table-pagination'
 import { Input } from '@/components/ui/input'
@@ -551,6 +553,28 @@ function MatchesContent() {
     : urlRecentes === '30' ? '30dias'
     : '15dias'
   )
+
+  // Painel colapsável
+  const [painelAberto, setPainelAberto] = useState(false)
+  const [staged, setStaged] = useState({
+    texto: '', etapa: '__todos__', finalidade: '__todas__', tipo: '__todos__', corretor: '__todos__', data: '15dias' as typeof filtroData,
+  })
+
+  function abrirPainel() {
+    setStaged({ texto: filtroTexto, etapa: filtroEtapa, finalidade: filtroFinalidade, tipo: filtroTipo, corretor: filtroCorretor, data: filtroData })
+    setPainelAberto(true)
+  }
+
+  function aplicarFiltros() {
+    setFiltroTexto(staged.texto)
+    setFiltroEtapa(staged.etapa)
+    setFiltroFinalidade(staged.finalidade)
+    setFiltroTipo(staged.tipo)
+    setFiltroCorretor(staged.corretor)
+    setFiltroData(staged.data)
+    setPage(1)
+    setPainelAberto(false)
+  }
   const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -685,11 +709,35 @@ function MatchesContent() {
     new Set(matches.map((m) => m.imovel.tipo?.nome).filter((n): n is string => !!n)),
   ).sort()
 
-  // '15dias' é o padrão — não conta como filtro ativo
-  const filtrosAtivos = filtroTexto || filtroEtapa !== '__todos__' || filtroFinalidade !== '__todas__' || filtroData !== '15dias' || filtroTipo !== '__todos__' || filtroCorretor !== '__todos__'
+  const etapaNome = etapas.find((e) => e.id === filtroEtapa)?.nome
+  const corretorNome = corretores.find((c) => c.id === filtroCorretor)?.name
+  const PERIODO_LABEL: Record<string, string> = { hoje: 'Hoje', '7dias': 'Últimos 7 dias', '15dias': 'Últimos 15 dias', '30dias': 'Últimos 30 dias' }
+
+  const filtrosAtivosArray = [
+    filtroTexto                 && { label: `Busca: ${filtroTexto}`,           key: 'texto' },
+    filtroEtapa !== '__todos__' && { label: `Etapa: ${etapaNome ?? filtroEtapa}`, key: 'etapa' },
+    filtroFinalidade !== '__todas__' && { label: filtroFinalidade === 'VENDA' ? 'Venda' : 'Aluguel', key: 'finalidade' },
+    filtroTipo !== '__todos__'  && { label: `Tipo: ${filtroTipo}`,             key: 'tipo' },
+    filtroCorretor === '__sem_corretor__' && { label: 'Sem corretor',          key: 'corretor' },
+    filtroCorretor !== '__todos__' && filtroCorretor !== '__sem_corretor__' && { label: `Corretor: ${corretorNome ?? ''}`, key: 'corretor' },
+    filtroData !== '15dias'     && { label: PERIODO_LABEL[filtroData] ?? filtroData, key: 'data' },
+  ].filter(Boolean) as { label: string; key: string }[]
+
+  const filtrosAtivos = filtrosAtivosArray.length > 0
+
+  function removerFiltro(key: string) {
+    if (key === 'texto')      setFiltroTexto('')
+    if (key === 'etapa')      setFiltroEtapa('__todos__')
+    if (key === 'finalidade') setFiltroFinalidade('__todas__')
+    if (key === 'tipo')       setFiltroTipo('__todos__')
+    if (key === 'corretor')   setFiltroCorretor('__todos__')
+    if (key === 'data')       { setFiltroData('15dias'); router.replace('/dashboard/matches') }
+    setPage(1)
+  }
 
   function limparFiltros() {
     setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('15dias'); setFiltroTipo('__todos__'); setFiltroCorretor('__todos__'); setPage(1)
+    setStaged({ texto: '', etapa: '__todos__', finalidade: '__todas__', tipo: '__todos__', corretor: '__todos__', data: '15dias' })
     router.replace('/dashboard/matches')
   }
 
@@ -745,24 +793,38 @@ function MatchesContent() {
           </p>
         </div>
 
-        {/* Toggle de view */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <LayoutList className="h-3.5 w-3.5" /> Tabela
-          </button>
-          <button
-            onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              viewMode === 'kanban' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Columns3 className="h-3.5 w-3.5" /> Kanban
-          </button>
+        <div className="flex items-center gap-2">
+          {/* Botão Filtrar */}
+          <Button variant="outline" size="sm" className="gap-2" onClick={painelAberto ? () => setPainelAberto(false) : abrirPainel}>
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtrar
+            {filtrosAtivosArray.length > 0 && (
+              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                {filtrosAtivosArray.length}
+              </span>
+            )}
+            {painelAberto ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </Button>
+
+          {/* Toggle de view */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <LayoutList className="h-3.5 w-3.5" /> Tabela
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'kanban' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Columns3 className="h-3.5 w-3.5" /> Kanban
+            </button>
+          </div>
         </div>
       </div>
 
@@ -796,101 +858,114 @@ function MatchesContent() {
         </div>
       )}
 
-      {/* Filtros */}
-      <Card className="shadow-sm rounded-xl">
-        <CardContent className="pt-4 pb-3">
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userIsAdmin ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-3 items-end`}>
-            <div className="lg:col-span-2 space-y-1">
-              <Label className="text-xs">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  placeholder="Imovel, cliente ou cidade..."
-                  value={filtroTexto}
-                  onChange={(e) => { setFiltroTexto(e.target.value); setPage(1) }}
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Finalidade</Label>
-              <Select value={filtroFinalidade} onValueChange={(v) => { setFiltroFinalidade(v); setPage(1) }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todas__">Todas</SelectItem>
-                  <SelectItem value="VENDA">Venda</SelectItem>
-                  <SelectItem value="ALUGUEL">Aluguel</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Tipo de imovel</Label>
-              <Select value={filtroTipo} onValueChange={(v) => { setFiltroTipo(v); setPage(1) }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todos__">Todos</SelectItem>
-                  {tiposDisponiveis.map((tipo) => (
-                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {userIsAdmin && (
+      {/* Tags de filtros ativos */}
+      {filtrosAtivosArray.length > 0 && !painelAberto && (
+        <div className="flex flex-wrap gap-2">
+          {filtrosAtivosArray.map((f) => (
+            <span key={f.key} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+              {f.label}
+              <button onClick={() => removerFiltro(f.key)} className="ml-1 text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Painel de filtros colapsável */}
+      {painelAberto && (
+        <Card className="shadow-sm rounded-xl border-primary/20">
+          <CardContent className="pt-4 pb-0">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${userIsAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
               <div className="space-y-1">
-                <Label className="text-xs">Corretor</Label>
-                <Select value={filtroCorretor} onValueChange={(v) => { setFiltroCorretor(v); setPage(1) }}>
+                <Label className="text-xs">Buscar</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-8"
+                    placeholder="Imóvel, cliente ou cidade..."
+                    value={staged.texto}
+                    onChange={(e) => setStaged((p) => ({ ...p, texto: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Finalidade</Label>
+                <Select value={staged.finalidade} onValueChange={(v) => setStaged((p) => ({ ...p, finalidade: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__todas__">Todas</SelectItem>
+                    <SelectItem value="VENDA">Venda</SelectItem>
+                    <SelectItem value="ALUGUEL">Aluguel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tipo de imóvel</Label>
+                <Select value={staged.tipo} onValueChange={(v) => setStaged((p) => ({ ...p, tipo: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__todos__">Todos</SelectItem>
-                    <SelectItem value="__sem_corretor__">Sem corretor</SelectItem>
-                    {corretores.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    {tiposDisponiveis.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-            <div className="space-y-1">
-              <Label className="text-xs">Etapa</Label>
-              <Select value={filtroEtapa} onValueChange={(v) => { setFiltroEtapa(v); setPage(1) }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todos__">Todas</SelectItem>
-                  {etapas.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: e.cor }}
-                        />
-                        {e.nome}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {userIsAdmin && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Corretor</Label>
+                  <Select value={staged.corretor} onValueChange={(v) => setStaged((p) => ({ ...p, corretor: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__todos__">Todos</SelectItem>
+                      <SelectItem value="__sem_corretor__">Sem corretor</SelectItem>
+                      {corretores.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label className="text-xs">Etapa</Label>
+                <Select value={staged.etapa} onValueChange={(v) => setStaged((p) => ({ ...p, etapa: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__todos__">Todas</SelectItem>
+                    {etapas.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        <span className="flex items-center gap-1.5">
+                          <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: e.cor }} />
+                          {e.nome}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Período</Label>
+                <Select value={staged.data} onValueChange={(v: any) => setStaged((p) => ({ ...p, data: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__todos__">Todos</SelectItem>
+                    <SelectItem value="hoje">Hoje</SelectItem>
+                    <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                    <SelectItem value="15dias">Últimos 15 dias</SelectItem>
+                    <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Periodo</Label>
-              <Select value={filtroData} onValueChange={(v: any) => { setFiltroData(v); setPage(1) }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__todos__">Todos</SelectItem>
-                  <SelectItem value="hoje">Hoje</SelectItem>
-                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                  <SelectItem value="15dias">Últimos 15 dias</SelectItem>
-                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </CardContent>
+          <div className="flex items-center justify-end gap-2 px-5 py-3 mt-4 border-t bg-muted/40">
+            <Button variant="outline" size="sm" onClick={limparFiltros}>Limpar filtros</Button>
+            <Button variant="outline" size="sm" onClick={() => setPainelAberto(false)}>Cancelar</Button>
+            <Button size="sm" onClick={aplicarFiltros} className="px-6">Aplicar filtros</Button>
           </div>
-          {filtrosAtivos && (
-            <button onClick={limparFiltros} className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-              <X className="h-3 w-3" /> Limpar filtros
-            </button>
-          )}
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* VIEW: TABELA */}
       {viewMode === 'table' && (
