@@ -22,12 +22,16 @@ export class EmailService {
     const preco = Number(imovel.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
     try {
-      await this.resend.emails.send({
+      // O SDK do Resend não lança exceção em erro de API (domínio não verificado,
+      // remetente inválido, etc.) — ele retorna { data, error }. Sem checar `error`
+      // aqui, a falha passava em silêncio (sem log, sem exceção).
+      const { error } = await this.resend.emails.send({
         from: this.config.get('EMAIL_FROM', 'noreply@corretorInteligente.com.br'),
         to: email,
         subject: `Encontramos um imóvel para você — ${imovel.titulo}`,
         html: this.buildEmailHtml(nome, imovel, preco, finalidade),
       })
+      if (error) throw new Error(error.message)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       this.logger.error(`Falha ao enviar email para ${email}: ${message}`)
@@ -46,12 +50,13 @@ export class EmailService {
     }
 
     try {
-      await this.resend.emails.send({
+      const { error } = await this.resend.emails.send({
         from: this.config.get('EMAIL_FROM', 'noreply@corretorInteligente.com.br'),
         to,
         subject: `Nova solicitação de demonstração — ${dados.empresa}`,
         html: this.buildDemoRequestHtml(dados),
       })
+      if (error) throw new Error(error.message)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       this.logger.error(`Falha ao enviar email de demo request (${dados.email}): ${message}`)
