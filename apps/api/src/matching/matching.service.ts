@@ -178,8 +178,7 @@ export class MatchingService {
     if (clienteId)    where.perfil    = { clienteId }
     if (createdAfter) where.createdAt = { gte: new Date(createdAfter) }
 
-    const isContextual = !!(imovelId || perfilId || clienteId)
-    if (userRole === 'CORRETOR' && !isContextual) where.corretorId = userId
+    if (userRole === 'CORRETOR') where.corretorId = userId
 
     return this.prisma.match.findMany({
       where,

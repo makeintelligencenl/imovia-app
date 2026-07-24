@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
 const GPTMAKER_BASE = 'https://api.gptmaker.ai'
@@ -45,14 +45,24 @@ export class ChatsService {
     return this.gptFetch<unknown>(`/v2/workspace/${this.workspaceId}/chats?${qs.toString()}`)
   }
 
-  async listarMensagens(chatId: string, query?: { page?: string; pageSize?: string }) {
+  private async assertChatOwnership(tenantId: string, chatId: string): Promise<void> {
+    const found = await this.prisma.cliente.findFirst({
+      where: { tenantId, ativo: true, gptMakerChatId: { contains: chatId } },
+      select: { id: true },
+    })
+    if (!found) throw new NotFoundException('Chat não encontrado')
+  }
+
+  async listarMensagens(tenantId: string, chatId: string, query?: { page?: string; pageSize?: string }) {
+    await this.assertChatOwnership(tenantId, chatId)
     const qs = new URLSearchParams()
     if (query?.page)     qs.set('page',     query.page)
     if (query?.pageSize) qs.set('pageSize', query.pageSize)
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/messages?${qs.toString()}`)
   }
 
-  async enviarMensagem(chatId: string, message: string) {
+  async enviarMensagem(tenantId: string, chatId: string, message: string) {
+    await this.assertChatOwnership(tenantId, chatId)
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/send-message`, {
       method: 'POST',
       body: JSON.stringify({ message }),
@@ -71,27 +81,31 @@ export class ChatsService {
     return map
   }
 
-  async assumirAtendimento(chatId: string) {
+  async assumirAtendimento(tenantId: string, chatId: string) {
+    await this.assertChatOwnership(tenantId, chatId)
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/start-human`, { method: 'PUT' })
   }
 
-  async encerrarAtendimento(chatId: string) {
+  async encerrarAtendimento(tenantId: string, chatId: string) {
+    await this.assertChatOwnership(tenantId, chatId)
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/stop-human`, { method: 'PUT' })
   }
 
   // Alias — ambas as rotas (/end e /resolve) fazem a mesma operação no GPT Maker
-  resolverChat(chatId: string) {
-    return this.encerrarAtendimento(chatId)
+  resolverChat(tenantId: string, chatId: string) {
+    return this.encerrarAtendimento(tenantId, chatId)
   }
 
-  async editarMensagem(chatId: string, messageId: string, message: string) {
+  async editarMensagem(tenantId: string, chatId: string, messageId: string, message: string) {
+    await this.assertChatOwnership(tenantId, chatId)
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/message/${messageId}`, {
       method: 'PUT',
       body: JSON.stringify({ message }),
     })
   }
 
-  async excluirMensagem(chatId: string, messageId: string) {
+  async excluirMensagem(tenantId: string, chatId: string, messageId: string) {
+    await this.assertChatOwnership(tenantId, chatId)
     return this.gptFetch<unknown>(`/v2/chat/${chatId}/message/${messageId}`, { method: 'DELETE' })
   }
 
