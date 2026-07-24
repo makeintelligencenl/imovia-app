@@ -226,7 +226,7 @@ export class FinanceiroService {
     status?:     string
     corretorId?: string
     periodo?:    string
-  }, requester?: { sub: string; role: string }) {
+  }, requester?: { id: string; role: string }) {
     const where: any = { tenantId }
     if (params.status) where.status = params.status
     // CORRETOR só vê as próprias comissões (tipo CORRETOR com seu corretorId)
