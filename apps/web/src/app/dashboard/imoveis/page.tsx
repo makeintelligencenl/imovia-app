@@ -524,23 +524,23 @@ function ImoveisContent() {
       <Card className="shadow-sm rounded-xl overflow-hidden">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
-            <button
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={vistaAtual === 'lista' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
               onClick={() => setVistaAtual('lista')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                vistaAtual === 'lista' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
             >
-              <List className="h-3.5 w-3.5" /> Lista
-            </button>
-            <button
+              <List className="h-4 w-4" /> Lista
+            </Button>
+            <Button
+              variant={vistaAtual === 'mapa' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
               onClick={() => setVistaAtual('mapa')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                vistaAtual === 'mapa' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
             >
-              <Map className="h-3.5 w-3.5" /> Mapa
-            </button>
+              <Map className="h-4 w-4" /> Mapa
+            </Button>
           </div>
           <span className="text-sm text-muted-foreground">
             {loading ? '' : `${imovelFiltrado.length} imóvel(is)`}
