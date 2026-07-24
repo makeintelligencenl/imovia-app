@@ -107,7 +107,7 @@ function ImoveisContent() {
   const [deleteTarget, setDeleteTarget] = useState<Imovel | null>(null)
   const [deleting, setDeleting]       = useState(false)
   const [matchCount, setMatchCount]     = useState(0)
-  const [matchHref, setMatchHref]       = useState('/dashboard/matches')
+  const [matchHref, setMatchHref]       = useState('/matches')
 
   // Paginação
   const [page, setPage]         = useState(1)
@@ -313,7 +313,7 @@ function ImoveisContent() {
 
         if (criado.matchesEncontrados > 0) {
           const params = new URLSearchParams({ imovelId: criado.id, label: payload.titulo })
-          setMatchHref(`/dashboard/matches?${params.toString()}`)
+          setMatchHref(`/matches?${params.toString()}`)
           celebrateMatch()
           setMatchCount(criado.matchesEncontrados)
         } else {
@@ -407,7 +407,7 @@ function ImoveisContent() {
             Mostrando apenas <strong>imóveis disponíveis sem match</strong> — estes precisam de atenção.
           </span>
           <button
-            onClick={() => router.replace('/dashboard/imoveis')}
+            onClick={() => router.replace('/imoveis')}
             className="flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 shrink-0"
           >
             <X className="h-3.5 w-3.5" /> Limpar filtro

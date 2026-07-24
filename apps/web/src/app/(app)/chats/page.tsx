@@ -558,7 +558,7 @@ export default function ChatsPage() {
                       <span className="text-[11px]">{ETAPA_LABELS[matchInfo.match.etapa] ?? matchInfo.match.etapa}</span>
                     </div>
                     <a
-                      href={`/dashboard/matches?perfilId=${matchInfo.perfil?.id ?? ''}`}
+                      href={`/matches?perfilId=${matchInfo.perfil?.id ?? ''}`}
                       className="flex items-center gap-1 text-[11px] text-blue-500 hover:underline mt-1"
                     >
                       <ExternalLink className="h-3 w-3" /> Ver match completo

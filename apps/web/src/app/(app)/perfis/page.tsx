@@ -61,7 +61,7 @@ export default function PerfisPage() {
   const [deleteTarget, setDeleteTarget] = useState<Perfil | null>(null)
   const [deleting,     setDeleting]     = useState(false)
   const [matchCount,   setMatchCount]   = useState(0)
-  const [matchHref,    setMatchHref]    = useState('/dashboard/matches')
+  const [matchHref,    setMatchHref]    = useState('/matches')
 
   const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -175,7 +175,7 @@ export default function PerfisPage() {
         const novos = matchesDepois.length - qtdAntes
         if (novos > 0) {
           const params = new URLSearchParams({ perfilId: criado.id, label: criado.cliente.nome })
-          setMatchHref(`/dashboard/matches?${params.toString()}`)
+          setMatchHref(`/matches?${params.toString()}`)
           celebrateMatch()
           setMatchCount(novos)
         }
@@ -372,7 +372,7 @@ export default function PerfisPage() {
               {clientes.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-2">
                   Nenhum cliente cadastrado.{' '}
-                  <a href="/dashboard/clientes" className="text-blue-600 underline">Cadastrar agora →</a>
+                  <a href="/clientes" className="text-blue-600 underline">Cadastrar agora →</a>
                 </p>
               ) : (
                 <Select

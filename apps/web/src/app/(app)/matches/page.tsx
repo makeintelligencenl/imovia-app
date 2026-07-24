@@ -731,14 +731,14 @@ function MatchesContent() {
     if (key === 'finalidade') setFiltroFinalidade('__todas__')
     if (key === 'tipo')       setFiltroTipo('__todos__')
     if (key === 'corretor')   setFiltroCorretor('__todos__')
-    if (key === 'data')       { setFiltroData('15dias'); router.replace('/dashboard/matches') }
+    if (key === 'data')       { setFiltroData('15dias'); router.replace('/matches') }
     setPage(1)
   }
 
   function limparFiltros() {
     setFiltroTexto(''); setFiltroEtapa('__todos__'); setFiltroFinalidade('__todas__'); setFiltroData('15dias'); setFiltroTipo('__todos__'); setFiltroCorretor('__todos__'); setPage(1)
     setStaged({ texto: '', etapa: '__todos__', finalidade: '__todas__', tipo: '__todos__', corretor: '__todos__', data: '15dias' })
-    router.replace('/dashboard/matches')
+    router.replace('/matches')
   }
 
   const matchesPaginados = matchesFiltrados.slice((page - 1) * pageSize, page * pageSize)
@@ -815,7 +815,7 @@ function MatchesContent() {
               {filtroData === 'hoje' ? 'últimas 24h' : filtroData === '7dias' ? 'últimos 7 dias' : filtroData === '15dias' ? 'últimos 15 dias' : 'últimos 30 dias'}
             </strong>
           </span>
-          <button onClick={() => { setFiltroData('__todos__'); router.replace('/dashboard/matches') }} className="ml-auto p-0.5 rounded hover:bg-blue-100">
+          <button onClick={() => { setFiltroData('__todos__'); router.replace('/matches') }} className="ml-auto p-0.5 rounded hover:bg-blue-100">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -829,7 +829,7 @@ function MatchesContent() {
             {urlImovelId ? 'Imovel: ' : 'Cliente: '}
             <span className="font-semibold">{urlLabel}</span>
           </span>
-          <button onClick={() => router.replace('/dashboard/matches')} className="ml-auto p-0.5 rounded hover:bg-blue-100">
+          <button onClick={() => router.replace('/matches')} className="ml-auto p-0.5 rounded hover:bg-blue-100">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>

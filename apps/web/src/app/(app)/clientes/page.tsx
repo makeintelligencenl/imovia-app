@@ -396,7 +396,7 @@ export default function ClientesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
-                        <Link href={`/dashboard/clientes/${c.id}`}>
+                        <Link href={`/clientes/${c.id}`}>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Ver detalhes e perfis">
                             <Eye className="h-3.5 w-3.5" />
                           </Button>

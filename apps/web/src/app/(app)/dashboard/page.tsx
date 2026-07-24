@@ -139,7 +139,7 @@ export default function DashboardPage() {
     // CORRETOR: redireciona imediatamente sem fazer nenhuma chamada à API.
     // O segundo useEffect só roda se NÃO for redirecionado (role ADMIN).
     const user = getCurrentUser()
-    if (user?.role === 'CORRETOR') { router.replace('/dashboard/corretor'); return }
+    if (user?.role === 'CORRETOR') { router.replace('/corretor'); return }
   }, [router])
 
   useEffect(() => {
@@ -376,7 +376,7 @@ export default function DashboardPage() {
         <Card className="rounded-xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-sm font-semibold">Últimos matches</CardTitle>
-            <Link href="/dashboard/matches?recentes=7"
+            <Link href="/matches?recentes=7"
               className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
               Ver todos <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -422,7 +422,7 @@ export default function DashboardPage() {
               <AlertCircle className="h-4 w-4 text-amber-500" />
               Imóveis disponíveis sem match
             </CardTitle>
-            <Link href="/dashboard/imoveis?semMatch=1"
+            <Link href="/imoveis?semMatch=1"
               className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
               Ver todos <ArrowRight className="h-3.5 w-3.5" />
             </Link>

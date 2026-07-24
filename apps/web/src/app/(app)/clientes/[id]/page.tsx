@@ -308,7 +308,7 @@ export default function ClienteDetalhePage() {
     try {
       await api.delete(`/clientes/${id}`)
       toast.success('Cliente removido.')
-      router.push('/dashboard/clientes')
+      router.push('/clientes')
     } catch { toast.error('Erro ao remover') }
     finally  { setRemoving(false) }
   }
@@ -463,7 +463,7 @@ export default function ClienteDetalhePage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-muted-foreground">Cliente não encontrado.</p>
-        <Button variant="outline" onClick={() => router.push('/dashboard/clientes')}>
+        <Button variant="outline" onClick={() => router.push('/clientes')}>
           <ChevronLeft className="h-4 w-4 mr-1" /> Voltar
         </Button>
       </div>
@@ -476,7 +476,7 @@ export default function ClienteDetalhePage() {
       {/* ── Breadcrumb + ações ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm">
-          <Link href="/dashboard/clientes" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+          <Link href="/clientes" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
             <ChevronLeft className="h-4 w-4" /> Clientes
           </Link>
           <span className="text-muted-foreground">/</span>

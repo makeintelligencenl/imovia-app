@@ -627,7 +627,7 @@ export default function CorretorDashboardPage() {
 
 
             {/* Agenda completa */}
-            <Link href="/dashboard/agenda" className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline whitespace-nowrap">
+            <Link href="/agenda" className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline whitespace-nowrap">
               Agenda completa
               <ArrowRight className="h-3 w-3" />
             </Link>
@@ -643,7 +643,7 @@ export default function CorretorDashboardPage() {
               <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                 <CalendarDays className="h-8 w-8 text-slate-200" />
                 <p className="text-sm">Nenhuma visita hoje</p>
-                <Link href="/dashboard/agenda" className="text-xs text-blue-600 font-semibold hover:underline">
+                <Link href="/agenda" className="text-xs text-blue-600 font-semibold hover:underline">
                   + Agendar visita
                 </Link>
               </div>
@@ -856,7 +856,7 @@ export default function CorretorDashboardPage() {
                 </p>
               </div>
             </div>
-            <Link href="/dashboard/matches"
+            <Link href="/matches"
               className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1">
               Ver todos <ArrowRight className="h-3 w-3" />
             </Link>
@@ -870,7 +870,7 @@ export default function CorretorDashboardPage() {
                 const sc  = scoreLabel(m.leadScore)
                 const cor = m.etapa?.cor ?? '#6B7280'
                 return (
-                  <Link key={m.id} href="/dashboard/matches"
+                  <Link key={m.id} href="/matches"
                     className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col gap-3">
 
                     {/* Imóvel */}
@@ -908,7 +908,7 @@ export default function CorretorDashboardPage() {
                           <p className={`text-xs font-bold mt-0.5 ${sc.text}`}>{sc.label}</p>
                         </div>
                       </div>
-                      <Link href="/dashboard/agenda"
+                      <Link href="/agenda"
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-700 transition-colors shadow-sm"
                         onClick={e => e.stopPropagation()}>
                         <CalendarDays className="h-3 w-3" />
@@ -933,7 +933,7 @@ export default function CorretorDashboardPage() {
               <Clock className="h-4 w-4 text-amber-500" />
               Precisam de atenção
             </CardTitle>
-            <Link href="/dashboard/matches"
+            <Link href="/matches"
               className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
               Ver matches <ArrowRight className="h-3.5 w-3.5" />
             </Link>

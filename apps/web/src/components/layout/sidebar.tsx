@@ -12,14 +12,14 @@ import { cn } from '@/lib/utils'
 interface UserInfo { name: string; email: string; role: string }
 
 const NAV_ITEMS_BASE = [
-  { href: '/dashboard/imoveis',           label: 'Imóveis',       icon: Home,          adminOnly: false },
-  { href: '/dashboard/clientes',          label: 'Clientes',      icon: UserRound,     adminOnly: false },
-  { href: '/dashboard/matches',           label: 'Matches',       icon: GitMerge,      adminOnly: false },
-  { href: '/dashboard/agenda',            label: 'Agenda',        icon: CalendarDays,  adminOnly: false },
-  { href: '/dashboard/relatorios',        label: 'Relatórios',    icon: BarChart2,     adminOnly: true  },
-  { href: '/dashboard/financeiro',        label: 'Financeiro',    icon: DollarSign,    adminOnly: true  },
-  { href: '/dashboard/chats',             label: 'Chats',         icon: MessageSquare, adminOnly: true  },
-  { href: '/dashboard/settings/pipeline', label: 'Configurações', icon: Settings2,     adminOnly: true  },
+  { href: '/imoveis',           label: 'Imóveis',       icon: Home,          adminOnly: false },
+  { href: '/clientes',          label: 'Clientes',      icon: UserRound,     adminOnly: false },
+  { href: '/matches',           label: 'Matches',       icon: GitMerge,      adminOnly: false },
+  { href: '/agenda',            label: 'Agenda',        icon: CalendarDays,  adminOnly: false },
+  { href: '/relatorios',        label: 'Relatórios',    icon: BarChart2,     adminOnly: true  },
+  { href: '/financeiro',        label: 'Financeiro',    icon: DollarSign,    adminOnly: true  },
+  { href: '/chats',             label: 'Chats',         icon: MessageSquare, adminOnly: true  },
+  { href: '/settings/pipeline', label: 'Configurações', icon: Settings2,     adminOnly: true  },
 ]
 
 interface SidebarProps {
@@ -33,7 +33,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const [user,      setUser]      = useState<UserInfo | null>(null)
   const [collapsed, setCollapsed] = useState(false)
 
-  const dashboardHref = user?.role === 'CORRETOR' ? '/dashboard/corretor' : '/dashboard'
+  const dashboardHref = user?.role === 'CORRETOR' ? '/corretor' : '/dashboard'
 
   const NAV_ITEMS = [
     { href: dashboardHref, label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
@@ -76,9 +76,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Menu</p>
         )}
         {NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === 'ADMIN').map((item) => {
-          const isDash = item.href === '/dashboard' || item.href === '/dashboard/corretor'
+          const isDash = item.href === '/dashboard' || item.href === '/corretor'
           const isActive = isDash
-            ? pathname === '/dashboard' || pathname === '/dashboard/corretor'
+            ? pathname === '/dashboard' || pathname === '/corretor'
             : pathname.startsWith(item.href)
           return (
             <Link

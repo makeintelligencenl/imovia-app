@@ -46,7 +46,7 @@ export default function CheckinPage() {
     try {
       await api.patch(`/visitas/${id}`, { status, observacoes: observacoes || null })
       toast.success(status === 'REALIZADA' ? 'Check-in confirmado!' : 'Visita cancelada')
-      router.push('/dashboard/agenda')
+      router.push('/agenda')
     } catch {
       toast.error('Erro ao salvar. Tente novamente.')
     } finally {
@@ -85,7 +85,7 @@ export default function CheckinPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center px-6">
         <CheckCircle2 className="h-10 w-10 text-emerald-400" />
         <p className="text-slate-700 font-semibold">Visita já {visita.status === 'REALIZADA' ? 'realizada' : 'cancelada'}</p>
-        <button onClick={() => router.push('/dashboard/agenda')} className="text-blue-600 text-sm mt-2">Ver agenda</button>
+        <button onClick={() => router.push('/agenda')} className="text-blue-600 text-sm mt-2">Ver agenda</button>
       </div>
     )
   }

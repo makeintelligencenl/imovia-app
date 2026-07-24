@@ -440,7 +440,7 @@ export default function AgendaPage() {
               <div className="flex items-center gap-2">
                 {modalMode === 'edit' && editTarget?.status === 'AGENDADA' && (
                   <Link
-                    href={`/dashboard/visitas/${editTarget.id}/checkin`}
+                    href={`/visitas/${editTarget.id}/checkin`}
                     className="md:hidden flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -487,7 +487,7 @@ export default function AgendaPage() {
                 {clientes.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-1">
                     Nenhum cliente cadastrado.{' '}
-                    <a href="/dashboard/clientes" className="text-blue-600 underline">Cadastrar →</a>
+                    <a href="/clientes" className="text-blue-600 underline">Cadastrar →</a>
                   </p>
                 ) : (
                   <Select value={form.clienteId} onValueChange={v => setF('clienteId', v)}>

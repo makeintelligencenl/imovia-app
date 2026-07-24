@@ -91,7 +91,7 @@ export default function NotificacoesPage() {
             titulo:     'Novo match encontrado',
             descricao:  `${m.perfil.cliente.nome} → ${m.imovel.titulo}`,
             tempo:      tempoRelativo(m.createdAt),
-            href:       '/dashboard/matches',
+            href:       '/matches',
             lida:       false,
           })
         })
@@ -113,7 +113,7 @@ export default function NotificacoesPage() {
             titulo:    hoje ? 'Visita hoje' : 'Visita agendada',
             descricao: `${v.cliente.nome} · ${v.imovel.titulo}`,
             tempo:     horaVisita(v.dataHora),
-            href:      `/dashboard/visitas/${v.id}/checkin`,
+            href:      `/visitas/${v.id}/checkin`,
             lida:      false,
           })
         })

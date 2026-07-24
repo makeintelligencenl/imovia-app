@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils'
 import { MobileBlock } from '@/components/layout/mobile-block'
 
 const TABS = [
-  { href: '/dashboard/settings/pipeline',   label: 'Funil de Vendas', icon: Settings2  },
-  { href: '/dashboard/settings/usuarios',   label: 'Usuários',        icon: Users      },
-  { href: '/dashboard/settings/financeiro', label: 'Financeiro',      icon: DollarSign },
+  { href: '/settings/pipeline',   label: 'Funil de Vendas', icon: Settings2  },
+  { href: '/settings/usuarios',   label: 'Usuários',        icon: Users      },
+  { href: '/settings/financeiro', label: 'Financeiro',      icon: DollarSign },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

@@ -5,11 +5,11 @@ import { LayoutDashboard, Home, GitMerge, CalendarDays, Bell } from 'lucide-reac
 import { cn } from '@/lib/utils'
 
 const ITEMS = [
-  { href: '/dashboard',               label: 'Início',        icon: LayoutDashboard, exact: true  },
-  { href: '/dashboard/imoveis',       label: 'Imóveis',       icon: Home,            exact: false },
-  { href: '/dashboard/matches',       label: 'Matches',       icon: GitMerge,        exact: false },
-  { href: '/dashboard/agenda',        label: 'Agenda',        icon: CalendarDays,    exact: false },
-  { href: '/dashboard/notificacoes',  label: 'Alertas',       icon: Bell,            exact: false },
+  { href: '/dashboard',       label: 'Início',        icon: LayoutDashboard, exact: true  },
+  { href: '/imoveis',         label: 'Imóveis',       icon: Home,            exact: false },
+  { href: '/matches',         label: 'Matches',       icon: GitMerge,        exact: false },
+  { href: '/agenda',          label: 'Agenda',        icon: CalendarDays,    exact: false },
+  { href: '/notificacoes',    label: 'Alertas',       icon: Bell,            exact: false },
 ]
 
 interface Props { onMoreClick: () => void }
@@ -29,7 +29,7 @@ export function MobileBottomNav({ onMoreClick: _ }: Props) {
     >
       {ITEMS.map((item) => {
         const isActive = item.exact
-          ? pathname === item.href || pathname === '/dashboard/corretor'
+          ? pathname === item.href || pathname === '/corretor'
           : pathname.startsWith(item.href)
         return (
           <Link
