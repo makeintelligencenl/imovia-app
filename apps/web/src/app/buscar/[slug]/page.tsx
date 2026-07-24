@@ -102,15 +102,15 @@ export default function FormularioPublicoPage({ params }: { params: Promise<{ sl
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label>Seu nome</Label>
-                <Input name="clienteNome" placeholder="João Silva" required />
+                <Input name="clienteNome" required />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input name="clienteEmail" type="email" placeholder="joao@email.com" required />
+                <Input name="clienteEmail" type="email" required />
               </div>
               <div className="space-y-2">
                 <Label>WhatsApp (opcional)</Label>
-                <Input name="clienteWhatsapp" placeholder="+55 11 99999-9999" />
+                <Input name="clienteWhatsapp" />
               </div>
 
               <hr />

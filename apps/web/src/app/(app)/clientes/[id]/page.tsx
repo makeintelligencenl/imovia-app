@@ -905,11 +905,11 @@ export default function ClienteDetalhePage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Preço mínimo (R$) *</Label>
-                <Input type="number" placeholder="300000" value={perfilData.precoMin} onChange={e => setPerfilData(p => ({ ...p, precoMin: e.target.value }))} />
+                <Input type="number" value={perfilData.precoMin} onChange={e => setPerfilData(p => ({ ...p, precoMin: e.target.value }))} />
               </div>
               <div className="space-y-1">
                 <Label>Preço máximo (R$) *</Label>
-                <Input type="number" placeholder="800000" value={perfilData.precoMax} onChange={e => setPerfilData(p => ({ ...p, precoMax: e.target.value }))} />
+                <Input type="number" value={perfilData.precoMax} onChange={e => setPerfilData(p => ({ ...p, precoMax: e.target.value }))} />
               </div>
             </div>
 
@@ -917,24 +917,24 @@ export default function ClienteDetalhePage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Área mínima (m²) *</Label>
-                <Input type="number" placeholder="60" value={perfilData.areaMin} onChange={e => setPerfilData(p => ({ ...p, areaMin: e.target.value }))} />
+                <Input type="number" value={perfilData.areaMin} onChange={e => setPerfilData(p => ({ ...p, areaMin: e.target.value }))} />
               </div>
               <div className="space-y-1">
                 <Label>Quartos mínimos</Label>
-                <Input type="number" placeholder="2" value={perfilData.quartosMin} onChange={e => setPerfilData(p => ({ ...p, quartosMin: e.target.value }))} />
+                <Input type="number" value={perfilData.quartosMin} onChange={e => setPerfilData(p => ({ ...p, quartosMin: e.target.value }))} />
               </div>
             </div>
 
             {/* Cidades */}
             <div className="space-y-1">
               <Label>Cidades * <span className="text-xs text-muted-foreground font-normal">(separadas por vírgula)</span></Label>
-              <Input placeholder="Belo Horizonte, Contagem" value={perfilData.cidades} onChange={e => setPerfilData(p => ({ ...p, cidades: e.target.value }))} />
+              <Input value={perfilData.cidades} onChange={e => setPerfilData(p => ({ ...p, cidades: e.target.value }))} />
             </div>
 
             {/* Bairros */}
             <div className="space-y-1">
               <Label>Bairros <span className="text-xs text-muted-foreground font-normal">(opcional, separados por vírgula)</span></Label>
-              <Input placeholder="Savassi, Belvedere" value={perfilData.bairros} onChange={e => setPerfilData(p => ({ ...p, bairros: e.target.value }))} />
+              <Input value={perfilData.bairros} onChange={e => setPerfilData(p => ({ ...p, bairros: e.target.value }))} />
             </div>
           </div>
           <DialogFooter className="mt-2">

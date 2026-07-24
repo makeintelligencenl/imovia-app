@@ -186,7 +186,6 @@ export default function CheckinPage() {
         <textarea
           value={observacoes}
           onChange={(e) => setObservacoes(e.target.value)}
-          placeholder="Cliente gostou do imóvel, pediu proposta..."
           rows={4}
           className="w-full text-sm border border-border rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-slate-50"
         />

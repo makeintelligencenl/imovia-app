@@ -278,7 +278,6 @@ export default function ClientesPage() {
               <div className="space-y-1">
                 <Label>Nome</Label>
                 <Input
-                  placeholder="Buscar por nome..."
                   value={staged.nome}
                   onChange={(e) => setStaged((p) => ({ ...p, nome: e.target.value }))}
                 />
@@ -286,7 +285,6 @@ export default function ClientesPage() {
               <div className="space-y-1">
                 <Label>CPF</Label>
                 <Input
-                  placeholder="000.000.000-00"
                   value={staged.cpf}
                   onChange={(e) => setStaged((p) => ({ ...p, cpf: e.target.value }))}
                 />
@@ -294,7 +292,6 @@ export default function ClientesPage() {
               <div className="space-y-1">
                 <Label>Telefone / WhatsApp</Label>
                 <Input
-                  placeholder="(31) 9 9999-9999"
                   value={staged.telefone}
                   onChange={(e) => setStaged((p) => ({ ...p, telefone: e.target.value }))}
                 />
@@ -433,23 +430,23 @@ export default function ClientesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2 space-y-1">
               <Label>Nome *</Label>
-              <Input placeholder="João Silva" {...field('nome')} />
+              <Input {...field('nome')} />
             </div>
             <div className="space-y-1">
               <Label>E-mail *</Label>
-              <Input type="email" placeholder="joao@email.com" {...field('email')} />
+              <Input type="email" {...field('email')} />
             </div>
             <div className="space-y-1">
               <Label>WhatsApp</Label>
-              <Input placeholder="+5531999999999" {...field('whatsapp')} />
+              <Input {...field('whatsapp')} />
             </div>
             <div className="space-y-1">
               <Label>Telefone</Label>
-              <Input placeholder="+5531333334444" {...field('telefone')} />
+              <Input {...field('telefone')} />
             </div>
             <div className="space-y-1">
               <Label>CPF</Label>
-              <Input placeholder="123.456.789-00" {...field('cpf')} />
+              <Input {...field('cpf')} />
             </div>
 
             <div className="sm:col-span-2 space-y-1">
@@ -478,7 +475,6 @@ export default function ClientesPage() {
               <Label>Observações</Label>
               <textarea
                 rows={2}
-                placeholder="Preferências, notas de atendimento..."
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                 {...field('observacoes')}
               />

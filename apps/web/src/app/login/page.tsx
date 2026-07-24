@@ -124,7 +124,6 @@ function LoginForm() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="corretor@imobiliaria.com"
                   required
                   className="h-10"
                 />
@@ -136,7 +135,6 @@ function LoginForm() {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
                     required
                     className="h-10 pr-10"
                   />

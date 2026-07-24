@@ -165,19 +165,19 @@ export default function UsuariosPage() {
                 <div className="space-y-1">
                   <Label className="text-xs">Nome</Label>
                   <Input value={newName} onChange={(e) => setNewName(e.target.value)}
-                    placeholder="João Silva" className="h-7 text-sm" autoFocus />
+                    className="h-7 text-sm" autoFocus />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Email</Label>
                   <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="joao@imob.com" className="h-7 text-sm" />
+                    className="h-7 text-sm" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs">Senha (mín. 8 car.)</Label>
                   <Input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)}
-                    placeholder="••••••••" className="h-7 text-sm" />
+                    className="h-7 text-sm" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Perfil</Label>

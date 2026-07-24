@@ -1,5 +1,6 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -11,10 +12,23 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function SolicitarDemoPage() {
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const turnstileRef = useRef<TurnstileInstance>(null)
+  const [countdown, setCountdown] = useState(5)
+
+  // Redireciona pra home automaticamente após o envio, com contagem regressiva
+  useEffect(() => {
+    if (!success) return
+    if (countdown === 0) {
+      router.push('/')
+      return
+    }
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [success, countdown, router])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -58,6 +72,9 @@ export default function SolicitarDemoPage() {
           <p className="text-muted-foreground">
             Nosso time vai entrar em contato em breve para agendar sua demonstração.
           </p>
+          <p className="text-sm text-muted-foreground mt-4">
+            Redirecionando em {countdown} segundo{countdown !== 1 ? 's' : ''} para página principal do ImovIA.
+          </p>
         </div>
       </div>
     )
@@ -88,19 +105,19 @@ export default function SolicitarDemoPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="nome">Nome</Label>
-                <Input id="nome" name="nome" placeholder="João Silva" required />
+                <Input id="nome" name="nome" required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="joao@imobiliaria.com" required />
+                <Input id="email" name="email" type="email" required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="telefone">Telefone</Label>
-                <Input id="telefone" name="telefone" placeholder="+55 11 99999-9999" required />
+                <Input id="telefone" name="telefone" required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="empresa">Nome da empresa</Label>
-                <Input id="empresa" name="empresa" placeholder="Imobiliária Vale do Aço" required />
+                <Input id="empresa" name="empresa" required />
               </div>
 
               <Turnstile

@@ -669,7 +669,7 @@ function ImoveisContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2 space-y-1">
               <Label>Título *</Label>
-              <Input placeholder="Ex: Apartamento 3 quartos no Jardins" {...field('titulo')} />
+              <Input {...field('titulo')} />
             </div>
             <div className="space-y-1">
               <Label>Tipo *</Label>
@@ -692,39 +692,39 @@ function ImoveisContent() {
             </div>
             <div className="space-y-1">
               <Label>Preço (R$) *</Label>
-              <Input type="number" min="0" placeholder="350000" {...field('preco')} />
+              <Input type="number" min="0" {...field('preco')} />
             </div>
             <div className="space-y-1">
               <Label>Área (m²) *</Label>
-              <Input type="number" min="1" placeholder="85" {...field('areaM2')} />
+              <Input type="number" min="1" {...field('areaM2')} />
             </div>
             <div className="space-y-1">
               <Label>Quartos</Label>
-              <Input type="number" min="0" placeholder="3" {...field('quartos')} />
+              <Input type="number" min="0" {...field('quartos')} />
             </div>
             <div className="space-y-1">
               <Label>Banheiros</Label>
-              <Input type="number" min="0" placeholder="2" {...field('banheiros')} />
+              <Input type="number" min="0" {...field('banheiros')} />
             </div>
             <div className="space-y-1">
               <Label>Vagas</Label>
-              <Input type="number" min="0" placeholder="1" {...field('vagas')} />
+              <Input type="number" min="0" {...field('vagas')} />
             </div>
             <div className="sm:col-span-2 space-y-1">
               <Label>Logradouro *</Label>
-              <Input placeholder="Rua das Flores" {...field('logradouro')} />
+              <Input {...field('logradouro')} />
             </div>
             <div className="space-y-1">
               <Label>Número *</Label>
-              <Input placeholder="123" {...field('numero')} />
+              <Input {...field('numero')} />
             </div>
             <div className="space-y-1">
               <Label>Complemento</Label>
-              <Input placeholder="Apto 42" {...field('complemento')} />
+              <Input {...field('complemento')} />
             </div>
             <div className="space-y-1">
               <Label>Bairro *</Label>
-              <Input placeholder="Cidade Nobre" {...field('bairro')} />
+              <Input {...field('bairro')} />
             </div>
             <div className="space-y-1">
               <Label>Estado *</Label>
@@ -770,7 +770,6 @@ function ImoveisContent() {
             <div className="space-y-1">
               <Label>CEP</Label>
               <Input
-                placeholder="00000-000"
                 maxLength={9}
                 value={formData.cep}
                 onChange={(e) => {
@@ -782,15 +781,15 @@ function ImoveisContent() {
             </div>
             <div className="space-y-1">
               <Label>Código de Origem</Label>
-              <Input maxLength={255} placeholder="Ex: IMV-00123" {...field('codigoOrigem')} />
+              <Input maxLength={255} {...field('codigoOrigem')} />
             </div>
             <div className="sm:col-span-2 space-y-1">
               <Label>Descrição</Label>
-              <Input placeholder="Detalhes do imóvel..." {...field('descricao')} />
+              <Input {...field('descricao')} />
             </div>
             <div className="sm:col-span-2 space-y-1">
               <Label>URL do imóvel no site</Label>
-              <Input placeholder="https://suaimobiliaria.com.br/imoveis/123" {...field('urlImovel')} />
+              <Input {...field('urlImovel')} />
             </div>
           </div>
           <DialogFooter className="mt-2">

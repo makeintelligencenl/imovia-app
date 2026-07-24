@@ -428,27 +428,27 @@ export default function PerfisPage() {
 
             <div className="space-y-1">
               <Label>Preço mínimo (R$) *</Label>
-              <Input type="number" min="0" placeholder="500000" {...field('precoMin')} />
+              <Input type="number" min="0" {...field('precoMin')} />
             </div>
             <div className="space-y-1">
               <Label>Preço máximo (R$) *</Label>
-              <Input type="number" min="0" placeholder="1000000" {...field('precoMax')} />
+              <Input type="number" min="0" {...field('precoMax')} />
             </div>
             <div className="space-y-1">
               <Label>Área mínima (m²) *</Label>
-              <Input type="number" min="1" placeholder="60" {...field('areaMin')} />
+              <Input type="number" min="1" {...field('areaMin')} />
             </div>
             <div className="space-y-1">
               <Label>Quartos mínimos</Label>
-              <Input type="number" min="1" placeholder="2" {...field('quartosMin')} />
+              <Input type="number" min="1" {...field('quartosMin')} />
             </div>
             <div className="space-y-1">
               <Label>Cidades * <span className="text-xs text-muted-foreground">(separadas por vírgula)</span></Label>
-              <Input placeholder="Ipatinga, Timóteo" {...field('cidades')} />
+              <Input {...field('cidades')} />
             </div>
             <div className="space-y-1">
               <Label>Bairros preferidos <span className="text-xs text-muted-foreground">(opcional)</span></Label>
-              <Input placeholder="Cidade Nobre, Bethania" {...field('bairros')} />
+              <Input {...field('bairros')} />
             </div>
           </div>
           <DialogFooter className="mt-2">

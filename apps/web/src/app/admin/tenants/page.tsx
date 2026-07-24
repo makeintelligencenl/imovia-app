@@ -81,19 +81,19 @@ export default function AdminTenantsPage() {
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome</Label>
-                <Input name="name" placeholder="Imobiliária Central" required />
+                <Input name="name" required />
               </div>
               <div className="space-y-2">
                 <Label>Slug (identificador único)</Label>
-                <Input name="slug" placeholder="imobiliaria-central" required />
+                <Input name="slug" required />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input name="email" type="email" placeholder="contato@imobiliaria.com" />
+                <Input name="email" type="email" />
               </div>
               <div className="space-y-2">
                 <Label>Telefone</Label>
-                <Input name="telefone" placeholder="(11) 99999-9999" />
+                <Input name="telefone" />
               </div>
               <div className="md:col-span-2 flex gap-2">
                 <Button type="submit" disabled={saving}>{saving ? 'Criando...' : 'Criar imobiliária'}</Button>

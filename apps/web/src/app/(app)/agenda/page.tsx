@@ -589,7 +589,6 @@ export default function AgendaPage() {
                 <textarea
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
                   rows={3}
-                  placeholder="Notas internas sobre a visita..."
                   value={form.observacoes}
                   onChange={e => setF('observacoes', e.target.value)}
                 />

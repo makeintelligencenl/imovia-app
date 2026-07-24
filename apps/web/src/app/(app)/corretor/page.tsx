@@ -1103,7 +1103,6 @@ export default function CorretorDashboardPage() {
                 <label className="text-xs font-semibold text-slate-600">Observações</label>
                 <textarea rows={2} value={editForm.observacoes}
                   onChange={e => setEditForm(f => ({ ...f, observacoes: e.target.value }))}
-                  placeholder="Notas sobre a visita..."
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
               </div>
             </div>
