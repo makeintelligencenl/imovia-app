@@ -793,39 +793,16 @@ function MatchesContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Botão Filtrar */}
-          <Button variant="outline" size="sm" className="gap-2" onClick={painelAberto ? () => setPainelAberto(false) : abrirPainel}>
-            <SlidersHorizontal className="h-4 w-4" />
-            Filtrar
-            {filtrosAtivosArray.length > 0 && (
-              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                {filtrosAtivosArray.length}
-              </span>
-            )}
-            {painelAberto ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </Button>
-
-          {/* Toggle de view */}
-          <div className="flex rounded-lg border overflow-hidden">
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-none gap-1.5"
-              onClick={() => setViewMode('table')}
-            >
-              <LayoutList className="h-4 w-4" /> Tabela
-            </Button>
-            <Button
-              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-none gap-1.5"
-              onClick={() => setViewMode('kanban')}
-            >
-              <Columns3 className="h-4 w-4" /> Kanban
-            </Button>
-          </div>
-        </div>
+        <Button variant="outline" size="sm" className="gap-2" onClick={painelAberto ? () => setPainelAberto(false) : abrirPainel}>
+          <SlidersHorizontal className="h-4 w-4" />
+          Filtrar
+          {filtrosAtivosArray.length > 0 && (
+            <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+              {filtrosAtivosArray.length}
+            </span>
+          )}
+          {painelAberto ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </Button>
       </div>
 
       {/* Banner: vindo de "Ultimos matches" no Dashboard */}
@@ -967,10 +944,33 @@ function MatchesContent() {
         </Card>
       )}
 
-      {/* VIEW: TABELA */}
-      {viewMode === 'table' && (
-        <Card className="shadow-sm rounded-xl overflow-hidden">
-          <CardContent className="p-0">
+      {/* Tabela / Kanban */}
+      <Card className="shadow-sm rounded-xl overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b">
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
+              onClick={() => setViewMode('table')}
+            >
+              <LayoutList className="h-4 w-4" /> Tabela
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none gap-1.5"
+              onClick={() => setViewMode('kanban')}
+            >
+              <Columns3 className="h-4 w-4" /> Kanban
+            </Button>
+          </div>
+          <span className="text-sm text-muted-foreground">{matchesFiltrados.length} match(es)</span>
+        </div>
+
+        {viewMode === 'table' && (
+        <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1130,22 +1130,22 @@ function MatchesContent() {
               onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
             />
           </CardContent>
-        </Card>
-      )}
+        )}
 
-      {/* VIEW: KANBAN */}
-      {viewMode === 'kanban' && (
-        loading
-          ? <p className="text-sm text-muted-foreground py-10 text-center">Carregando...</p>
-          : (
-            <KanbanView
-              matches={matchesFiltrados}
-              etapas={etapas}
-              onEtapaChange={handleEtapaChange}
-              onShowHistorico={setHistoricoMatchId}
-            />
-          )
-      )}
+        {viewMode === 'kanban' && (
+          <CardContent className="p-3">
+            {loading
+              ? <p className="text-sm text-muted-foreground py-10 text-center">Carregando...</p>
+              : <KanbanView
+                  matches={matchesFiltrados}
+                  etapas={etapas}
+                  onEtapaChange={handleEtapaChange}
+                  onShowHistorico={setHistoricoMatchId}
+                />
+            }
+          </CardContent>
+        )}
+      </Card>
     </div>
   )
 }
