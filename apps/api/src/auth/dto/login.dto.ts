@@ -9,4 +9,8 @@ export class LoginDto {
   @ApiProperty()
   @IsString()
   password: string
+
+  @ApiProperty()
+  @IsString()
+  cfTurnstileToken: string
 }

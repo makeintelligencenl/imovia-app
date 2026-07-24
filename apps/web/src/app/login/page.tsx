@@ -1,9 +1,11 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
+import { Turnstile } from '@marsidev/react-turnstile'
+import type { TurnstileInstance } from '@marsidev/react-turnstile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +17,8 @@ function LoginForm() {
   const params  = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance>(null)
 
   // Mostra aviso se redirecionado por sessão expirada
   useEffect(() => {
@@ -30,16 +34,22 @@ function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!turnstileToken) {
+      toast.error('Verificação de segurança pendente. Aguarde.')
+      return
+    }
     setLoading(true)
     const form = new FormData(e.currentTarget)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method:      'POST',
         headers:     { 'Content-Type': 'application/json' },
-        // S1 FIX: `credentials: 'include'` faz o browser salvar o HttpOnly cookie
-        // que a API seta no response. O token não toca mais o JavaScript.
         credentials: 'include',
-        body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
+        body: JSON.stringify({
+          email:            form.get('email'),
+          password:         form.get('password'),
+          cfTurnstileToken: turnstileToken,
+        }),
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
@@ -59,6 +69,9 @@ function LoginForm() {
       }
     } catch {
       toast.error('Email ou senha incorretos')
+      // Reseta o widget para o próximo envio
+      turnstileRef.current?.reset()
+      setTurnstileToken(null)
     } finally {
       setLoading(false)
     }
@@ -137,7 +150,19 @@ function LoginForm() {
                   </button>
                 </div>
               </div>
-              <Button type="submit" className="w-full h-10 mt-2 font-semibold shadow-sm" disabled={loading}>
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                onSuccess={setTurnstileToken}
+                onError={() => setTurnstileToken(null)}
+                onExpire={() => setTurnstileToken(null)}
+                options={{ theme: 'light', language: 'pt-BR' }}
+              />
+              <Button
+                type="submit"
+                className="w-full h-10 font-semibold shadow-sm"
+                disabled={loading || !turnstileToken}
+              >
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
