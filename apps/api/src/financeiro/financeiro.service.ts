@@ -231,7 +231,7 @@ export class FinanceiroService {
     if (params.status) where.status = params.status
     // CORRETOR só vê as próprias comissões (tipo CORRETOR com seu corretorId)
     if (requester?.role === 'CORRETOR') {
-      where.corretorId = requester.sub
+      where.corretorId = requester.id
       where.tipo = 'CORRETOR'
     } else {
       if (params.tipo)       where.tipo       = params.tipo

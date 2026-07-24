@@ -30,35 +30,36 @@ export class ChatsController {
   @Get(':chatId/messages')
   @ApiOperation({ summary: 'Lista mensagens de um chat' })
   mensagens(
+    @Request() req: any,
     @Param('chatId')   chatId:    string,
     @Query('page')     page?:     string,
     @Query('pageSize') pageSize?: string,
   ) {
-    return this.chatsService.listarMensagens(chatId, { page, pageSize })
+    return this.chatsService.listarMensagens(req.user.tenantId, chatId, { page, pageSize })
   }
 
   @Post(':chatId/messages')
   @ApiOperation({ summary: 'Envia mensagem em um chat' })
-  enviar(@Param('chatId') chatId: string, @Body('message') message: string) {
-    return this.chatsService.enviarMensagem(chatId, message)
+  enviar(@Request() req: any, @Param('chatId') chatId: string, @Body('message') message: string) {
+    return this.chatsService.enviarMensagem(req.user.tenantId, chatId, message)
   }
 
   @Post(':chatId/assume')
   @ApiOperation({ summary: 'Assume atendimento humano (pausa IA)' })
-  assumir(@Param('chatId') chatId: string) {
-    return this.chatsService.assumirAtendimento(chatId)
+  assumir(@Request() req: any, @Param('chatId') chatId: string) {
+    return this.chatsService.assumirAtendimento(req.user.tenantId, chatId)
   }
 
   @Post(':chatId/end')
   @ApiOperation({ summary: 'Encerra atendimento humano (retorna IA)' })
-  encerrar(@Param('chatId') chatId: string) {
-    return this.chatsService.encerrarAtendimento(chatId)
+  encerrar(@Request() req: any, @Param('chatId') chatId: string) {
+    return this.chatsService.encerrarAtendimento(req.user.tenantId, chatId)
   }
 
   @Post(':chatId/resolve')
   @ApiOperation({ summary: 'Marca o chat como resolvido/finalizado' })
-  resolver(@Param('chatId') chatId: string) {
-    return this.chatsService.resolverChat(chatId)
+  resolver(@Request() req: any, @Param('chatId') chatId: string) {
+    return this.chatsService.resolverChat(req.user.tenantId, chatId)
   }
 
   // ADMIN only — edição/exclusão de mensagens e configurações
@@ -67,11 +68,12 @@ export class ChatsController {
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Edita uma mensagem' })
   editarMensagem(
+    @Request() req: any,
     @Param('chatId')    chatId:    string,
     @Param('messageId') messageId: string,
     @Body('message')    message:   string,
   ) {
-    return this.chatsService.editarMensagem(chatId, messageId, message)
+    return this.chatsService.editarMensagem(req.user.tenantId, chatId, messageId, message)
   }
 
   @Delete(':chatId/messages/:messageId')
@@ -79,10 +81,11 @@ export class ChatsController {
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Exclui uma mensagem' })
   excluirMensagem(
+    @Request() req: any,
     @Param('chatId')    chatId:    string,
     @Param('messageId') messageId: string,
   ) {
-    return this.chatsService.excluirMensagem(chatId, messageId)
+    return this.chatsService.excluirMensagem(req.user.tenantId, chatId, messageId)
   }
 
   @Get('client-names')
