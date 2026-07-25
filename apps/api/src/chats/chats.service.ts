@@ -130,7 +130,7 @@ export class ChatsService {
       corretor: { select: { id: true, name: true } },
       perfis: {
         take: 1,
-        orderBy: { updatedAt: 'desc' } as const,
+        orderBy: { createdAt: 'desc' } as const,
         include: {
           matches: {
             take: 1,
@@ -191,6 +191,8 @@ export class ChatsService {
             finalidade:  perfil.finalidade,
             precoMin:    perfil.precoMin,
             precoMax:    perfil.precoMax,
+            cidades:     perfil.cidades,
+            bairros:     perfil.bairros,
           }
         : null,
       match: match

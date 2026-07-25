@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Send, UserCheck, Bot, Phone, MapPin, Ruler, ExternalLink, LinkIcon, UserRound, Unlink, CheckCircle, MoreVertical, Pencil, Trash2, Users } from 'lucide-react'
+import { Send, UserCheck, Bot, MapPin, Ruler, ExternalLink, LinkIcon, UserRound, Unlink, CheckCircle, MoreVertical, Pencil, Trash2, Users, Search } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
 import { MobileBlock } from '@/components/layout/mobile-block'
@@ -38,7 +38,7 @@ interface GptMessage {
 
 interface MatchInfo {
   cliente: { id: string; nome: string; email: string; whatsapp: string | null; corretor: { id: string; name: string } | null }
-  perfil:  { id: string; finalidade: string; precoMin: number | null; precoMax: number | null } | null
+  perfil:  { id: string; finalidade: string; precoMin: number | null; precoMax: number | null; cidades: string[]; bairros: string[] } | null
   match:   { id: string; leadScore: number; etapa: string; updatedAt: string; imovel: { id: string; titulo: string; preco: number; areaM2: number | null; quartos: number | null; vagas: number | null; cidade: { nome: string } } } | null
 }
 
@@ -524,94 +524,60 @@ export default function ChatsPage() {
       <div className="shrink-0 border-border bg-card overflow-y-auto" style={{ width: panelWidth }}>
         {activeChat ? (
           <>
-            {/* Match */}
+            {/* Cliente */}
             <div className="p-3 border-b border-border">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
-                <LinkIcon className="h-3 w-3" /> Match associado
+                <UserRound className="h-3 w-3" /> Cliente
               </p>
               {matchInfo === 'loading' ? (
                 <p className="text-xs text-muted-foreground">Buscando…</p>
-              ) : matchInfo?.match ? (
-                <div className="rounded-lg border border-border overflow-hidden">
-                  <div className="h-16 bg-secondary/40 flex items-center justify-center relative">
-                    <MapPin className="h-6 w-6 text-muted-foreground/30" />
-                    <span className="absolute top-1.5 right-1.5 text-[10px] font-bold bg-green-500/20 text-green-500 border border-green-500/30 rounded px-1.5 py-0.5">
-                      {Math.round(matchInfo.match.leadScore)}%
-                    </span>
-                  </div>
-                  <div className="p-2 space-y-1">
-                    <p className="text-xs font-medium leading-snug line-clamp-2">{matchInfo.match.imovel.titulo}</p>
-                    <p className="text-sm font-semibold text-blue-500">R$ {fmtPreco(Number(matchInfo.match.imovel.preco))}</p>
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-2.5 w-2.5" />{matchInfo.match.imovel.cidade.nome}
-                    </p>
-                    {(matchInfo.match.imovel.areaM2 || matchInfo.match.imovel.quartos) && (
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Ruler className="h-2.5 w-2.5" />
-                        {matchInfo.match.imovel.areaM2 ? `${matchInfo.match.imovel.areaM2}m²` : ''}
-                        {matchInfo.match.imovel.quartos ? ` · ${matchInfo.match.imovel.quartos}q` : ''}
-                        {matchInfo.match.imovel.vagas ? ` · ${matchInfo.match.imovel.vagas}v` : ''}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-1 pt-1 border-t border-border">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                      <span className="text-[11px]">{ETAPA_LABELS[matchInfo.match.etapa] ?? matchInfo.match.etapa}</span>
-                    </div>
-                    <a
-                      href={`/matches?perfilId=${matchInfo.perfil?.id ?? ''}`}
-                      className="flex items-center gap-1 text-[11px] text-blue-500 hover:underline mt-1"
-                    >
-                      <ExternalLink className="h-3 w-3" /> Ver match completo
-                    </a>
-                  </div>
-                </div>
               ) : matchInfo?.cliente ? (
-                <p className="text-xs text-muted-foreground">Cliente encontrado, sem match vinculado.</p>
+                <div className="space-y-1.5">
+                  <InfoRow label="Nome"     value={matchInfo.cliente.nome} />
+                  <InfoRow label="Email"    value={matchInfo.cliente.email || '—'} />
+                  <InfoRow label="WhatsApp" value={matchInfo.cliente.whatsapp || activeChat.whatsappPhone || '—'} />
+                  <a
+                    href={`/clientes/${matchInfo.cliente.id}`}
+                    className="flex items-center gap-1 text-[11px] text-blue-500 hover:underline mt-2"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Ver cadastro completo
+                  </a>
+                </div>
               ) : (
                 <div className="flex flex-col items-center gap-2 py-3">
                   <Unlink className="h-5 w-5 text-muted-foreground/30" />
-                  <p className="text-[11px] text-muted-foreground text-center">Nenhum match vinculado a este chat.</p>
+                  <p className="text-[11px] text-muted-foreground text-center">Nenhum cliente vinculado a este chat.</p>
                 </div>
               )}
             </div>
 
-            {/* Perfil do lead */}
-            {matchInfo && matchInfo !== 'loading' && matchInfo?.cliente && (
+            {/* O que busca — perfil de busca mais recente (se houver mais de um) */}
+            {matchInfo && matchInfo !== 'loading' && matchInfo?.cliente && matchInfo.perfil && (
               <div className="p-3 border-b border-border">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
-                  <UserRound className="h-3 w-3" /> Perfil do lead
+                  <Search className="h-3 w-3" /> O que busca
                 </p>
                 <div className="space-y-1.5">
-                  <InfoRow label="Nome"     value={matchInfo.cliente.nome} />
-                  {matchInfo.perfil && (
-                    <>
-                      <InfoRow label="Tipo"    value={matchInfo.perfil.finalidade === 'COMPRA' ? 'Compra' : 'Aluguel'} />
-                      {(matchInfo.perfil.precoMin || matchInfo.perfil.precoMax) && (
-                        <InfoRow
-                          label="Orçamento"
-                          value={`R$ ${matchInfo.perfil.precoMin ? fmt(Number(matchInfo.perfil.precoMin)) + 'k' : '?'} – ${matchInfo.perfil.precoMax ? fmt(Number(matchInfo.perfil.precoMax)) + 'k' : '?'}`}
-                        />
-                      )}
-                    </>
+                  <InfoRow label="Tipo" value={matchInfo.perfil.finalidade === 'COMPRA' ? 'Compra' : 'Aluguel'} />
+                  {(matchInfo.perfil.precoMin || matchInfo.perfil.precoMax) && (
+                    <InfoRow
+                      label="Orçamento"
+                      value={`R$ ${matchInfo.perfil.precoMin ? fmt(Number(matchInfo.perfil.precoMin)) + 'k' : '?'} – ${matchInfo.perfil.precoMax ? fmt(Number(matchInfo.perfil.precoMax)) + 'k' : '?'}`}
+                    />
                   )}
-                  {matchInfo.cliente.corretor && (
-                    <InfoRow label="Corretor" value={matchInfo.cliente.corretor.name} />
+                  {matchInfo.perfil.cidades.length > 0 && (
+                    <InfoRow label="Cidades" value={matchInfo.perfil.cidades.join(', ')} />
+                  )}
+                  {matchInfo.perfil.bairros.length > 0 && (
+                    <InfoRow label="Bairros" value={matchInfo.perfil.bairros.join(', ')} />
                   )}
                 </div>
               </div>
             )}
 
-            {/* Telefone */}
-            <div className="p-3 border-b border-border">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
-                <Phone className="h-3 w-3" /> Contato
-              </p>
-              <p className="text-xs">{activeChat.whatsappPhone || '—'}</p>
-            </div>
-
             {/* Atribuir corretor */}
             {matchInfo && matchInfo !== 'loading' && matchInfo?.cliente && (
-              <div className="p-3">
+              <div className="p-3 border-b border-border">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
                   <Users className="h-3 w-3" /> Corretor responsável
                 </p>
@@ -626,6 +592,52 @@ export default function ChatsPage() {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Match — mais recente, se houver mais de um */}
+            {matchInfo && matchInfo !== 'loading' && matchInfo?.cliente && (
+              <div className="p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
+                  <LinkIcon className="h-3 w-3" /> Match associado
+                </p>
+                {matchInfo.match ? (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <div className="h-16 bg-secondary/40 flex items-center justify-center relative">
+                      <MapPin className="h-6 w-6 text-muted-foreground/30" />
+                      <span className="absolute top-1.5 right-1.5 text-[10px] font-bold bg-green-500/20 text-green-500 border border-green-500/30 rounded px-1.5 py-0.5">
+                        {Math.round(matchInfo.match.leadScore)}%
+                      </span>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <p className="text-xs font-medium leading-snug line-clamp-2">{matchInfo.match.imovel.titulo}</p>
+                      <p className="text-sm font-semibold text-blue-500">R$ {fmtPreco(Number(matchInfo.match.imovel.preco))}</p>
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-2.5 w-2.5" />{matchInfo.match.imovel.cidade.nome}
+                      </p>
+                      {(matchInfo.match.imovel.areaM2 || matchInfo.match.imovel.quartos) && (
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <Ruler className="h-2.5 w-2.5" />
+                          {matchInfo.match.imovel.areaM2 ? `${matchInfo.match.imovel.areaM2}m²` : ''}
+                          {matchInfo.match.imovel.quartos ? ` · ${matchInfo.match.imovel.quartos}q` : ''}
+                          {matchInfo.match.imovel.vagas ? ` · ${matchInfo.match.imovel.vagas}v` : ''}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-1 pt-1 border-t border-border">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                        <span className="text-[11px]">{ETAPA_LABELS[matchInfo.match.etapa] ?? matchInfo.match.etapa}</span>
+                      </div>
+                      <a
+                        href={`/matches?perfilId=${matchInfo.perfil?.id ?? ''}`}
+                        className="flex items-center gap-1 text-[11px] text-blue-500 hover:underline mt-1"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Ver match completo
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Sem match vinculado.</p>
+                )}
               </div>
             )}
           </>
