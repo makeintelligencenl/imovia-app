@@ -13,8 +13,18 @@ export class ChatsService {
     return process.env.GPTMAKER_API_KEY ?? ''
   }
 
-  private get workspaceId(): string {
-    return process.env.GPTMAKER_WORKSPACE_ID ?? ''
+  // Cada imobiliária tem seu próprio agente no GPT Maker — o workspace pode
+  // ser compartilhado (fallback no env) ou próprio, se um dia migrarem pra
+  // workspaces separados por tenant.
+  private async resolveGptMakerConfig(tenantId: string): Promise<{ workspaceId: string; agentId: string | null }> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { gptMakerWorkspaceId: true, gptMakerAgentId: true },
+    })
+    return {
+      workspaceId: tenant?.gptMakerWorkspaceId || process.env.GPTMAKER_WORKSPACE_ID || '',
+      agentId: tenant?.gptMakerAgentId ?? null,
+    }
   }
 
   private async gptFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -35,14 +45,23 @@ export class ChatsService {
     return res.json() as Promise<T>
   }
 
-  async listarChats(query?: { page?: string; pageSize?: string; agentId?: string; search?: string; finished?: string }) {
+  async listarChats(tenantId: string, query?: { page?: string; pageSize?: string; search?: string; finished?: string }) {
+    const { workspaceId, agentId } = await this.resolveGptMakerConfig(tenantId)
+
+    // Sem agente configurado para o tenant, não há como filtrar com segurança
+    // no GPT Maker — retorna vazio em vez de arriscar vazar chats de outro tenant.
+    if (!agentId) {
+      this.logger.warn(`Tenant ${tenantId} sem gptMakerAgentId configurado — listagem de chats vazia.`)
+      return []
+    }
+
     const qs = new URLSearchParams()
     if (query?.page)     qs.set('page',     query.page)
     if (query?.pageSize) qs.set('pageSize', query.pageSize)
-    if (query?.agentId)  qs.set('agentId',  query.agentId)
+    qs.set('agentId', agentId) // sempre o agente do próprio tenant — nunca vindo do cliente
     if (query?.search)   qs.set('query',    query.search)
     if (query?.finished) qs.set('finished', query.finished)
-    return this.gptFetch<unknown>(`/v2/workspace/${this.workspaceId}/chats?${qs.toString()}`)
+    return this.gptFetch<unknown>(`/v2/workspace/${workspaceId}/chats?${qs.toString()}`)
   }
 
   private async assertChatOwnership(tenantId: string, chatId: string): Promise<void> {

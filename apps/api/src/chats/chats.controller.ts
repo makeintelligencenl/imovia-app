@@ -17,13 +17,13 @@ export class ChatsController {
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Lista chats do GPT Maker' })
   listar(
+    @Request() req: any,
     @Query('page')     page?:     string,
     @Query('pageSize') pageSize?: string,
-    @Query('agentId')  agentId?:  string,
     @Query('search')   search?:   string,
     @Query('finished') finished?: string,
   ) {
-    return this.chatsService.listarChats({ page, pageSize, agentId, search, finished })
+    return this.chatsService.listarChats(req.user.tenantId, { page, pageSize, search, finished })
   }
 
   // ADMIN + CORRETOR — operações de atendimento
