@@ -18,7 +18,7 @@ interface GptChat {
   unReadCount:      number
   agentName:        string
   finished:         boolean
-  whatsappPhone:    string
+  whatsappPhone:    string | null
   conversationType: string
   createdAt:        string
   time:             string
@@ -303,7 +303,7 @@ export default function ChatsPage() {
   const applySearch = (c: GptChat) => {
     if (!search) return true
     const q = search.toLowerCase()
-    return getChatName(c, clientNames).toLowerCase().includes(q) || c.whatsappPhone.includes(q)
+    return getChatName(c, clientNames).toLowerCase().includes(q) || (c.whatsappPhone ?? '').includes(q)
   }
   // Todos os chats de ambas as listas, sem duplicatas
   const allChatsMap = new Map<string, GptChat>()
