@@ -1,26 +1,33 @@
--- Script idempotente de pos-deploy.
--- RLS desabilitado temporariamente; isolamento garantido pela aplicacao (where: { tenantId }).
+-- Script idempotente de pós-deploy.
+-- RLS ativo com isolamento por tenant via nestjs-cls + SET LOCAL por request.
 
--- Restaura BYPASSRLS para o usuario de app (caso NOBYPASSRLS tenha sido aplicado anteriormente)
+-- Garante NOBYPASSRLS no usuário de app (imovia_user não pode escapar das policies)
 DO $$
 BEGIN
-  EXECUTE format('ALTER ROLE %I BYPASSRLS', current_user);
+  EXECUTE format('ALTER ROLE %I NOBYPASSRLS', current_user);
 EXCEPTION WHEN insufficient_privilege THEN
-  RAISE NOTICE 'Sem permissao para ALTER ROLE.';
+  RAISE NOTICE 'Sem permissão para ALTER ROLE — ignorando.';
 END;
 $$;
 
--- Desabilita RLS em todas as tabelas
-ALTER TABLE IF EXISTS "clientes"        DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "imoveis"         DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "perfis_busca"    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "pipeline_etapas" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "matches"         DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "match_historico" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "visitas"         DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "comissoes_venda" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "users"           DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS "refresh_tokens"  DISABLE ROW LEVEL SECURITY;
+-- Habilita RLS nas tabelas com tenantId
+ALTER TABLE IF EXISTS "clientes"        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "imoveis"         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "perfis_busca"    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "pipeline_etapas" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "matches"         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "match_historico" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "visitas"         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "comissoes_venda" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "users"           ENABLE ROW LEVEL SECURITY;
+
+-- Habilita RLS nas tabelas globais (sem tenantId) com allow_all
+ALTER TABLE IF EXISTS "refresh_tokens"  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "tenants"         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "cidades"         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "estados"         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "tipos_imovel"    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS "demo_requests"   ENABLE ROW LEVEL SECURITY;
 
 -- Atribui EtapaTipo a etapas existentes (idempotente — só toca etapas ainda como PADRAO)
 -- Convenção: última por ordem = ENCERRADO, penúltima = FECHADO, nome contém 'visita' = VISITA
@@ -70,15 +77,28 @@ BEGIN
 END;
 $$;
 
--- Remove policies caso existam
+-- Recria policies de isolamento por tenant (idempotente)
 DO $$
 DECLARE
-  tbls TEXT[] := ARRAY['clientes','imoveis','perfis_busca','pipeline_etapas','matches','match_historico','visitas','comissoes_venda','users','refresh_tokens'];
+  tenant_tbls TEXT[] := ARRAY['clientes','imoveis','perfis_busca','pipeline_etapas','matches','match_historico','visitas','comissoes_venda','users'];
+  global_tbls TEXT[] := ARRAY['refresh_tokens','tenants','cidades','estados','tipos_imovel','demo_requests'];
   t TEXT;
 BEGIN
-  FOREACH t IN ARRAY tbls LOOP
+  -- Tabelas com tenantId: isola por tenant
+  FOREACH t IN ARRAY tenant_tbls LOOP
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
     EXECUTE format('DROP POLICY IF EXISTS allow_all ON %I', t);
+    EXECUTE format(
+      'CREATE POLICY tenant_isolation ON %I USING ("tenantId" = current_setting(''app.current_tenant_id'')::text) WITH CHECK ("tenantId" = current_setting(''app.current_tenant_id'')::text)',
+      t
+    );
+  END LOOP;
+
+  -- Tabelas globais: acesso livre (não têm tenantId)
+  FOREACH t IN ARRAY global_tbls LOOP
+    EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
+    EXECUTE format('DROP POLICY IF EXISTS allow_all ON %I', t);
+    EXECUTE format('CREATE POLICY allow_all ON %I USING (true) WITH CHECK (true)', t);
   END LOOP;
 END;
 $$;
