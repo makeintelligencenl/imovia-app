@@ -22,9 +22,9 @@ CREATE POLICY tenant_isolation ON imoveis
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
 
--- "perfisBusca"
-DROP POLICY IF EXISTS tenant_isolation ON "perfisBusca";
-CREATE POLICY tenant_isolation ON "perfisBusca"
+-- perfis_busca
+DROP POLICY IF EXISTS tenant_isolation ON perfis_busca;
+CREATE POLICY tenant_isolation ON perfis_busca
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
 
@@ -34,9 +34,9 @@ CREATE POLICY tenant_isolation ON matches
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
 
--- "matchesHistorico"
-DROP POLICY IF EXISTS tenant_isolation ON "matchesHistorico";
-CREATE POLICY tenant_isolation ON "matchesHistorico"
+-- match_historico
+DROP POLICY IF EXISTS tenant_isolation ON match_historico;
+CREATE POLICY tenant_isolation ON match_historico
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
 
@@ -46,9 +46,9 @@ CREATE POLICY tenant_isolation ON visitas
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
 
--- "pipelineEtapas"
-DROP POLICY IF EXISTS tenant_isolation ON "pipelineEtapas";
-CREATE POLICY tenant_isolation ON "pipelineEtapas"
+-- pipeline_etapas
+DROP POLICY IF EXISTS tenant_isolation ON pipeline_etapas;
+CREATE POLICY tenant_isolation ON pipeline_etapas
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
 
@@ -58,8 +58,8 @@ CREATE POLICY tenant_isolation ON users
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
 
--- "comissoesVenda"
-DROP POLICY IF EXISTS tenant_isolation ON "comissoesVenda";
-CREATE POLICY tenant_isolation ON "comissoesVenda"
+-- comissoes_venda
+DROP POLICY IF EXISTS tenant_isolation ON comissoes_venda;
+CREATE POLICY tenant_isolation ON comissoes_venda
   USING ("tenantId" = current_setting('app.current_tenant_id')::text)
   WITH CHECK ("tenantId" = current_setting('app.current_tenant_id')::text);
