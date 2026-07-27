@@ -51,9 +51,10 @@ export class TenantsController {
     }
   }
 
-  // Corretor só pode ver o próprio tenant
+  // SUPERADMIN acessa qualquer tenant; ADMIN e CORRETOR só o próprio
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role === 'SUPERADMIN') return this.tenantsService.findById(id)
     if (req.user.role !== 'ADMIN' && req.user.tenantId !== id) {
       return this.tenantsService.findById(req.user.tenantId)
     }

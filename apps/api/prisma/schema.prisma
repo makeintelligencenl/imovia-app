@@ -327,6 +327,7 @@ model ComissaoVenda {
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   CORRETOR
 }

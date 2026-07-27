@@ -18,14 +18,11 @@ export class AuthService {
     dto: RegisterDto,
     requester: { id: string; role: string; tenantId: string },
   ) {
-    if (requester.role !== 'ADMIN') {
+    if (requester.role !== 'ADMIN' && requester.role !== 'SUPERADMIN') {
       throw new ForbiddenException('Apenas administradores podem cadastrar usuários')
     }
-    if (requester.tenantId !== dto.tenantId) {
+    if (requester.role !== 'SUPERADMIN' && requester.tenantId !== dto.tenantId) {
       throw new ForbiddenException('Não é permitido criar usuários em outro tenant')
-    }
-    if (dto.role === 'ADMIN' && requester.role !== 'ADMIN') {
-      throw new ForbiddenException('Apenas administradores podem criar outros administradores')
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12)

@@ -21,7 +21,8 @@ export class RolesGuard implements CanActivate {
     if (!roles || roles.length === 0) return true
 
     const { user } = context.switchToHttp().getRequest()
-    if (!user || !roles.includes(user.role)) {
+    // SUPERADMIN tem acesso a qualquer rota protegida por role
+    if (!user || (user.role !== 'SUPERADMIN' && !roles.includes(user.role))) {
       throw new ForbiddenException('Acesso restrito a: ' + roles.join(', '))
     }
     return true

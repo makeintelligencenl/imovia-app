@@ -62,7 +62,7 @@ function LoginForm() {
       invalidateCache()
       updateLastActivity()
 
-      if (data.user.role === 'ADMIN' && data.user.tenantId === 'super-admin') {
+      if (data.user.role === 'SUPERADMIN') {
         router.push('/admin')
       } else {
         router.push('/dashboard')
