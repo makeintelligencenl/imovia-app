@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common'
 import { PrismaClient } from '@prisma/client'
-import { tenantStorage } from '../auth/interceptors/tenant.interceptor'
+import { ClsService } from 'nestjs-cls'
+import { TENANT_ID_KEY } from '../auth/interceptors/tenant.interceptor'
 
 // Nomes dos delegates de model no Prisma Client (camelCase, espelhando o schema)
 const MODEL_DELEGATES = new Set([
@@ -18,12 +19,7 @@ const MODEL_OPS = new Set([
   'count', 'aggregate', 'groupBy',
 ])
 
-/**
- * Cria um Proxy sobre um delegate de model (ex: prisma.cliente) que envolve
- * cada operação em uma transaction com SET LOCAL app.current_tenant_id.
- * Usa o client base (não proxied) para a transaction para evitar recursão.
- */
-function wrapModelDelegate(baseClient: PrismaClient, modelName: string, delegate: unknown) {
+function wrapModelDelegate(baseClient: PrismaClient, modelName: string, delegate: unknown, getCls: () => ClsService) {
   return new Proxy(delegate as object, {
     get(target: any, method: string | symbol) {
       const fn: unknown = Reflect.get(target, method)
@@ -31,10 +27,9 @@ function wrapModelDelegate(baseClient: PrismaClient, modelName: string, delegate
         return fn
       }
       return (args: unknown) => {
-        const tenantId = tenantStorage.getStore()
+        const tenantId = getCls().get<string>(TENANT_ID_KEY)
         if (!tenantId) return (fn as Function).call(target, args)
 
-        // Usa baseClient.$transaction (não proxied) para evitar recursão
         return (baseClient as any).$transaction(async (tx: any) => {
           await tx.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`
           return tx[modelName][method](args)
@@ -44,33 +39,23 @@ function wrapModelDelegate(baseClient: PrismaClient, modelName: string, delegate
   })
 }
 
-/**
- * Envolve o PrismaClient num Proxy que:
- *  - Intercepta acessos a delegates de model → injeta SET LOCAL por operação
- *  - Intercepta $transaction → injeta SET LOCAL no início da transaction
- * O tenantId vem do AsyncLocalStorage populado pelo TenantInterceptor.
- */
-function createRLSProxy(client: PrismaClient): PrismaClient {
-  // Cria os model delegates já envolvidos, usando o client base (não proxied)
+function createRLSProxy(client: PrismaClient, getCls: () => ClsService): PrismaClient {
   const wrappedDelegates = new Map<string, unknown>()
   for (const name of MODEL_DELEGATES) {
     const delegate = (client as any)[name]
-    if (delegate) wrappedDelegates.set(name, wrapModelDelegate(client, name, delegate))
+    if (delegate) wrappedDelegates.set(name, wrapModelDelegate(client, name, delegate, getCls))
   }
 
   return new Proxy(client, {
     get(target: any, prop: string | symbol) {
       if (typeof prop !== 'string') return Reflect.get(target, prop)
 
-      // Delegates de model → versão com RLS automático
       if (wrappedDelegates.has(prop)) return wrappedDelegates.get(prop)
 
-      // $transaction → injeta SET LOCAL no início
       if (prop === '$transaction') {
         const originalTx: Function = target.$transaction.bind(target)
         return (fnOrOps: unknown, options?: unknown) => {
-          const tenantId = tenantStorage.getStore()
-          // Batch transaction (array) ou sem tenant → passa direto
+          const tenantId = getCls().get<string>(TENANT_ID_KEY)
           if (!tenantId || Array.isArray(fnOrOps)) return originalTx(fnOrOps, options)
           return originalTx(async (tx: any) => {
             await tx.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`
@@ -89,10 +74,9 @@ type TxClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transa
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name)
-  // Referência ao $transaction original (não proxied), usada por withTenantRLS
   private readonly _baseTx: PrismaClient['$transaction']
 
-  constructor() {
+  constructor(private readonly cls: ClsService) {
     const rawUrl = process.env.DATABASE_URL ?? ''
     const poolSize    = process.env.DATABASE_POOL_SIZE    ?? '10'
     const poolTimeout = process.env.DATABASE_POOL_TIMEOUT ?? '20'
@@ -115,12 +99,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       }
     })
 
-    // Guarda referência ao $transaction real ANTES de criar o Proxy
     this._baseTx = this.$transaction.bind(this)
 
-    // Retorna o client envolvido no Proxy de RLS automático.
-    // A partir daqui, toda operação de model usa o tenantStorage para SET LOCAL.
-    return createRLSProxy(this) as this
+    // getCls usa arrow para capturar o `this` após o super(), não antes.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this
+    return createRLSProxy(this, () => self.cls) as this
   }
 
   async onModuleInit() {

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { TenantInterceptor } from './auth/interceptors/tenant.interceptor'
 import { ConfigModule } from '@nestjs/config'
+import { ClsModule } from 'nestjs-cls'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { PrismaModule } from './prisma/prisma.module'
 import { TenantsModule } from './tenants/tenants.module'
@@ -24,6 +25,9 @@ import { DemoRequestsModule } from './demo-requests/demo-requests.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // CLS (Continuation Local Storage) — propaga contexto de tenant por request
+    // através de RxJS Observables. O middleware monta o store antes do guard/interceptor.
+    ClsModule.forRoot({ middleware: { mount: true } }),
     // Max 10 tentativas de login por minuto por IP
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
     PrismaModule,
