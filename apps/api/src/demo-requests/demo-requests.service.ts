@@ -12,6 +12,12 @@ export class DemoRequestsService {
     private notificacoes: NotificacoesService,
   ) {}
 
+  async listar() {
+    return this.prisma.demoRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+    })
+  }
+
   async criar(dto: CreateDemoRequestDto) {
     await this.turnstile.verify(dto.cfTurnstileToken)
 

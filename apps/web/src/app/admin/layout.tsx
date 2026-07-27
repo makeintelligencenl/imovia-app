@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Building2, LayoutDashboard, Users, LogOut } from 'lucide-react'
+import { Building2, LayoutDashboard, Users, ClipboardList, LogOut } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -33,6 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {[
             { href: '/admin', label: 'Visão geral', icon: LayoutDashboard },
             { href: '/admin/tenants', label: 'Imobiliárias', icon: Users },
+            { href: '/admin/demos', label: 'Solicitações de Demo', icon: ClipboardList },
           ].map((item) => (
             <Link
               key={item.href}
