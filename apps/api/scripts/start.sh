@@ -2,7 +2,7 @@
 set -e
 
 echo ">>> Sincronizando schema..."
-npx prisma db push --accept-data-loss
+DATABASE_URL="${MIGRATION_DATABASE_URL:-$DATABASE_URL}" npx prisma db push --accept-data-loss
 
 echo ">>> Aplicando configuracoes pos-deploy (idempotente)..."
 npx prisma db execute --file scripts/post-deploy.sql --schema prisma/schema.prisma || true
