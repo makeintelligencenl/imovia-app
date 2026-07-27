@@ -24,6 +24,9 @@ const securityHeaders = [
       "connect-src 'self' https://api-imovia.makeintelligence.com.br https://challenges.cloudflare.com",
       "frame-src https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
+      "form-action 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
     ].join('; '),
   },
 ]
