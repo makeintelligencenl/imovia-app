@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
+import { ClsService } from 'nestjs-cls'
 import { PrismaService } from '../prisma/prisma.service'
 import { TurnstileService } from '../common/turnstile.service'
 import { NotificacoesService } from '../notificacoes/notificacoes.service'
 import { PipelineService } from '../pipeline/pipeline.service'
+import { TENANT_ID_KEY } from '../auth/interceptors/tenant.interceptor'
 import { CreateDemoRequestDto } from './dto/create-demo-request.dto'
 import * as bcrypt from 'bcryptjs'
 
@@ -13,6 +15,7 @@ export class DemoRequestsService {
     private turnstile: TurnstileService,
     private notificacoes: NotificacoesService,
     private pipeline: PipelineService,
+    private cls: ClsService,
   ) {}
 
   async listar() {
@@ -46,6 +49,7 @@ export class DemoRequestsService {
       data: { name: demo.empresa, slug, email: demo.email, telefone: demo.telefone },
     })
 
+    this.cls.set(TENANT_ID_KEY, tenant.id)
     await this.pipeline.criarEtapasPadrao(tenant.id)
 
     const senhaTemporaria = 'Imovia@2026'
