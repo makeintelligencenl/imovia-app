@@ -35,14 +35,24 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     await this.turnstile.verify(dto.cfTurnstileToken)
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } })
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: { tenant: { select: { name: true } } },
+    })
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw new UnauthorizedException('Credenciais inválidas')
     }
     if (!user.ativo) throw new UnauthorizedException('Usuário inativo')
 
     return {
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId,
+        tenantName: user.tenant?.name ?? null,
+      },
       token: this.jwt.sign({ sub: user.id, tenantId: user.tenantId }),
     }
   }
