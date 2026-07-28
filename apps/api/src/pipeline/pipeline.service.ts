@@ -49,13 +49,14 @@ export class PipelineService {
 
   // ── Reordenar etapas ─────────────────────────────────────────────────────
   async reordenar(tenantId: string, dto: ReorderEtapasDto) {
-    const updates = dto.ids.map((id, index) =>
-      this.prisma.pipelineEtapa.updateMany({
-        where: { id, tenantId },
-        data: { ordem: index + 1 },
-      }),
+    await Promise.all(
+      dto.ids.map((id, index) =>
+        this.prisma.pipelineEtapa.updateMany({
+          where: { id, tenantId },
+          data: { ordem: index + 1 },
+        }),
+      ),
     )
-    await this.prisma.$transaction(updates)
     return this.listar(tenantId)
   }
 

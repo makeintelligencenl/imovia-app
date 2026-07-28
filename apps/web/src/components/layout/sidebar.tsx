@@ -161,7 +161,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                     Imov<span className="text-blue-400 font-bold">IA</span>
                   </span>
                   {user?.tenantName && (
-                    <p className="text-[11px] text-slate-400 truncate leading-tight">{user.tenantName}</p>
+                    <p className="text-[13px] text-slate-400 truncate leading-tight">{user.tenantName}</p>
                   )}
                 </div>
               </Link>
@@ -197,7 +197,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 Imov<span className="text-blue-400 font-bold">IA</span>
               </span>
               {user?.tenantName && (
-                <p className="text-[11px] text-slate-400 truncate leading-tight">{user.tenantName}</p>
+                <p className="text-[13px] text-slate-400 truncate leading-tight">{user.tenantName}</p>
               )}
             </div>
           </Link>
