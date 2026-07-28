@@ -39,7 +39,6 @@ export default function UsuariosPage() {
   const [editName, setEditName] = useState('')
   const [editEmail,setEditEmail]= useState('')
   const [editPass, setEditPass] = useState('')
-  const [showEditPass, setShowEditPass] = useState(false)
 
   useEffect(() => {
     api.get<UsuarioAPI[]>('/users').then(setUsuarios).finally(() => setLoading(false))
@@ -252,6 +251,7 @@ function UsuarioRow({
   cancelar: () => void
   remover: (id: string, name: string) => void
 }) {
+  const [showEditPass, setShowEditPass] = useState(false)
   const isEditing = editId === u.id
   const isMe      = me?.id === u.id
 
