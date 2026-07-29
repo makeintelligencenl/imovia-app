@@ -266,17 +266,17 @@ export class MatchingService {
 
     const historicoUserId = corretorId ?? match.corretorId
 
-    return this.prisma.$transaction(async (tx) => {
-      const result = await tx.match.update({
+    const [result] = await Promise.all([
+      this.prisma.match.update({
         where:   { id: matchId },
         data:    { corretorId },
         include: { etapa: true, corretor: { select: CORRETOR_SELECT } },
-      })
-      await tx.matchHistorico.create({
+      }),
+      this.prisma.matchHistorico.create({
         data: { matchId, tenantId, tipo: corretorId ? 'CORRETOR_ATRIBUIDO' : 'CORRETOR_REMOVIDO', userId: historicoUserId ?? null },
-      })
-      return result
-    })
+      }),
+    ])
+    return result
   }
 
   // ─── Dashboard summary ────────────────────────────────────────────────────
