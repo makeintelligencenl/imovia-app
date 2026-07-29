@@ -30,10 +30,8 @@ export class ScoringService {
       score += SCORE_PRECO_MAX // preço exato (range = 0)
     }
 
-    // Especificidade da cidade
-    const numCidades = (perfil.cidades ?? []).length
-    if      (numCidades === 1) score += SCORE_CIDADE_MAX
-    else if (numCidades <= 3)  score += Math.floor(SCORE_CIDADE_MAX * 0.6)
+    // Especificidade da cidade (cidade única = match preciso)
+    if (perfil.cidadeId != null) score += SCORE_CIDADE_MAX
 
     // Bairro preferido
     const bairros = (perfil.bairros ?? []) as string[]

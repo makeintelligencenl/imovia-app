@@ -6,6 +6,7 @@ import { CreatePerfilDto } from './dto/create-perfil.dto'
 
 const INCLUDE_DEFAULT = {
   tipos:   true,
+  cidade:  { include: { estado: { select: { id: true, sigla: true } } } },
   cliente: { select: { id: true, nome: true, email: true, whatsapp: true, telefone: true } },
 } as const
 
@@ -26,7 +27,6 @@ export class PerfisService {
         ...rest,
         finalidade: dto.finalidade as Finalidade,
         bairros:    rest.bairros ?? [],
-        cidades:    rest.cidades ?? [],
         tenantId,
         tipos: { connect: tiposIds.map((id) => ({ id })) },
       },
@@ -75,7 +75,7 @@ export class PerfisService {
         precoMin:   { lte: imovel.preco },
         precoMax:   { gte: imovel.preco },
         areaMin:    { lte: imovel.areaM2 },
-        cidades:    { hasSome: [imovel.cidade.nome] },
+        ...(imovel.cidadeId ? { cidadeId: imovel.cidadeId } : {}),
       },
       include: INCLUDE_DEFAULT,
     })
@@ -96,11 +96,11 @@ export class PerfisService {
       include: INCLUDE_DEFAULT,
     })
 
-    // Recalcula leadScore pois preço/área/bairros/cidades/quartos podem ter mudado
+    // Re-executa matching completo: cria novos matches e recalcula scores existentes
     this.matchingService
-      .recalcularLeadScoresPorPerfil(tenantId, id)
+      .executarMatchingParaPerfil(tenantId, id)
       .catch((err: Error) =>
-        this.logger.error(`[update] Erro ao recalcular leadScore do perfil ${id}: ${err.message}`, err.stack),
+        this.logger.error(`[update] Erro no matching do perfil ${id}: ${err.message}`, err.stack),
       )
 
     return updated

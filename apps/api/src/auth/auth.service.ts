@@ -18,14 +18,11 @@ export class AuthService {
     dto: RegisterDto,
     requester: { id: string; role: string; tenantId: string },
   ) {
-    if (requester.role !== 'ADMIN') {
+    if (requester.role !== 'ADMIN' && requester.role !== 'SUPERADMIN') {
       throw new ForbiddenException('Apenas administradores podem cadastrar usuários')
     }
-    if (requester.tenantId !== dto.tenantId) {
+    if (requester.role !== 'SUPERADMIN' && requester.tenantId !== dto.tenantId) {
       throw new ForbiddenException('Não é permitido criar usuários em outro tenant')
-    }
-    if (dto.role === 'ADMIN' && requester.role !== 'ADMIN') {
-      throw new ForbiddenException('Apenas administradores podem criar outros administradores')
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12)
@@ -38,14 +35,24 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     await this.turnstile.verify(dto.cfTurnstileToken)
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } })
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: { tenant: { select: { name: true } } },
+    })
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw new UnauthorizedException('Credenciais inválidas')
     }
     if (!user.ativo) throw new UnauthorizedException('Usuário inativo')
 
     return {
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId,
+        tenantName: user.tenant?.name ?? null,
+      },
       token: this.jwt.sign({ sub: user.id, tenantId: user.tenantId }),
     }
   }

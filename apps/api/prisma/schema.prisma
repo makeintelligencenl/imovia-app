@@ -103,11 +103,12 @@ model Estado {
 }
 
 model Cidade {
-  id       Int      @id
+  id       Int           @id
   nome     String
   estadoId Int
-  estado   Estado   @relation(fields: [estadoId], references: [id])
+  estado   Estado        @relation(fields: [estadoId], references: [id])
   imoveis  Imovel[]
+  perfis   PerfilBusca[] @relation("PerfilCidade")
 
   @@index([estadoId])
   @@map("cidades")
@@ -185,6 +186,7 @@ model PerfilBusca {
   areaMax    Decimal?     @db.Decimal(8, 2)
   quartosMin Int?
   cidades    String[]
+  cidadeId   Int?
   bairros    String[]
   ativo      Boolean      @default(true)
   createdAt  DateTime     @default(now())
@@ -192,6 +194,7 @@ model PerfilBusca {
   tenantId   String
   clienteId  String
   matches    Match[]
+  cidade     Cidade?      @relation("PerfilCidade", fields: [cidadeId], references: [id])
   cliente    Cliente      @relation(fields: [clienteId], references: [id])
   tenant     Tenant       @relation(fields: [tenantId], references: [id])
   tipos      TipoImovel[] @relation("PerfilTipos")
@@ -327,6 +330,7 @@ model ComissaoVenda {
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   CORRETOR
 }

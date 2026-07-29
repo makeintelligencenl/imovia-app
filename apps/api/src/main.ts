@@ -1,12 +1,19 @@
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import helmet from 'helmet'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const cookieParser = require('cookie-parser')
 import { AppModule } from './app.module'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+
+  // Security headers — API pura (sem HTML), CSP desabilitado, CORP cross-origin para o web app
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }))
 
   // S1 FIX: habilita leitura de cookies — necessário para JWT em HttpOnly cookie
   app.use(cookieParser())

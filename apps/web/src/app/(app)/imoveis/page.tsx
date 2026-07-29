@@ -43,6 +43,8 @@ interface Imovel {
   codigoOrigem?: string
   descricao?: string
   urlImovel?: string
+  latitude?: number | null
+  longitude?: number | null
   status: string
   createdAt: string
 }

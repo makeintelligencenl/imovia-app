@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import {
-  UserPlus, Trash2, Pencil, Check, X, ShieldCheck, User as UserIcon,
+  UserPlus, Trash2, Pencil, Check, X, ShieldCheck, User as UserIcon, Eye, EyeOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -32,6 +32,7 @@ export default function UsuariosPage() {
   const [newPass,    setNewPass]    = useState('')
   const [newRole,    setNewRole]    = useState<'CORRETOR' | 'ADMIN'>('CORRETOR')
   const [saving,     setSaving]     = useState(false)
+  const [showNewPass, setShowNewPass] = useState(false)
 
   // Edição inline
   const [editId,   setEditId]   = useState<string | null>(null)
@@ -176,8 +177,14 @@ export default function UsuariosPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs">Senha (mín. 8 car.)</Label>
-                  <Input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)}
-                    className="h-7 text-sm" />
+                  <div className="relative">
+                    <Input type={showNewPass ? 'text' : 'password'} value={newPass} onChange={(e) => setNewPass(e.target.value)}
+                      className="h-7 text-sm pr-8" />
+                    <button type="button" onClick={() => setShowNewPass(v => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showNewPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Perfil</Label>
@@ -244,6 +251,7 @@ function UsuarioRow({
   cancelar: () => void
   remover: (id: string, name: string) => void
 }) {
+  const [showEditPass, setShowEditPass] = useState(false)
   const isEditing = editId === u.id
   const isMe      = me?.id === u.id
 
@@ -263,9 +271,15 @@ function UsuarioRow({
             placeholder="Nome" className="h-7 text-sm" autoFocus />
           <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)}
             placeholder="Email" className="h-7 text-sm" />
-          <Input type="password" value={editPass} onChange={(e) => setEditPass(e.target.value)}
-            placeholder="Nova senha (opcional)" className="h-7 text-sm"
-            onKeyDown={(e) => { if (e.key === 'Enter') salvarEdicao(u.id); if (e.key === 'Escape') cancelar() }} />
+          <div className="relative">
+            <Input type={showEditPass ? 'text' : 'password'} value={editPass} onChange={(e) => setEditPass(e.target.value)}
+              placeholder="Nova senha (opcional)" className="h-7 text-sm pr-8"
+              onKeyDown={(e) => { if (e.key === 'Enter') salvarEdicao(u.id); if (e.key === 'Escape') cancelar() }} />
+            <button type="button" onClick={() => setShowEditPass(v => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              {showEditPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex-1 min-w-0">

@@ -25,6 +25,8 @@ import Link from 'next/link'
 
 interface Tipo { id: string; nome: string }
 interface CorretorResumido { id: string; name: string; email: string }
+interface Estado { id: number; sigla: string; nome: string }
+interface Cidade { id: number; nome: string; estadoId: number }
 
 interface Perfil {
   id: string
@@ -33,7 +35,8 @@ interface Perfil {
   precoMax: number | string
   areaMin:  number | string
   quartosMin?: number | null
-  cidades: string[]
+  cidadeId?: number | null
+  cidade?: { id: number; nome: string; estadoId: number; estado: { id: number; sigla: string } } | null
   bairros: string[]
   tipos: Tipo[]
   _count: { matches: number }
@@ -84,7 +87,7 @@ interface Match {
     precoMax:   number | string
     areaMin:    number | string
     quartosMin: number | null
-    cidades:    string[]
+    cidadeId:   number | null
     bairros:    string[]
   }
 }
@@ -97,9 +100,7 @@ function initials(name: string) {
 
 function fmtBRL(v: number | string) {
   const n = Number(v)
-  if (n >= 1_000_000) return `R$ ${(n / 1_000_000).toFixed(1).replace('.', ',')}M`
-  if (n >= 1_000)     return `R$ ${(n / 1_000).toFixed(0)}k`
-  return `R$ ${n.toLocaleString('pt-BR')}`
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })
 }
 
 function fmtDate(iso: string) {
@@ -137,10 +138,8 @@ function computeLeadScoreDetail(m: Match): ScoreItem[] {
   } else { precoPts = 20; precoDetalhe = 'Preço exato' }
 
   // 2. Cidade
-  const nc = m.perfil.cidades.length
-  let cidadePts = 0, cidadeDetalhe = '4 ou mais cidades aceitas'
-  if      (nc === 1) { cidadePts = 5; cidadeDetalhe = 'Perfil com cidade única (match preciso)' }
-  else if (nc <= 3)  { cidadePts = 3; cidadeDetalhe = `Perfil com ${nc} cidades aceitas` }
+  const cidadePts    = m.perfil.cidadeId != null ? 5 : 0
+  const cidadeDetalhe = m.perfil.cidadeId != null ? 'Perfil com cidade única (match preciso)' : 'Perfil sem cidade definida'
 
   // 3. Bairro
   const bairros   = m.perfil.bairros as string[]
@@ -187,7 +186,8 @@ const BLANK_PERFIL = {
   precoMax:   '',
   areaMin:    '',
   quartosMin: '',
-  cidades:    '',
+  estadoId:   '',
+  cidadeId:   '',
   bairros:    '',
 }
 
@@ -203,6 +203,8 @@ export default function ClienteDetalhePage() {
   const [cliente,         setCliente]         = useState<Cliente | null>(null)
   const [matches,         setMatches]         = useState<Match[]>([])
   const [tipos,           setTipos]           = useState<Tipo[]>([])
+  const [estados,         setEstados]         = useState<Estado[]>([])
+  const [cidadesPerfil,   setCidadesPerfil]   = useState<Cidade[]>([])
   const [etapas,          setEtapas]          = useState<Etapa[]>([])
   const [corretores,      setCorretores]      = useState<CorretorResumido[]>([])
   const [loading,          setLoading]          = useState(true)
@@ -258,9 +260,16 @@ export default function ClienteDetalhePage() {
     }
   }
 
+  async function carregarCidadesPerfil(estadoId: number) {
+    if (!estadoId) { setCidadesPerfil([]); return }
+    const data = await api.get<Cidade[]>(`/localidades/cidades?estadoId=${estadoId}`)
+    setCidadesPerfil(data)
+  }
+
   useEffect(() => {
     loadCliente()
     api.get<Tipo[]>('/tipos').then(setTipos).catch(() => {})
+    api.get<Estado[]>('/localidades/estados').then(setEstados).catch(() => {})
     api.get<Etapa[]>('/pipeline/etapas').then(setEtapas).catch(() => {})
     api.get<CorretorResumido[]>('/users').then(setCorretores).catch(() => {})
   }, [id])
@@ -322,6 +331,7 @@ export default function ClienteDetalhePage() {
   }
 
   function abrirEditarPerfil(p: Perfil) {
+    const estadoId = p.cidade?.estadoId ? String(p.cidade.estadoId) : ''
     setPerfilData({
       finalidade: p.finalidade,
       tiposIds:   p.tipos.map(t => t.id),
@@ -329,9 +339,11 @@ export default function ClienteDetalhePage() {
       precoMax:   String(p.precoMax),
       areaMin:    String(p.areaMin),
       quartosMin: p.quartosMin ? String(p.quartosMin) : '',
-      cidades:    p.cidades.join(', '),
+      estadoId,
+      cidadeId:   p.cidadeId ? String(p.cidadeId) : '',
       bairros:    p.bairros.join(', '),
     })
+    if (estadoId) carregarCidadesPerfil(Number(estadoId))
     setPerfilEditId(p.id)
     setPerfilMode('editar')
   }
@@ -348,7 +360,7 @@ export default function ClienteDetalhePage() {
   async function handleSalvarPerfil() {
     if (!perfilData.tiposIds.length)           { toast.error('Selecione ao menos um tipo'); return }
     if (!perfilData.precoMin || !perfilData.precoMax) { toast.error('Informe a faixa de preço'); return }
-    if (!perfilData.cidades)                   { toast.error('Informe ao menos uma cidade'); return }
+    if (!perfilData.cidadeId)                  { toast.error('Selecione uma cidade'); return }
     if (!perfilData.areaMin)                   { toast.error('Informe a área mínima'); return }
 
     setPerfilSaving(true)
@@ -360,7 +372,7 @@ export default function ClienteDetalhePage() {
       precoMax:   Number(perfilData.precoMax),
       areaMin:    Number(perfilData.areaMin),
       quartosMin: perfilData.quartosMin ? Number(perfilData.quartosMin) : undefined,
-      cidades:    perfilData.cidades.split(',').map(s => s.trim()).filter(Boolean),
+      cidadeId:   Number(perfilData.cidadeId),
       bairros:    perfilData.bairros  ? perfilData.bairros.split(',').map(s => s.trim()).filter(Boolean) : [],
     }
     try {
@@ -642,11 +654,11 @@ export default function ClienteDetalhePage() {
                     <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5">
                       📐 {String(p.areaMin)}m²+
                     </span>
-                    {p.cidades.map(c => (
-                      <span key={c} className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5">
-                        📍 {c}
+                    {p.cidade && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5">
+                        📍 {p.cidade.nome}
                       </span>
-                    ))}
+                    )}
                   </div>
                   {/* Footer */}
                   <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -925,10 +937,42 @@ export default function ClienteDetalhePage() {
               </div>
             </div>
 
-            {/* Cidades */}
-            <div className="space-y-1">
-              <Label>Cidades * <span className="text-xs text-muted-foreground font-normal">(separadas por vírgula)</span></Label>
-              <Input value={perfilData.cidades} onChange={e => setPerfilData(p => ({ ...p, cidades: e.target.value }))} />
+            {/* Estado + Cidade */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Estado *</Label>
+                <Select
+                  value={perfilData.estadoId || '__none__'}
+                  onValueChange={v => {
+                    const estadoId = v === '__none__' ? '' : v
+                    setPerfilData(p => ({ ...p, estadoId, cidadeId: '' }))
+                    setCidadesPerfil([])
+                    if (estadoId) carregarCidadesPerfil(Number(estadoId))
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Selecione o estado</SelectItem>
+                    {estados.map(e => <SelectItem key={e.id} value={String(e.id)}>{e.sigla} — {e.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Cidade *</Label>
+                <Select
+                  value={perfilData.cidadeId || '__none__'}
+                  disabled={!perfilData.estadoId || cidadesPerfil.length === 0}
+                  onValueChange={v => setPerfilData(p => ({ ...p, cidadeId: v === '__none__' ? '' : v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={perfilData.estadoId ? 'Selecione' : 'Selecione o estado'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Selecione a cidade</SelectItem>
+                    {cidadesPerfil.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Bairros */}

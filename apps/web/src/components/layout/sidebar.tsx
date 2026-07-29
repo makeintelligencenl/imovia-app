@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface UserInfo { name: string; email: string; role: string }
+interface UserInfo { name: string; email: string; role: string; tenantName?: string }
 
 const NAV_ITEMS_BASE = [
   { href: '/imoveis',           label: 'Imóveis',       icon: Home,          adminOnly: false },
@@ -152,13 +152,18 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           >
             {/* Logo + fechar */}
             <div className="px-3 py-4 border-b border-white/10 flex items-center justify-between min-h-[57px]">
-              <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onMobileClose}>
+              <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0" onClick={onMobileClose}>
                 <div className="p-1.5 rounded-lg bg-blue-500/20 shrink-0">
                   <Building2 className="h-4 w-4 text-blue-400" />
                 </div>
-                <span className="text-sm font-semibold text-white tracking-tight leading-tight whitespace-nowrap">
-                  Imov<span className="text-blue-400 font-bold">IA</span>
-                </span>
+                <div className="min-w-0">
+                  <span className="text-sm font-semibold text-white tracking-tight leading-tight whitespace-nowrap">
+                    Imov<span className="text-blue-400 font-bold">IA</span>
+                  </span>
+                  {user?.tenantName && (
+                    <p className="text-[13px] text-slate-400 truncate leading-tight">{user.tenantName}</p>
+                  )}
+                </div>
               </Link>
               <button onClick={onMobileClose} className="flex items-center justify-center h-7 w-7 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-all">
                 <X className="h-4 w-4" />
@@ -182,14 +187,19 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         <div className="px-3 py-4 border-b border-white/10 flex items-center justify-between min-h-[57px]">
           <Link
             href="/dashboard"
-            className={cn('flex items-center gap-2.5 group transition-all duration-200 overflow-hidden', collapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-auto opacity-100')}
+            className={cn('flex items-center gap-2.5 group transition-all duration-200 overflow-hidden min-w-0', collapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-auto opacity-100')}
           >
             <div className="p-1.5 rounded-lg bg-blue-500/20 shrink-0">
               <Building2 className="h-4 w-4 text-blue-400" />
             </div>
-            <span className="text-sm font-semibold text-white tracking-tight leading-tight whitespace-nowrap">
-              Imov<span className="text-blue-400 font-bold">IA</span>
-            </span>
+            <div className="min-w-0">
+              <span className="text-sm font-semibold text-white tracking-tight leading-tight whitespace-nowrap">
+                Imov<span className="text-blue-400 font-bold">IA</span>
+              </span>
+              {user?.tenantName && (
+                <p className="text-[13px] text-slate-400 truncate leading-tight">{user.tenantName}</p>
+              )}
+            </div>
           </Link>
           {collapsed && (
             <Link href="/dashboard" className="mx-auto">
