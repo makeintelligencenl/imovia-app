@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { api } from '@/lib/api'
+import { api, invalidateCache } from '@/lib/api'
 import { formatWhatsappLink } from '@/lib/utils'
 import { LeadScore } from '@/components/ui/lead-score'
 import { AgendarVisitaModal, VisitaRapidaData } from '@/components/ui/agendar-visita-modal'
@@ -394,17 +394,37 @@ export default function ClienteDetalhePage() {
       bairros:    perfilData.bairros  ? perfilData.bairros.split(',').map(s => s.trim()).filter(Boolean) : [],
     }
     try {
+      let savedId = perfilEditId
       if (perfilMode === 'criar') {
-        await api.post('/perfis', payload)
-        toast.success('Perfil de busca criado!')
+        const created = await api.post<{ id: string }>('/perfis', payload)
+        savedId = created.id
+        toast.success('Perfil de busca criado! Buscando matches...')
       } else {
         await api.patch(`/perfis/${perfilEditId}`, payload)
-        toast.success('Perfil atualizado.')
+        toast.success('Perfil atualizado! Buscando matches...')
       }
       setPerfilMode(null)
-      setSelectedPerfil(null)
       setMatches([])
       loadCliente()
+
+      // Aguarda o matching assíncrono do backend completar (~2s) e recarrega
+      setTimeout(async () => {
+        invalidateCache('/clientes')
+        invalidateCache('/matches')
+        await loadCliente()
+        if (savedId) {
+          setSelectedPerfil(savedId)
+          try {
+            const novosMatches = await api.get<Match[]>(`/matches?perfilId=${savedId}`)
+            setMatches(novosMatches)
+            if (novosMatches.length > 0) {
+              toast.success(`${novosMatches.length} match${novosMatches.length > 1 ? 'es' : ''} encontrado${novosMatches.length > 1 ? 's' : ''}!`)
+            } else {
+              toast.info('Nenhum imóvel compatível encontrado por enquanto.')
+            }
+          } catch { /* silencioso */ }
+        }
+      }, 2500)
     } catch { toast.error('Erro ao salvar perfil') }
     finally  { setPerfilSaving(false) }
   }
