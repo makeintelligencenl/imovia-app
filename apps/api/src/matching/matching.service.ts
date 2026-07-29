@@ -119,6 +119,40 @@ export class MatchingService {
     )
   }
 
+  // ─── Move matches incompatíveis para "Encerrado" após update de perfil ───
+  async invalidarMatchesIncompativeisPorPerfil(tenantId: string, perfilId: string): Promise<void> {
+    const perfil = await this.prisma.perfilBusca.findFirst({
+      where: { id: perfilId, tenantId }, include: { tipos: true },
+    })
+    if (!perfil) return
+
+    const etapaEncerrada = await this.prisma.pipelineEtapa.findFirst({
+      where: { tenantId, ativo: true, tipo: 'ENCERRADO' },
+    }) ?? await this.prisma.pipelineEtapa.findFirst({
+      where: { tenantId, ativo: true }, orderBy: { ordem: 'desc' },
+    })
+    if (!etapaEncerrada) return
+
+    const matches = await this.prisma.match.findMany({
+      where:   { perfilId, tenantId, etapaId: { not: etapaEncerrada.id } },
+      include: { imovel: { include: { cidade: true } } },
+    })
+
+    const incompativeis = matches.filter(m => !this.compatibilidade.isCompativel(perfil, m.imovel))
+    if (incompativeis.length === 0) return
+
+    this.logger.log(`[Perfil ${perfilId}] Desativando ${incompativeis.length} match(es) incompatíveis`)
+
+    await Promise.all(
+      incompativeis.flatMap(m => [
+        this.prisma.match.update({ where: { id: m.id }, data: { etapaId: etapaEncerrada.id } }),
+        this.prisma.matchHistorico.create({
+          data: { matchId: m.id, tenantId, tipo: 'ETAPA_ALTERADA', etapaOrigemId: m.etapaId, etapaDestinoId: etapaEncerrada.id },
+        }),
+      ]),
+    )
+  }
+
   // ─── Recalcula leadScore de todos os matches de um imóvel atualizado ──────
   async recalcularLeadScoresPorImovel(tenantId: string, imovelId: string): Promise<void> {
     const imovel = await this.prisma.imovel.findFirst({
