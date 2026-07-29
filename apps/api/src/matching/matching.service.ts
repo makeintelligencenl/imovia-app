@@ -32,7 +32,7 @@ export class MatchingService {
 
     const perfisCompativeis = await this.prisma.perfilBusca.findMany({
       where:   { tenantId, ...this.compatibilidade.perfilWhere(imovel) },
-      include: { tipos: true, cliente: true },
+      include: { tipos: true, cliente: { select: { email: true, nome: true, telefone: true, corretorId: true } } },
     })
 
     const resultados = await Promise.all(
@@ -47,7 +47,7 @@ export class MatchingService {
   async executarMatchingParaPerfil(tenantId: string, perfilId: string) {
     const perfil = await this.prisma.perfilBusca.findFirst({
       where:   { id: perfilId, tenantId, ativo: true },
-      include: { tipos: true, cliente: true },
+      include: { tipos: true, cliente: { select: { email: true, nome: true, telefone: true, corretorId: true } } },
     })
     if (!perfil) return { matchesEncontrados: 0 }
 
@@ -71,7 +71,14 @@ export class MatchingService {
 
     try {
       const match = await this.prisma.match.create({
-        data: { perfilId: perfil.id, imovelId: imovel.id, tenantId, etapaId: primeiraEtapa.id, leadScore },
+        data: {
+          perfilId:   perfil.id,
+          imovelId:   imovel.id,
+          tenantId,
+          etapaId:    primeiraEtapa.id,
+          leadScore,
+          corretorId: perfil.cliente.corretorId ?? null,
+        },
       })
       await this.prisma.matchHistorico.create({
         data: { matchId: match.id, tenantId, tipo: 'MATCH_CRIADO', etapaDestinoId: primeiraEtapa.id },

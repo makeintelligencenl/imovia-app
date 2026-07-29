@@ -28,9 +28,10 @@ export interface PerfilInput {
 
 export interface PerfilComCliente extends PerfilInput {
   cliente: {
-    email:    string | null
-    nome:     string | null
-    telefone: string | null
+    email:      string | null
+    nome:       string | null
+    telefone:   string | null
+    corretorId: string | null
   }
 }
 
