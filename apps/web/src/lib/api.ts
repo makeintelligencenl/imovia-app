@@ -61,7 +61,7 @@ export async function apiRequest<T>(method: string, path: string, body?: unknown
     const resource = '/' + path.replace(/^\//, '').split(/[/?]/)[0]
     const CASCADE: Record<string, string[]> = {
       '/imoveis':   ['/imoveis', '/matches'],
-      '/perfis':    ['/perfis',  '/matches'],
+      '/perfis':    ['/perfis',  '/matches', '/clientes'],
       '/clientes':  ['/clientes', '/perfis'],
       '/matches':   ['/matches'],
       '/visitas':   ['/visitas'],
