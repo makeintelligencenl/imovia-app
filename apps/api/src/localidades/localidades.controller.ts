@@ -13,7 +13,13 @@ export class LocalidadesController {
   }
 
   @Get('cidades')
-  async cidades(@Query('estadoId') estadoId?: string) {
+  async cidades(@Query('estadoId') estadoId?: string, @Query('id') id?: string) {
+    if (id) {
+      return this.prisma.cidade.findUnique({
+        where: { id: Number(id) },
+        select: { id: true, nome: true, estadoId: true },
+      })
+    }
     return this.prisma.cidade.findMany({
       where: estadoId ? { estadoId: Number(estadoId) } : undefined,
       orderBy: { nome: 'asc' },

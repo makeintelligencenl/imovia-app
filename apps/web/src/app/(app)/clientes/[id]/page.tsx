@@ -330,8 +330,27 @@ export default function ClienteDetalhePage() {
     setPerfilMode('criar')
   }
 
-  function abrirEditarPerfil(p: Perfil) {
-    const estadoId = p.cidade?.estadoId ? String(p.cidade.estadoId) : ''
+  async function abrirEditarPerfil(p: Perfil) {
+    let estadoId = p.cidade?.estadoId ? String(p.cidade.estadoId) : ''
+
+    // Fallback: se cidade não veio no payload mas cidadeId existe, busca o estadoId via API
+    if (!estadoId && p.cidadeId) {
+      try {
+        const c = await api.get<{ id: number; nome: string; estadoId: number } | null>(
+          `/localidades/cidades?id=${p.cidadeId}`
+        )
+        if (c) estadoId = String(c.estadoId)
+      } catch { /* ignora */ }
+    }
+
+    const cidadeId = p.cidadeId ? String(p.cidadeId) : ''
+
+    // Carrega cidades do estado antes de abrir o modal, para o Select já ter as opções
+    if (estadoId) {
+      const cidades = await api.get<Cidade[]>(`/localidades/cidades?estadoId=${estadoId}`)
+      setCidadesPerfil(cidades)
+    }
+
     setPerfilData({
       finalidade: p.finalidade,
       tiposIds:   p.tipos.map(t => t.id),
@@ -340,10 +359,9 @@ export default function ClienteDetalhePage() {
       areaMin:    String(p.areaMin),
       quartosMin: p.quartosMin ? String(p.quartosMin) : '',
       estadoId,
-      cidadeId:   p.cidadeId ? String(p.cidadeId) : '',
+      cidadeId,
       bairros:    p.bairros.join(', '),
     })
-    if (estadoId) carregarCidadesPerfil(Number(estadoId))
     setPerfilEditId(p.id)
     setPerfilMode('editar')
   }
