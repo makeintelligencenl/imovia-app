@@ -96,9 +96,10 @@ export class PerfisService {
       include: INCLUDE_DEFAULT,
     })
 
-    // Re-executa matching completo: cria novos matches e recalcula scores existentes
+    // Invalida matches que ficaram incompatíveis com os novos critérios, depois cria novos
     this.matchingService
-      .executarMatchingParaPerfil(tenantId, id)
+      .invalidarMatchesIncompativeisPorPerfil(tenantId, id)
+      .then(() => this.matchingService.executarMatchingParaPerfil(tenantId, id))
       .catch((err: Error) =>
         this.logger.error(`[update] Erro no matching do perfil ${id}: ${err.message}`, err.stack),
       )
