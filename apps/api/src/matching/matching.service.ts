@@ -241,17 +241,17 @@ export class MatchingService {
     const etapa = await this.prisma.pipelineEtapa.findFirst({ where: { id: etapaId, tenantId, ativo: true } })
     if (!etapa) throw new NotFoundException('Etapa não encontrada')
 
-    return this.prisma.$transaction(async (tx) => {
-      const result = await tx.match.update({
+    const [result] = await Promise.all([
+      this.prisma.match.update({
         where:   { id: matchId },
         data:    { etapaId },
         include: { etapa: true, corretor: { select: CORRETOR_SELECT } },
-      })
-      await tx.matchHistorico.create({
+      }),
+      this.prisma.matchHistorico.create({
         data: { matchId, tenantId, tipo: 'ETAPA_ALTERADA', etapaOrigemId: match.etapaId, etapaDestinoId: etapaId, userId: userId ?? null },
-      })
-      return result
-    })
+      }),
+    ])
+    return result
   }
 
   // ─── Associar / desassociar corretor ao match ─────────────────────────────
