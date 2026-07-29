@@ -678,12 +678,11 @@ function MatchesContent() {
     try {
       await api.patch(`/matches/${matchId}/corretor`, { corretorId: value })
       toast.success(value ? 'Corretor atribuido' : 'Corretor removido')
-    } catch (err: unknown) {
+    } catch {
       setMatches((prev) =>
         prev.map((m) => m.id === matchId ? { ...m, corretorId: oldMatch.corretorId, corretor: oldMatch.corretor } : m),
       )
-      const msg = err instanceof Error ? err.message : 'Erro ao atribuir corretor'
-      toast.error(msg)
+      toast.error('Erro ao atribuir corretor')
     }
   }
 
