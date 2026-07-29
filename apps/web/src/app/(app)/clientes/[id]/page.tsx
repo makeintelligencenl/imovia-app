@@ -237,6 +237,9 @@ export default function ClienteDetalhePage() {
   const [removePerfilId, setRemovePerfilId] = useState<string | null>(null)
   const [removingPerfil, setRemovingPerfil] = useState(false)
 
+  // Banner de resultado do matching
+  const [matchBanner, setMatchBanner] = useState<{ count: number; perfilId: string } | null>(null)
+
   // ─── Carregamento ────────────────────────────────────────────────────────────
 
   async function loadCliente() {
@@ -417,11 +420,7 @@ export default function ClienteDetalhePage() {
           try {
             const novosMatches = await api.get<Match[]>(`/matches?perfilId=${savedId}`)
             setMatches(novosMatches)
-            if (novosMatches.length > 0) {
-              toast.success(`${novosMatches.length} match${novosMatches.length > 1 ? 'es' : ''} encontrado${novosMatches.length > 1 ? 's' : ''}!`)
-            } else {
-              toast.info('Nenhum imóvel compatível encontrado por enquanto.')
-            }
+            setMatchBanner({ count: novosMatches.length, perfilId: savedId })
           } catch { /* silencioso */ }
         }
       }, 2500)
@@ -1131,6 +1130,61 @@ export default function ClienteDetalhePage() {
           isAdmin={isAdmin}
           onClose={() => setVisitaRapida(null)}
         />
+      )}
+
+      {/* ── Modal Resultado do Matching ── */}
+      {matchBanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl p-8 mx-4 max-w-sm w-full text-center animate-in zoom-in-95 duration-300">
+            {matchBanner.count > 0 ? (
+              <>
+                {/* Ícone animado */}
+                <div className="relative mx-auto mb-5 w-20 h-20">
+                  <div className="absolute inset-0 rounded-full bg-indigo-100 animate-ping opacity-40" />
+                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg">
+                    <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                      <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                  </div>
+                  {/* Estrelinhas */}
+                  <span className="absolute -top-1 -right-1 text-xl animate-bounce" style={{ animationDelay: '0.1s' }}>✨</span>
+                  <span className="absolute -bottom-1 -left-1 text-sm animate-bounce" style={{ animationDelay: '0.3s' }}>⭐</span>
+                </div>
+                <h2 className="text-2xl font-extrabold text-slate-800 mb-1">
+                  {matchBanner.count} {matchBanner.count === 1 ? 'imóvel encontrado' : 'imóveis encontrados'}!
+                </h2>
+                <p className="text-sm text-slate-500 mb-6">
+                  {matchBanner.count === 1
+                    ? 'Um imóvel compatível com o perfil deste cliente foi encontrado.'
+                    : `${matchBanner.count} imóveis compatíveis com o perfil deste cliente foram encontrados.`}
+                </p>
+                <button
+                  onClick={() => setMatchBanner(null)}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors"
+                >
+                  Ver matches →
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto mb-5 w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center">
+                  <Search className="w-9 h-9 text-slate-300" />
+                </div>
+                <h2 className="text-lg font-bold text-slate-700 mb-1">Nenhum imóvel encontrado</h2>
+                <p className="text-sm text-slate-500 mb-6">
+                  Não há imóveis disponíveis compatíveis com este perfil no momento.
+                </p>
+                <button
+                  onClick={() => setMatchBanner(null)}
+                  className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Fechar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── Modal Fechamento de Venda ── */}
