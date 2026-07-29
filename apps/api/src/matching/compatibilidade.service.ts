@@ -24,7 +24,7 @@ export class CompatibilidadeService {
       precoMin:   { lte: imovel.preco as number },
       precoMax:   { gte: imovel.preco as number },
       areaMin:    { lte: imovel.areaM2 as number },
-      cidades:    { hasSome: [imovel.cidade.nome] },
+      OR: [{ cidadeId: imovel.cidadeId }, { cidadeId: null }],
       AND: [
         ...(imovel.quartos
           ? [{ OR: [{ quartosMin: null }, { quartosMin: { lte: imovel.quartos } }] }]
@@ -51,7 +51,7 @@ export class CompatibilidadeService {
       preco:      { gte: perfil.precoMin as number, lte: perfil.precoMax as number },
       areaM2:     { gte: perfil.areaMin as number },
       ...(perfil.quartosMin ? { quartos: { gte: perfil.quartosMin } } : {}),
-      cidade:     { nome: { in: perfil.cidades } },
+      ...(perfil.cidadeId   ? { cidadeId: perfil.cidadeId } : {}),
       ...(bairros.length > 0 ? { bairro: { in: bairros } } : {}),
     }
   }
@@ -63,7 +63,7 @@ export class CompatibilidadeService {
     if (Number(perfil.precoMin) > Number(imovel.preco)) return false
     if (Number(perfil.precoMax) < Number(imovel.preco)) return false
     if (Number(perfil.areaMin)  > Number(imovel.areaM2)) return false
-    if (!perfil.cidades.includes(imovel.cidade.nome)) return false
+    if (perfil.cidadeId && imovel.cidadeId && perfil.cidadeId !== imovel.cidadeId) return false
     if (imovel.quartos && perfil.quartosMin && Number(perfil.quartosMin) > imovel.quartos) return false
     const bairros = (perfil.bairros ?? []) as string[]
     if (bairros.length > 0 && imovel.bairro && !bairros.includes(imovel.bairro)) return false

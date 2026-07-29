@@ -10,6 +10,7 @@ export interface ImovelInput {
   areaM2:     number | { toNumber(): number }
   quartos:    number | null
   bairro:     string | null
+  cidadeId:   number
   cidade:     { nome: string }
 }
 
@@ -21,7 +22,7 @@ export interface PerfilInput {
   precoMax:   number | { toNumber(): number }
   areaMin:    number | { toNumber(): number }
   quartosMin: number | null
-  cidades:    string[]
+  cidadeId:   number | null
   bairros:    string[] | null
 }
 

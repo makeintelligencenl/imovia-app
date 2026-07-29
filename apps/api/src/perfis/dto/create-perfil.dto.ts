@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsArray, IsEnum, IsOptional, Min } from 'class-validator'
+import { IsString, IsNumber, IsArray, IsEnum, IsOptional, IsInt, Min } from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class CreatePerfilDto {
@@ -39,9 +39,10 @@ export class CreatePerfilDto {
   @IsOptional()
   quartosMin?: number
 
-  @ApiProperty({ example: ['São Paulo', 'Guarulhos'] })
-  @IsArray()
-  cidades: string[]
+  @ApiPropertyOptional({ example: 1234, description: 'ID da cidade (ver GET /localidades/cidades)' })
+  @IsInt()
+  @IsOptional()
+  cidadeId?: number
 
   @ApiPropertyOptional({ example: ['Jardins', 'Moema'] })
   @IsArray()
