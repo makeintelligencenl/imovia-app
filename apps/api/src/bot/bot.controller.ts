@@ -1,6 +1,8 @@
 import { Controller, Post, Get, Body, Query, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiSecurity, ApiOperation, ApiQuery } from '@nestjs/swagger'
+import { ClsService } from 'nestjs-cls'
 import { ApiKeyGuard } from '../auth/guards/api-key.guard'
+import { TENANT_ID_KEY } from '../auth/interceptors/tenant.interceptor'
 import { PerfisService } from '../perfis/perfis.service'
 import { MatchingService } from '../matching/matching.service'
 import { TiposService } from '../tipos/tipos.service'
@@ -15,6 +17,7 @@ import { BotCreateLeadDto } from './dto/bot-create-lead.dto'
 @Controller('bot')
 export class BotController {
   constructor(
+    private readonly cls: ClsService,
     private readonly perfisService: PerfisService,
     private readonly matchingService: MatchingService,
     private readonly tiposService: TiposService,
@@ -33,6 +36,8 @@ export class BotController {
   })
   async cadastrarLead(@Body() dto: BotCreateLeadDto) {
     const { tenantId, clienteNome, clienteEmail, clienteWhatsapp, chatId, ...perfilData } = dto
+
+    this.cls.set(TENANT_ID_KEY, tenantId)
 
     const cliente = await this.clientesService.create(tenantId, {
       nome: clienteNome,
@@ -73,6 +78,7 @@ export class BotController {
   })
   async cadastrarPerfil(@Body() dto: BotCreatePerfilDto) {
     const { tenantId, ...perfilData } = dto
+    this.cls.set(TENANT_ID_KEY, tenantId)
     const perfil = await this.perfisService.create(tenantId, perfilData)
     return {
       perfilId: perfil.id,
