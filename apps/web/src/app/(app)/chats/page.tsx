@@ -176,6 +176,13 @@ export default function ChatsPage() {
   const fetchChatsRef = useRef(fetchChats)
   useEffect(() => { fetchChatsRef.current = fetchChats }, [fetchChats])
 
+  // Debounce do fetchChats para SSE — agrupa rajadas de mensagens em 1 fetch
+  const sseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedFetchChats = useCallback(() => {
+    if (sseDebounceRef.current) clearTimeout(sseDebounceRef.current)
+    sseDebounceRef.current = setTimeout(() => fetchChatsRef.current(), 2000)
+  }, [])
+
   // SSE — recebe eventos de nova mensagem em tempo real
   useEffect(() => {
     if (!allowed) return
@@ -188,7 +195,7 @@ export default function ChatsPage() {
     es.addEventListener('new-message', (e) => {
       const data = JSON.parse(e.data) as { chatId: string; role: string; message: string }
       invalidateCache('/chats')
-      fetchChatsRef.current()
+      debouncedFetchChats()
       setActiveChat((current) => {
         if (current && (current.id === data.chatId || current.id.includes(data.chatId) || data.chatId.includes(current.id))) {
           api.get<{ messages?: GptMessage[] } | GptMessage[]>(`/chats/${current.id}/messages?pageSize=50`)
