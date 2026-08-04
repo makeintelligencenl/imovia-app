@@ -171,6 +171,10 @@ export default function ChatsPage() {
 
   useEffect(() => { fetchChats() }, [fetchChats])
 
+  // Ref estável para fetchChats — evita recriar o EventSource quando fetchChats recria
+  const fetchChatsRef = useRef(fetchChats)
+  useEffect(() => { fetchChatsRef.current = fetchChats }, [fetchChats])
+
   // SSE — recebe eventos de nova mensagem em tempo real
   useEffect(() => {
     if (!allowed) return
@@ -182,9 +186,7 @@ export default function ChatsPage() {
 
     es.addEventListener('new-message', (e) => {
       const data = JSON.parse(e.data) as { chatId: string; role: string; message: string }
-      // Atualiza lista de chats ao receber qualquer nova mensagem
-      fetchChats()
-      // Se o chat ativo é o que recebeu mensagem, atualiza as mensagens também
+      fetchChatsRef.current()
       setActiveChat((current) => {
         if (current && (current.id === data.chatId || current.id.includes(data.chatId) || data.chatId.includes(current.id))) {
           api.get<{ messages?: GptMessage[] } | GptMessage[]>(`/chats/${current.id}/messages?pageSize=50`)
@@ -203,7 +205,7 @@ export default function ChatsPage() {
     }
 
     return () => es.close()
-  }, [allowed, fetchChats])
+  }, [allowed])
 
   // Scroll automático ao receber novas mensagens
   useEffect(() => {
