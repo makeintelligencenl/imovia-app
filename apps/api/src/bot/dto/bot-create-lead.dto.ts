@@ -1,4 +1,5 @@
 import { IsString, IsEmail, IsNumber, IsArray, IsEnum, IsOptional, Min } from 'class-validator'
+import { Type } from 'class-transformer'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class BotCreateLeadDto {
@@ -36,26 +37,31 @@ export class BotCreateLeadDto {
   tiposIds: string[]
 
   @ApiProperty({ example: 200000 })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   precoMin: number
 
   @ApiProperty({ example: 500000 })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   precoMax: number
 
   @ApiProperty({ example: 60 })
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   areaMin: number
 
   @ApiPropertyOptional({ example: 150 })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   areaMax?: number
 
   @ApiPropertyOptional({ example: 2 })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   quartosMin?: number
