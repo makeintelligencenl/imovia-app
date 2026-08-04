@@ -162,7 +162,8 @@ export default function ChatsPage() {
         setClientNames(names)
         setCorretores(Array.isArray(users) ? users : [])
       }
-    } catch {
+    } catch (err) {
+      console.error('[fetchChats error]', err)
       toast.error('Não foi possível carregar os chats.')
     } finally {
       setLoadingList(false)
