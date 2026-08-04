@@ -171,6 +171,40 @@ export default function ChatsPage() {
 
   useEffect(() => { fetchChats() }, [fetchChats])
 
+  // SSE — recebe eventos de nova mensagem em tempo real
+  useEffect(() => {
+    if (!allowed) return
+    const user = getCurrentUser()
+    if (!user?.tenantId) return
+
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/chats/events/${user.tenantId}`
+    const es = new EventSource(url, { withCredentials: true })
+
+    es.addEventListener('new-message', (e) => {
+      const data = JSON.parse(e.data) as { chatId: string; role: string; message: string }
+      // Atualiza lista de chats ao receber qualquer nova mensagem
+      fetchChats()
+      // Se o chat ativo é o que recebeu mensagem, atualiza as mensagens também
+      setActiveChat((current) => {
+        if (current && (current.id === data.chatId || current.id.includes(data.chatId) || data.chatId.includes(current.id))) {
+          api.get<{ messages?: GptMessage[] } | GptMessage[]>(`/chats/${current.id}/messages?pageSize=50`)
+            .then((res) => {
+              const msgs = Array.isArray(res) ? res : (res as { messages?: GptMessage[] }).messages ?? []
+              setMessages(msgs)
+            })
+            .catch(() => {})
+        }
+        return current
+      })
+    })
+
+    es.onerror = () => {
+      // Reconexão automática pelo browser — sem ação necessária
+    }
+
+    return () => es.close()
+  }, [allowed, fetchChats])
+
   // Scroll automático ao receber novas mensagens
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
