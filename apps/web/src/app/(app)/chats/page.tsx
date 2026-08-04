@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Send, UserCheck, Bot, MapPin, Ruler, ExternalLink, LinkIcon, UserRound, Unlink, CheckCircle, MoreVertical, Pencil, Trash2, Users, Search } from 'lucide-react'
-import { api } from '@/lib/api'
+import { api, invalidateCache } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
 import { MobileBlock } from '@/components/layout/mobile-block'
 
@@ -186,6 +186,7 @@ export default function ChatsPage() {
 
     es.addEventListener('new-message', (e) => {
       const data = JSON.parse(e.data) as { chatId: string; role: string; message: string }
+      invalidateCache('/chats')
       fetchChatsRef.current()
       setActiveChat((current) => {
         if (current && (current.id === data.chatId || current.id.includes(data.chatId) || data.chatId.includes(current.id))) {
