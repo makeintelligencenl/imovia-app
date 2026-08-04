@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { ClsModule } from 'nestjs-cls'
 import { BotController } from './bot.controller'
 import { PerfisModule } from '../perfis/perfis.module'
 import { MatchingModule } from '../matching/matching.module'
@@ -7,7 +8,7 @@ import { TenantsModule } from '../tenants/tenants.module'
 import { ClientesModule } from '../clientes/clientes.module'
 
 @Module({
-  imports: [PerfisModule, MatchingModule, TiposModule, TenantsModule, ClientesModule],
+  imports: [ClsModule, PerfisModule, MatchingModule, TiposModule, TenantsModule, ClientesModule],
   controllers: [BotController],
 })
 export class BotModule {}
