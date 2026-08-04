@@ -83,7 +83,8 @@ export class MatchingService {
       await this.prisma.matchHistorico.create({
         data: { matchId: match.id, tenantId, tipo: 'MATCH_CRIADO', etapaDestinoId: primeiraEtapa.id },
       })
-      await this.notificacoes.enviarNotificacaoMatch(perfil, imovel)
+      // TODO: reabilitar quando rate limit de email estiver resolvido
+      // await this.notificacoes.enviarNotificacaoMatch(perfil, imovel)
       this.logger.log(`Match: perfil ${perfil.id} ↔ imóvel ${imovel.id} [etapa: ${primeiraEtapa.nome}]`)
       return true
     } catch (err: any) {
