@@ -8,6 +8,7 @@ import { MatchingService } from '../matching/matching.service'
 import { TiposService } from '../tipos/tipos.service'
 import { TenantsService } from '../tenants/tenants.service'
 import { ClientesService } from '../clientes/clientes.service'
+import { PrismaService } from '../prisma/prisma.service'
 import { BotCreatePerfilDto } from './dto/bot-create-perfil.dto'
 import { BotCreateLeadDto } from './dto/bot-create-lead.dto'
 
@@ -23,6 +24,7 @@ export class BotController {
     private readonly tiposService: TiposService,
     private readonly tenantsService: TenantsService,
     private readonly clientesService: ClientesService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // ─────────────────────────────────────────
@@ -157,6 +159,24 @@ export class BotController {
   })
   listarTipos() {
     return this.tiposService.findAll()
+  }
+
+  // ─────────────────────────────────────────
+  // Auxiliar: Buscar cidades por nome (busca parcial)
+  // O agente usa para resolver o nome informado pelo usuário ao ID correto
+  // ─────────────────────────────────────────
+  @Post('cidades')
+  @ApiOperation({
+    summary: 'Busca cidades por nome (parcial)',
+    description: 'Retorna até 5 cidades cujo nome contenha o termo informado. Use para resolver o nome digitado pelo usuário ao ID correto antes de cadastrar um perfil.',
+  })
+  async buscarCidades(@Body('q') q: string) {
+    return this.prisma.cidade.findMany({
+      where: { nome: { contains: q, mode: 'insensitive' } },
+      orderBy: { nome: 'asc' },
+      take: 5,
+      select: { id: true, nome: true, estado: { select: { sigla: true } } },
+    })
   }
 
   // ─────────────────────────────────────────
