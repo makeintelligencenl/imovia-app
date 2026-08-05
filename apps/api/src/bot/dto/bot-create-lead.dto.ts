@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNumber, IsArray, IsEnum, IsOptional, Min } from 'class-validator'
+import { IsString, IsEmail, IsNumber, IsInt, IsArray, IsEnum, IsOptional, Min } from 'class-validator'
 import { Type } from 'class-transformer'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
@@ -66,9 +66,10 @@ export class BotCreateLeadDto {
   @IsOptional()
   quartosMin?: number
 
-  @ApiProperty({ example: ['Belo Horizonte'] })
-  @IsArray()
-  cidades: string[]
+  @ApiProperty({ example: 3106200, description: 'ID da cidade (use POST /bot/cidades para obter o ID a partir do nome)' })
+  @Type(() => Number)
+  @IsInt()
+  cidadeId: number
 
   @ApiPropertyOptional({ example: ['Savassi', 'Lourdes'] })
   @IsArray()
