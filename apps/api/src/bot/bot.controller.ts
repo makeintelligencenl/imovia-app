@@ -37,9 +37,24 @@ export class BotController {
     description: 'Use este endpoint no MCP. Cria o cliente automaticamente e dispara o matching.',
   })
   async cadastrarLead(@Body() dto: BotCreateLeadDto) {
-    const { tenantId, clienteNome, clienteEmail, clienteWhatsapp, chatId, ...perfilData } = dto
+    const { tenantId, clienteNome, clienteEmail, clienteWhatsapp, chatId, cidade, tipo, ...perfilData } = dto
 
     this.cls.set(TENANT_ID_KEY, tenantId)
+
+    // ── Resolve cidade (formato "UF-Nome", ex: "MG-Belo Horizonte") ──
+    const [siglaEstado, ...nomeParts] = cidade.split('-')
+    const nomeCidade = nomeParts.join('-').trim()
+    const cidadeRecord = await this.prisma.cidade.findFirst({
+      where: {
+        nome: { equals: nomeCidade, mode: 'insensitive' },
+        estado: { sigla: { equals: siglaEstado.trim(), mode: 'insensitive' } },
+      },
+    })
+    if (!cidadeRecord) throw new Error(`Cidade não encontrada: ${cidade}`)
+
+    // ── Resolve tipo (nome, ex: "Casa") ──
+    const tipoRecord = await this.tiposService.findByNome(tipo)
+    if (!tipoRecord) throw new Error(`Tipo de imóvel não encontrado: ${tipo}`)
 
     const cliente = await this.clientesService.create(tenantId, {
       nome: clienteNome,
@@ -50,6 +65,8 @@ export class BotController {
 
     const perfil = await this.perfisService.create(tenantId, {
       clienteId: cliente.id,
+      cidadeId: cidadeRecord.id,
+      tiposIds: [tipoRecord.id],
       ...perfilData,
     })
 

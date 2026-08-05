@@ -1,5 +1,5 @@
 import { IsString, IsEmail, IsNumber, IsArray, IsEnum, IsOptional, Min } from 'class-validator'
-import { Type, Transform } from 'class-transformer'
+import { Type } from 'class-transformer'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class BotCreateLeadDto {
@@ -32,10 +32,12 @@ export class BotCreateLeadDto {
   @IsEnum(['ALUGUEL', 'VENDA'])
   finalidade: string
 
-  @ApiProperty({ example: 'id-do-tipo-1', description: 'ID do tipo de imóvel (string simples)' })
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
-  @IsArray()
-  tiposIds: string[]
+  @ApiProperty({
+    example: 'Casa',
+    description: 'Nome do tipo de imóvel (ex: Casa, Apartamento, Comercial, Rural, Terreno)',
+  })
+  @IsString()
+  tipo: string
 
   @ApiProperty({ example: 200000 })
   @Type(() => Number)
@@ -67,10 +69,12 @@ export class BotCreateLeadDto {
   @IsOptional()
   quartosMin?: number
 
-  @ApiProperty({ example: 3106200, description: 'ID da cidade (use POST /bot/cidades para obter o ID a partir do nome)' })
-  @Transform(({ value }) => (typeof value === 'string' ? parseInt(value, 10) : value))
-  @IsNumber()
-  cidadeId: number
+  @ApiProperty({
+    example: 'MG-Belo Horizonte',
+    description: 'Cidade no formato UF-Nome (ex: MG-Belo Horizonte, SP-São Paulo)',
+  })
+  @IsString()
+  cidade: string
 
   @ApiPropertyOptional({ example: ['Savassi', 'Lourdes'] })
   @IsArray()

@@ -11,4 +11,10 @@ export class TiposService {
       orderBy: { nome: 'asc' },
     })
   }
+
+  async findByNome(nome: string) {
+    return this.prisma.tipoImovel.findFirst({
+      where: { nome: { equals: nome, mode: 'insensitive' }, ativo: true },
+    })
+  }
 }
