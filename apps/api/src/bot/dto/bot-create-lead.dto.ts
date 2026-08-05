@@ -68,7 +68,7 @@ export class BotCreateLeadDto {
 
   @ApiProperty({ example: 3106200, description: 'ID da cidade (use POST /bot/cidades para obter o ID a partir do nome)' })
   @Type(() => Number)
-  @IsInt()
+  @IsNumber()
   cidadeId: number
 
   @ApiPropertyOptional({ example: ['Savassi', 'Lourdes'] })
