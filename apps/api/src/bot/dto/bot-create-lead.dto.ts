@@ -32,7 +32,8 @@ export class BotCreateLeadDto {
   @IsEnum(['ALUGUEL', 'VENDA'])
   finalidade: string
 
-  @ApiProperty({ example: ['id-do-tipo-1'] })
+  @ApiProperty({ example: 'id-do-tipo-1', description: 'ID do tipo de imóvel (string simples)' })
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
   @IsArray()
   tiposIds: string[]
 
