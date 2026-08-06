@@ -23,9 +23,9 @@ export class CompatibilidadeService {
       tipos:      { some: { id: imovel.tipoId } },
       precoMin:   { lte: imovel.preco as number },
       precoMax:   { gte: imovel.preco as number },
-      OR: [{ areaMin: null }, { areaMin: { lte: imovel.areaM2 as number } }],
-      OR: [{ cidadeId: imovel.cidadeId }, { cidadeId: null }],
       AND: [
+        { OR: [{ areaMin: null }, { areaMin: { lte: imovel.areaM2 as number } }] },
+        { OR: [{ cidadeId: imovel.cidadeId }, { cidadeId: null }] },
         ...(imovel.quartos
           ? [{ OR: [{ quartosMin: null }, { quartosMin: { lte: imovel.quartos } }] }]
           : []),
