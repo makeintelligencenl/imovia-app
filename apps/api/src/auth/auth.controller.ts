@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Res, HttpCode } from '@nestjs/common'
+import { Controller, Post, Body, UseGuards, Request, Res, HttpCode, Get } from '@nestjs/common'
 import { Response } from 'express'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
@@ -41,6 +41,18 @@ export class AuthController {
     })
 
     return { user: result.user, token: result.token }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(200)
+  @Post('change-password')
+  @ApiOperation({ summary: 'Troca a senha do usuário autenticado e limpa forcePasswordChange' })
+  changePassword(
+    @Body('password') password: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.authService.changePassword(req.user.id, password)
   }
 
   @UseGuards(JwtAuthGuard)

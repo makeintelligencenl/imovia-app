@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
 import * as bcrypt from 'bcryptjs'
@@ -52,8 +52,21 @@ export class AuthService {
         role: user.role,
         tenantId: user.tenantId,
         tenantName: user.tenant?.name ?? null,
+        forcePasswordChange: user.forcePasswordChange,
       },
       token: this.jwt.sign({ sub: user.id, tenantId: user.tenantId }),
     }
+  }
+
+  async changePassword(userId: string, newPassword: string) {
+    if (newPassword.length < 8) {
+      throw new BadRequestException('A senha deve ter ao menos 8 caracteres')
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 12)
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, forcePasswordChange: false },
+    })
+    return { ok: true }
   }
 }

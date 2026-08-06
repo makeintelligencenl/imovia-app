@@ -62,7 +62,9 @@ function LoginForm() {
       invalidateCache()
       updateLastActivity()
 
-      if (data.user.role === 'SUPERADMIN') {
+      if (data.user.forcePasswordChange) {
+        router.push('/trocar-senha')
+      } else if (data.user.role === 'SUPERADMIN') {
         router.push('/admin')
       } else {
         router.push('/dashboard')

@@ -39,6 +39,42 @@ export class EmailService {
     }
   }
 
+  async enviarCredenciaisAcesso(dados: { nome: string; email: string; senha: string; empresa: string }) {
+    const resendKey = this.config.get('RESEND_API_KEY')
+    if (!resendKey) {
+      this.logger.warn(`Email de credenciais desabilitado (RESEND_API_KEY ausente). Destinatário: ${dados.email}`)
+      return
+    }
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.config.get('EMAIL_FROM', 'noreply@corretorInteligente.com.br'),
+        to: dados.email,
+        subject: `Bem-vindo ao ImovIA — suas credenciais de acesso`,
+        html: this.buildCredenciaisHtml(dados),
+      })
+      if (error) throw new Error(error.message)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.logger.error(`Falha ao enviar credenciais para ${dados.email}: ${message}`)
+      throw err
+    }
+  }
+
+  private buildCredenciaisHtml(dados: { nome: string; email: string; senha: string; empresa: string }): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Bem-vindo ao ImovIA, ${dados.nome}!</h2>
+        <p>Sua conta para <strong>${dados.empresa}</strong> foi criada. Use as credenciais abaixo para o primeiro acesso:</p>
+        <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p><strong>Email:</strong> ${dados.email}</p>
+          <p><strong>Senha temporária:</strong> <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">${dados.senha}</code></p>
+        </div>
+        <p style="color:#dc2626;"><strong>⚠️ Você será solicitado a criar uma nova senha no primeiro login.</strong></p>
+        <p style="color:#888;font-size:12px;">Por segurança, não compartilhe este email com terceiros.</p>
+      </div>
+    `
+  }
+
   async enviarDemoRequestEmail(dados: { nome: string; email: string; telefone: string; empresa: string }) {
     const resendKey = this.config.get('RESEND_API_KEY')
     const to = this.config.get('DEMO_NOTIFICATION_EMAIL')

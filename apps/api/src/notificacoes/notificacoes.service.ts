@@ -43,4 +43,12 @@ export class NotificacoesService {
       this.logger.error(`Falha ao enviar notificação de demo request: ${err}`)
     }
   }
+
+  async enviarCredenciaisAcesso(dados: { nome: string; email: string; senha: string; empresa: string }) {
+    try {
+      await this.emailService.enviarCredenciaisAcesso(dados)
+    } catch (err) {
+      this.logger.error(`Falha ao enviar credenciais de acesso para ${dados.email}: ${err}`)
+    }
+  }
 }

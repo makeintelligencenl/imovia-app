@@ -53,24 +53,33 @@ export class DemoRequestsService {
     this.cls.set(TENANT_ID_KEY, tenant.id)
     await this.pipeline.criarEtapasPadrao(tenant.id)
 
-    // Gera senha temporária única por tenant usando crypto seguro
-    const senhaTemporaria = randomBytes(12).toString('base64url')  // 16 chars URL-safe
+    // Gera senha temporária única por tenant (criptograficamente segura)
+    const senhaTemporaria = randomBytes(16).toString('hex')  // 32 chars hex
     const passwordHash = await bcrypt.hash(senhaTemporaria, 12)
 
     await this.prisma.user.create({
       data: {
-        name:         demo.nome,
-        email:        demo.email,
+        name:               demo.nome,
+        email:              demo.email,
         passwordHash,
-        role:         'ADMIN',
-        tenantId:     tenant.id,
+        role:               'ADMIN',
+        tenantId:           tenant.id,
+        forcePasswordChange: true,
       },
     })
 
+    // Envia credenciais por email — senha NÃO é retornada no body da resposta
+    await this.notificacoes.enviarCredenciaisAcesso({
+      nome:    demo.nome,
+      email:   demo.email,
+      senha:   senhaTemporaria,
+      empresa: demo.empresa,
+    })
+
     return {
-      tenant: { id: tenant.id, name: tenant.name, slug },
+      tenant:     { id: tenant.id, name: tenant.name, slug },
       adminEmail: demo.email,
-      senhaTemporaria,
+      // senha omitida intencionalmente — enviada por email ao solicitante
     }
   }
 
