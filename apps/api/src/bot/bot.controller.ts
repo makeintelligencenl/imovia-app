@@ -79,6 +79,7 @@ export class BotController {
       finalidade: perfil.finalidade,
       precoMin: perfil.precoMin,
       precoMax: perfil.precoMax,
+      quartosMin: perfil.quartosMin ?? null,
       cidade: (perfil as any).cidade ? `${(perfil as any).cidade.nome} - ${(perfil as any).cidade.estado?.sigla}` : null,
       tipos: perfil.tipos.map((t: { id: string; nome: string }) => ({ id: t.id, nome: t.nome })),
       criadoEm: perfil.createdAt,
