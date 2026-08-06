@@ -7,6 +7,7 @@ import { PipelineService } from '../pipeline/pipeline.service'
 import { TENANT_ID_KEY } from '../auth/interceptors/tenant.interceptor'
 import { CreateDemoRequestDto } from './dto/create-demo-request.dto'
 import * as bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 
 @Injectable()
 export class DemoRequestsService {
@@ -52,7 +53,8 @@ export class DemoRequestsService {
     this.cls.set(TENANT_ID_KEY, tenant.id)
     await this.pipeline.criarEtapasPadrao(tenant.id)
 
-    const senhaTemporaria = 'Imovia@2026'
+    // Gera senha temporária única por tenant usando crypto seguro
+    const senhaTemporaria = randomBytes(12).toString('base64url')  // 16 chars URL-safe
     const passwordHash = await bcrypt.hash(senhaTemporaria, 12)
 
     await this.prisma.user.create({
