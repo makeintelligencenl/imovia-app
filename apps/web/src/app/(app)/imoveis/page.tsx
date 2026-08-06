@@ -91,12 +91,18 @@ function ImoveisContent() {
   const [filtroEstado, setFiltroEstado]       = useState('__todos__')
   const [filtroCidadeId, setFiltroCidadeId]   = useState('__todas__')
   const [cidadesFiltro, setCidadesFiltro]     = useState<Cidade[]>([])
+  const [filtroPrecoMin, setFiltroPrecoMin]   = useState('')
+  const [filtroPrecoMax, setFiltroPrecoMax]   = useState('')
+  const [filtroAreaMin, setFiltroAreaMin]     = useState('')
+  const [filtroQuartosMin, setFiltroQuartosMin] = useState('')
+  const [filtroBairro, setFiltroBairro]       = useState('')
 
   // Painel de filtros (variante B)
   const [painelAberto, setPainelAberto] = useState(false)
   const [staged, setStaged] = useState({
     tipo: '__todos__', finalidade: '__todas__', status: '__todos__',
     estado: '__todos__', cidadeId: '__todas__',
+    precoMin: '', precoMax: '', areaMin: '', quartosMin: '', bairro: '',
   })
   const [cidadesStaged, setCidadesStaged] = useState<Cidade[]>([])
 
@@ -162,6 +168,11 @@ function ImoveisContent() {
     if (filtroStatus !== '__todos__' && i.status !== filtroStatus) return false
     if (filtroEstado !== '__todos__' && i.cidade.estado.sigla !== filtroEstado) return false
     if (filtroCidadeId !== '__todas__' && String(i.cidadeId) !== filtroCidadeId) return false
+    if (filtroPrecoMin && Number(i.preco) < Number(filtroPrecoMin)) return false
+    if (filtroPrecoMax && Number(i.preco) > Number(filtroPrecoMax)) return false
+    if (filtroAreaMin && Number(i.areaM2) < Number(filtroAreaMin)) return false
+    if (filtroQuartosMin && (i.quartos == null || i.quartos < Number(filtroQuartosMin))) return false
+    if (filtroBairro && !i.bairro?.toLowerCase().includes(filtroBairro.toLowerCase())) return false
     return true
   })
 
@@ -172,6 +183,11 @@ function ImoveisContent() {
     setFiltroEstado('__todos__')
     setFiltroCidadeId('__todas__')
     setCidadesFiltro([])
+    setFiltroPrecoMin('')
+    setFiltroPrecoMax('')
+    setFiltroAreaMin('')
+    setFiltroQuartosMin('')
+    setFiltroBairro('')
     setPage(1)
   }
 
@@ -197,6 +213,8 @@ function ImoveisContent() {
     setStaged({
       tipo: filtroTipo, finalidade: filtroFinalidade, status: filtroStatus,
       estado: filtroEstado, cidadeId: filtroCidadeId,
+      precoMin: filtroPrecoMin, precoMax: filtroPrecoMax,
+      areaMin: filtroAreaMin, quartosMin: filtroQuartosMin, bairro: filtroBairro,
     })
     setCidadesStaged(cidadesFiltro)
     setPainelAberto(true)
@@ -209,6 +227,12 @@ function ImoveisContent() {
     handleFiltroStatus(staged.status)
     if (staged.estado !== filtroEstado) handleFiltroEstado(staged.estado)
     handleFiltroCidade(staged.cidadeId)
+    setFiltroPrecoMin(staged.precoMin)
+    setFiltroPrecoMax(staged.precoMax)
+    setFiltroAreaMin(staged.areaMin)
+    setFiltroQuartosMin(staged.quartosMin)
+    setFiltroBairro(staged.bairro)
+    setPage(1)
     setPainelAberto(false)
   }
 
@@ -227,7 +251,8 @@ function ImoveisContent() {
 
   const filtrosAtivos =
     filtroTipo !== '__todos__' || filtroFinalidade !== '__todas__' || filtroStatus !== '__todos__' ||
-    filtroEstado !== '__todos__' || filtroCidadeId !== '__todas__'
+    filtroEstado !== '__todos__' || filtroCidadeId !== '__todas__' ||
+    !!filtroPrecoMin || !!filtroPrecoMax || !!filtroAreaMin || !!filtroQuartosMin || !!filtroBairro
 
   const ativos = [
     filtroTipo !== '__todos__' ? tipos.find(t => t.id === filtroTipo)?.nome : null,
@@ -235,6 +260,11 @@ function ImoveisContent() {
     filtroStatus !== '__todos__' ? STATUS_LABELS[filtroStatus] : null,
     filtroEstado !== '__todos__' ? filtroEstado : null,
     filtroCidadeId !== '__todas__' ? cidadesFiltro.find(c => String(c.id) === filtroCidadeId)?.nome : null,
+    filtroPrecoMin ? `R$ ${Number(filtroPrecoMin).toLocaleString('pt-BR')}+` : null,
+    filtroPrecoMax ? `até R$ ${Number(filtroPrecoMax).toLocaleString('pt-BR')}` : null,
+    filtroAreaMin ? `${filtroAreaMin}m²+` : null,
+    filtroQuartosMin ? `${filtroQuartosMin}+ quartos` : null,
+    filtroBairro ? filtroBairro : null,
   ].filter(Boolean) as string[]
 
   // Criar / Editar
@@ -439,7 +469,7 @@ function ImoveisContent() {
             {painelAberto && (
               <Card className="shadow-sm rounded-xl overflow-hidden">
                 <CardContent className="pt-5 pb-0">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo</Label>
                       <Select value={staged.tipo} onValueChange={(v) => setStaged((s) => ({ ...s, tipo: v }))}>
@@ -510,9 +540,33 @@ function ImoveisContent() {
                       </Select>
                     </div>
                   </div>
+
+                  {/* Segunda linha: Preço, Área, Quartos, Bairro */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pb-5">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preço mín. (R$)</Label>
+                      <Input type="number" placeholder="Ex: 200000" value={staged.precoMin} onChange={e => setStaged(s => ({ ...s, precoMin: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preço máx. (R$)</Label>
+                      <Input type="number" placeholder="Ex: 800000" value={staged.precoMax} onChange={e => setStaged(s => ({ ...s, precoMax: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Área mín. (m²)</Label>
+                      <Input type="number" placeholder="Ex: 60" value={staged.areaMin} onChange={e => setStaged(s => ({ ...s, areaMin: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quartos mín.</Label>
+                      <Input type="number" placeholder="Ex: 2" min="1" value={staged.quartosMin} onChange={e => setStaged(s => ({ ...s, quartosMin: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bairro</Label>
+                      <Input placeholder="Ex: Savassi" value={staged.bairro} onChange={e => setStaged(s => ({ ...s, bairro: e.target.value }))} />
+                    </div>
+                  </div>
                 </CardContent>
-                <div className="flex items-center justify-end gap-2 px-5 py-3 mt-4 border-t bg-muted/40">
-                  <Button variant="outline" size="sm" onClick={() => { setStaged({ tipo: '__todos__', finalidade: '__todas__', status: '__todos__', estado: '__todos__', cidadeId: '__todas__' }); setCidadesStaged([]) }}>Limpar filtros</Button>
+                <div className="flex items-center justify-end gap-2 px-5 py-3 border-t bg-muted/40">
+                  <Button variant="outline" size="sm" onClick={() => { setStaged({ tipo: '__todos__', finalidade: '__todas__', status: '__todos__', estado: '__todos__', cidadeId: '__todas__', precoMin: '', precoMax: '', areaMin: '', quartosMin: '', bairro: '' }); setCidadesStaged([]) }}>Limpar filtros</Button>
                   <Button variant="outline" size="sm" onClick={() => setPainelAberto(false)}>Cancelar</Button>
                   <Button size="sm" onClick={aplicarFiltros} className="px-6">Aplicar filtros</Button>
                 </div>
