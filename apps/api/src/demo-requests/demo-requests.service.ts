@@ -76,6 +76,11 @@ export class DemoRequestsService {
       empresa: demo.empresa,
     })
 
+    await this.prisma.demoRequest.update({
+      where: { id },
+      data:  { aprovadoEm: new Date() },
+    })
+
     return {
       tenant:     { id: tenant.id, name: tenant.name, slug },
       adminEmail: demo.email,

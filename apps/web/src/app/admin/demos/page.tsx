@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { ClipboardList, Building2, Mail, Phone, Calendar, Trash2, CheckCircle, Copy } from 'lucide-react'
+import { ClipboardList, Building2, Mail, Phone, Calendar, Trash2, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
 
 interface DemoRequest {
@@ -12,13 +13,13 @@ interface DemoRequest {
   email: string
   telefone: string
   empresa: string
+  aprovadoEm: string | null
   createdAt: string
 }
 
 interface AprovarResult {
   tenant: { id: string; name: string; slug: string }
   adminEmail: string
-  senhaTemporaria: string
 }
 
 export default function AdminDemosPage() {
@@ -45,7 +46,7 @@ export default function AdminDemosPage() {
     try {
       const result = await api.post<AprovarResult>(`/demo-requests/${demo.id}/aprovar`, {})
       setResultado(result)
-      toast.success(`Tenant "${result.tenant.name}" criado com sucesso!`)
+      toast.success(`Tenant "${result.tenant.name}" criado! Credenciais enviadas por email.`)
       load()
     } catch (e: any) {
       toast.error(e?.message ?? 'Erro ao aprovar solicitação')
@@ -68,11 +69,6 @@ export default function AdminDemosPage() {
     }
   }
 
-  function copiar(texto: string, label: string) {
-    navigator.clipboard.writeText(texto)
-    toast.success(`${label} copiado!`)
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -87,28 +83,15 @@ export default function AdminDemosPage() {
               <CheckCircle className="h-5 w-5" />
               Tenant criado com sucesso!
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-white rounded-lg p-3 border border-green-200">
                 <p className="text-xs text-muted-foreground mb-1">Imobiliária</p>
                 <p className="font-medium text-sm">{resultado.tenant.name}</p>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-green-200 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Email do admin</p>
-                  <p className="font-medium text-sm">{resultado.adminEmail}</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => copiar(resultado.adminEmail, 'Email')}>
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div className="bg-white rounded-lg p-3 border border-green-200 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Senha temporária</p>
-                  <p className="font-mono font-medium text-sm">{resultado.senhaTemporaria}</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => copiar(resultado.senhaTemporaria, 'Senha')}>
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
+              <div className="bg-white rounded-lg p-3 border border-green-200">
+                <p className="text-xs text-muted-foreground mb-1">Email do admin</p>
+                <p className="font-medium text-sm">{resultado.adminEmail}</p>
+                <p className="text-xs text-muted-foreground mt-1">Credenciais enviadas por email ✓</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => setResultado(null)}>Fechar</Button>
@@ -125,53 +108,71 @@ export default function AdminDemosPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {demos.map((demo) => (
-            <Card key={demo.id}>
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="space-y-1.5 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <p className="font-semibold">{demo.empresa}</p>
+          {demos.map((demo) => {
+            const aprovado = !!demo.aprovadoEm
+            return (
+              <Card key={demo.id} className={aprovado ? 'opacity-60 bg-muted/30' : ''}>
+                <CardContent className="pt-4">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <p className="font-semibold">{demo.empresa}</p>
+                        {aprovado && (
+                          <Badge variant="secondary" className="gap-1 text-green-700 bg-green-100 border-green-200">
+                            <CheckCircle className="h-3 w-3" />
+                            Tenant criado
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium">{demo.nome}</p>
+                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5" />{demo.email}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5" />{demo.telefone}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {new Date(demo.createdAt).toLocaleDateString('pt-BR')}
+                        </span>
+                        {aprovado && (
+                          <span className="flex items-center gap-1.5 text-green-700">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Aprovado em {new Date(demo.aprovadoEm!).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm font-medium">{demo.nome}</p>
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5" />{demo.email}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5" />{demo.telefone}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {new Date(demo.createdAt).toLocaleDateString('pt-BR')}
-                      </span>
+                    <div className="flex gap-2 shrink-0">
+                      {!aprovado && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleAprovar(demo)}
+                          disabled={aprovando === demo.id}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          {aprovando === demo.id ? 'Criando...' : 'Criar tenant'}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => handleExcluir(demo.id)}
+                        disabled={excluindo === demo.id || aprovado}
+                        title={aprovado ? 'Solicitações aprovadas não podem ser excluídas' : ''}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {excluindo === demo.id ? '...' : 'Excluir'}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      onClick={() => handleAprovar(demo)}
-                      disabled={aprovando === demo.id}
-                    >
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      {aprovando === demo.id ? 'Criando...' : 'Criar tenant'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => handleExcluir(demo.id)}
-                      disabled={excluindo === demo.id}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {excluindo === demo.id ? '...' : 'Excluir'}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>
