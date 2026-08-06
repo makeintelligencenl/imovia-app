@@ -382,8 +382,6 @@ export default function ClienteDetalhePage() {
     if (!perfilData.tiposIds.length)           { toast.error('Selecione ao menos um tipo'); return }
     if (!perfilData.precoMin || !perfilData.precoMax) { toast.error('Informe a faixa de preço'); return }
     if (!perfilData.cidadeId)                  { toast.error('Selecione uma cidade'); return }
-    if (!perfilData.areaMin)                   { toast.error('Informe a área mínima'); return }
-
     setPerfilSaving(true)
     const payload = {
       clienteId:  id,
@@ -391,7 +389,7 @@ export default function ClienteDetalhePage() {
       tiposIds:   perfilData.tiposIds,
       precoMin:   Number(perfilData.precoMin),
       precoMax:   Number(perfilData.precoMax),
-      areaMin:    Number(perfilData.areaMin),
+      areaMin:    perfilData.areaMin ? Number(perfilData.areaMin) : undefined,
       quartosMin: perfilData.quartosMin ? Number(perfilData.quartosMin) : undefined,
       cidadeId:   Number(perfilData.cidadeId),
       bairros:    perfilData.bairros  ? perfilData.bairros.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -689,7 +687,7 @@ export default function ClienteDetalhePage() {
                       </span>
                     )}
                     <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5">
-                      📐 {String(p.areaMin)}m²+
+                      📐 {p.areaMin != null ? `${Number(p.areaMin)}m²+` : '—'}
                     </span>
                     {p.cidade && (
                       <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5">
@@ -965,7 +963,7 @@ export default function ClienteDetalhePage() {
             {/* Área + Quartos */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Área mínima (m²) *</Label>
+                <Label>Área mínima (m²)</Label>
                 <Input type="number" value={perfilData.areaMin} onChange={e => setPerfilData(p => ({ ...p, areaMin: e.target.value }))} />
               </div>
               <div className="space-y-1">

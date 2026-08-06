@@ -325,7 +325,7 @@ export default function PerfisPage() {
                     <TableCell className="text-sm whitespace-nowrap">
                       {formatCurrency(p.precoMin)} – {formatCurrency(p.precoMax)}
                     </TableCell>
-                    <TableCell className="text-right">{Number(p.areaMin)} m²</TableCell>
+                    <TableCell className="text-right">{p.areaMin != null ? `${Number(p.areaMin)} m²` : '—'}</TableCell>
                     <TableCell className="text-center">{p.quartosMin ?? '—'}</TableCell>
                     <TableCell className="text-sm">
                       <p>{p.cidades.join(', ')}</p>
