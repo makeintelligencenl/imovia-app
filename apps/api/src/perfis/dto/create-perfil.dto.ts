@@ -24,10 +24,11 @@ export class CreatePerfilDto {
   @Min(0)
   precoMax: number
 
-  @ApiProperty({ example: 60 })
+  @ApiPropertyOptional({ example: 60 })
   @IsNumber()
   @Min(1)
-  areaMin: number
+  @IsOptional()
+  areaMin?: number
 
   @ApiPropertyOptional({ example: 150 })
   @IsNumber()

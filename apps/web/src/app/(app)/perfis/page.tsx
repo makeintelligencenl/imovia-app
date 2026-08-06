@@ -139,7 +139,7 @@ export default function PerfisPage() {
 
   async function handleSalvar() {
     if (!formData.clienteId || !formData.finalidade ||
-        !formData.precoMin || !formData.precoMax || !formData.areaMin || !formData.cidades) {
+        !formData.precoMin || !formData.precoMax || !formData.cidades) {
       toast.error('Preencha os campos obrigatórios')
       return
     }
@@ -154,7 +154,7 @@ export default function PerfisPage() {
       tiposIds:   tiposSelecionados,
       precoMin:   Number(formData.precoMin),
       precoMax:   Number(formData.precoMax),
-      areaMin:    Number(formData.areaMin),
+      areaMin:    formData.areaMin ? Number(formData.areaMin) : undefined,
       quartosMin: formData.quartosMin ? Number(formData.quartosMin) : undefined,
       cidades:    formData.cidades.split(',').map((c) => c.trim()).filter(Boolean),
       bairros:    formData.bairros ? formData.bairros.split(',').map((b) => b.trim()).filter(Boolean) : [],
@@ -435,7 +435,7 @@ export default function PerfisPage() {
               <Input type="number" min="0" {...field('precoMax')} />
             </div>
             <div className="space-y-1">
-              <Label>Área mínima (m²) *</Label>
+              <Label>Área mínima (m²)</Label>
               <Input type="number" min="1" {...field('areaMin')} />
             </div>
             <div className="space-y-1">

@@ -182,7 +182,7 @@ model PerfilBusca {
   finalidade Finalidade
   precoMin   Decimal      @db.Decimal(12, 2)
   precoMax   Decimal      @db.Decimal(12, 2)
-  areaMin    Decimal      @db.Decimal(8, 2)
+  areaMin    Decimal?     @db.Decimal(8, 2)
   areaMax    Decimal?     @db.Decimal(8, 2)
   quartosMin Int?
   cidades    String[]
