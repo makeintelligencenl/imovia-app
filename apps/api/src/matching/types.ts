@@ -20,7 +20,7 @@ export interface PerfilInput {
   tipos:      { id: string }[]
   precoMin:   number | { toNumber(): number }
   precoMax:   number | { toNumber(): number }
-  areaMin:    number | { toNumber(): number }
+  areaMin:    number | { toNumber(): number } | null
   quartosMin: number | null
   cidadeId:   number | null
   bairros:    string[] | null

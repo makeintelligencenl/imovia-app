@@ -23,7 +23,7 @@ export class CompatibilidadeService {
       tipos:      { some: { id: imovel.tipoId } },
       precoMin:   { lte: imovel.preco as number },
       precoMax:   { gte: imovel.preco as number },
-      areaMin:    { lte: imovel.areaM2 as number },
+      OR: [{ areaMin: null }, { areaMin: { lte: imovel.areaM2 as number } }],
       OR: [{ cidadeId: imovel.cidadeId }, { cidadeId: null }],
       AND: [
         ...(imovel.quartos
@@ -49,7 +49,7 @@ export class CompatibilidadeService {
       finalidade: perfil.finalidade,
       tipoId:     { in: tipoIds },
       preco:      { gte: perfil.precoMin as number, lte: perfil.precoMax as number },
-      areaM2:     { gte: perfil.areaMin as number },
+      ...(perfil.areaMin != null ? { areaM2: { gte: perfil.areaMin as number } } : {}),
       ...(perfil.quartosMin ? { quartos: { gte: perfil.quartosMin } } : {}),
       ...(perfil.cidadeId   ? { cidadeId: perfil.cidadeId } : {}),
       ...(bairros.length > 0 ? { bairro: { in: bairros } } : {}),
@@ -62,7 +62,7 @@ export class CompatibilidadeService {
     if (!perfil.tipos.some(t => t.id === imovel.tipoId)) return false
     if (Number(perfil.precoMin) > Number(imovel.preco)) return false
     if (Number(perfil.precoMax) < Number(imovel.preco)) return false
-    if (Number(perfil.areaMin)  > Number(imovel.areaM2)) return false
+    if (perfil.areaMin != null && Number(perfil.areaMin) > Number(imovel.areaM2)) return false
     if (perfil.cidadeId && imovel.cidadeId && perfil.cidadeId !== imovel.cidadeId) return false
     if (imovel.quartos && perfil.quartosMin && Number(perfil.quartosMin) > imovel.quartos) return false
     const bairros = (perfil.bairros ?? []) as string[]
