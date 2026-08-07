@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { TurnstileService } from '../common/turnstile.service'
 import { NotificacoesService } from '../notificacoes/notificacoes.service'
 import { PipelineService } from '../pipeline/pipeline.service'
+import { CaracteristicasService } from '../caracteristicas/caracteristicas.service'
 import { TENANT_ID_KEY } from '../auth/interceptors/tenant.interceptor'
 import { CreateDemoRequestDto } from './dto/create-demo-request.dto'
 import * as bcrypt from 'bcryptjs'
@@ -16,6 +17,7 @@ export class DemoRequestsService {
     private turnstile: TurnstileService,
     private notificacoes: NotificacoesService,
     private pipeline: PipelineService,
+    private caracteristicas: CaracteristicasService,
     private cls: ClsService,
   ) {}
 
@@ -52,6 +54,7 @@ export class DemoRequestsService {
 
     this.cls.set(TENANT_ID_KEY, tenant.id)
     await this.pipeline.criarEtapasPadrao(tenant.id)
+    await this.caracteristicas.criarPadrao(tenant.id)
 
     // Gera senha temporária única por tenant (criptograficamente segura)
     const senhaTemporaria = randomBytes(16).toString('hex')  // 32 chars hex
