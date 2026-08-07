@@ -1,14 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings2, Users, DollarSign } from 'lucide-react'
+import { Settings2, Users, DollarSign, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MobileBlock } from '@/components/layout/mobile-block'
 
 const TABS = [
-  { href: '/settings/pipeline',   label: 'Funil de Vendas', icon: Settings2  },
-  { href: '/settings/usuarios',   label: 'Usuários',        icon: Users      },
-  { href: '/settings/financeiro', label: 'Financeiro',      icon: DollarSign },
+  { href: '/settings/pipeline',        label: 'Funil de Vendas', icon: Settings2  },
+  { href: '/settings/usuarios',        label: 'Usuários',        icon: Users      },
+  { href: '/settings/financeiro',      label: 'Financeiro',      icon: DollarSign },
+  { href: '/settings/caracteristicas', label: 'Características', icon: Tag        },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
