@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException, Logger } from '@nestjs/common'
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common'
 import { Prisma, Finalidade, StatusImovel } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { MatchingService } from '../matching/matching.service'
@@ -26,6 +26,15 @@ export class ImoveisService {
         cep:        dto.cep,
       })
       if (coords) { latitude = coords.latitude; longitude = coords.longitude }
+    }
+
+    if (dto.caracteristicaIds?.length) {
+      const valid = await this.prisma.caracteristica.count({
+        where: { id: { in: dto.caracteristicaIds }, tenantId },
+      })
+      if (valid !== dto.caracteristicaIds.length) {
+        throw new BadRequestException('Uma ou mais características não pertencem a este tenant')
+      }
     }
 
     const imovel = await this.prisma.imovel.create({
@@ -109,6 +118,15 @@ export class ImoveisService {
         cep:        data.cep,
       })
       if (coords) { rest.latitude = coords.latitude; rest.longitude = coords.longitude }
+    }
+
+    if (caracteristicaIds?.length) {
+      const valid = await this.prisma.caracteristica.count({
+        where: { id: { in: caracteristicaIds }, tenantId },
+      })
+      if (valid !== caracteristicaIds.length) {
+        throw new BadRequestException('Uma ou mais características não pertencem a este tenant')
+      }
     }
 
     const updated = await this.prisma.imovel.update({
