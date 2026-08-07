@@ -21,6 +21,7 @@ import { ClientesModule } from './clientes/clientes.module'
 import { FinanceiroModule } from './financeiro/financeiro.module'
 import { ChatsModule } from './chats/chats.module'
 import { DemoRequestsModule } from './demo-requests/demo-requests.module'
+import { CaracteristicasModule } from './caracteristicas/caracteristicas.module'
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { DemoRequestsModule } from './demo-requests/demo-requests.module'
     FinanceiroModule,
     ChatsModule,
     DemoRequestsModule,
+    CaracteristicasModule,
   ],
   providers: [
     { provide: APP_GUARD,       useClass: ThrottlerGuard },
