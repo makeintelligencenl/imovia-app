@@ -49,9 +49,19 @@ export class ImoveisService {
         latitude,
         longitude,
         descricao:   dto.descricao,
+        urlImovel:   dto.urlImovel,
         tenantId,
+        iptu:            dto.iptu,
+        seguroIncendio:  dto.seguroIncendio,
+        condominio:      dto.condominio,
+        andar:           dto.andar,
+        suites:          dto.suites,
+        nomeCondominio:  dto.nomeCondominio,
+        ...(dto.caracteristicaIds?.length
+          ? { caracteristicas: { connect: dto.caracteristicaIds.map((id) => ({ id })) } }
+          : {}),
       },
-      include: { tipo: true, cidade: { include: { estado: true } } },
+      include: { tipo: true, cidade: { include: { estado: true } }, caracteristicas: true },
     })
 
     let matchesEncontrados = 0
@@ -73,7 +83,7 @@ export class ImoveisService {
         ...(filters?.finalidade && { finalidade: filters.finalidade as Finalidade }),
         ...(filters?.status && { status: filters.status as StatusImovel }),
       },
-      include: { tipo: true, cidade: { include: { estado: true } } },
+      include: { tipo: true, cidade: { include: { estado: true } }, caracteristicas: true },
       orderBy: { createdAt: 'desc' },
     })
   }
@@ -81,7 +91,7 @@ export class ImoveisService {
   async findById(tenantId: string, id: string) {
     const imovel = await this.prisma.imovel.findFirst({
       where: { id, tenantId },
-      include: { tipo: true, cidade: { include: { estado: true } } },
+      include: { tipo: true, cidade: { include: { estado: true } }, caracteristicas: true },
     })
     if (!imovel) throw new NotFoundException('Imóvel não encontrado')
     return imovel
@@ -89,7 +99,7 @@ export class ImoveisService {
 
   async update(tenantId: string, id: string, data: Partial<CreateImovelDto>) {
     await this.findById(tenantId, id)
-    const { tipoId, finalidade, ...rest } = data
+    const { tipoId, finalidade, caracteristicaIds, ...rest } = data
 
     if (data.latitude == null && data.longitude == null && (data.logradouro || data.cep)) {
       const coords = await this.geocoding.geocodificarEndereco({
@@ -107,8 +117,11 @@ export class ImoveisService {
         ...rest,
         ...(tipoId     && { tipoId }),
         ...(finalidade && { finalidade: finalidade as Finalidade }),
+        ...(caracteristicaIds !== undefined
+          ? { caracteristicas: { set: caracteristicaIds.map((id) => ({ id })) } }
+          : {}),
       },
-      include: { tipo: true, cidade: { include: { estado: true } } },
+      include: { tipo: true, cidade: { include: { estado: true } }, caracteristicas: true },
     })
 
     // BUG #5 FIX: executa matching e invalidação SEQUENCIALMENTE via async IIFE.

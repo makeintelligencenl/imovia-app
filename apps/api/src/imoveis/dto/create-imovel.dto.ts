@@ -95,4 +95,44 @@ export class CreateImovelDto {
   @IsString()
   @IsOptional()
   urlImovel?: string
+
+  @ApiPropertyOptional({ example: 250.00, description: 'Valor mensal do IPTU' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  iptu?: number
+
+  @ApiPropertyOptional({ example: 45.00, description: 'Valor mensal do seguro incêndio' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  seguroIncendio?: number
+
+  @ApiPropertyOptional({ example: 800.00, description: 'Taxa mensal de condomínio' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  condominio?: number
+
+  @ApiPropertyOptional({ example: 5 })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  andar?: number
+
+  @ApiPropertyOptional({ example: 2 })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  suites?: number
+
+  @ApiPropertyOptional({ example: 'Edifício Solar das Flores' })
+  @IsString()
+  @IsOptional()
+  nomeCondominio?: string
+
+  @ApiPropertyOptional({ type: [String], description: 'IDs das características do imóvel' })
+  @IsString({ each: true })
+  @IsOptional()
+  caracteristicaIds?: string[]
 }
