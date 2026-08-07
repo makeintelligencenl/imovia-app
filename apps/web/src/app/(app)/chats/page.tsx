@@ -603,7 +603,7 @@ export default function ChatsPage() {
                   <Search className="h-3 w-3" /> O que busca
                 </p>
                 <div className="space-y-1.5">
-                  <InfoRow label="Tipo" value={matchInfo.perfil.finalidade === 'COMPRA' ? 'Compra' : 'Aluguel'} />
+                  <InfoRow label="Tipo" value={matchInfo.perfil.finalidade === 'VENDA' ? 'Compra' : 'Aluguel'} />
                   {(matchInfo.perfil.precoMin || matchInfo.perfil.precoMax) && (
                     <InfoRow
                       label="Orçamento"
