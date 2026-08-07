@@ -29,6 +29,7 @@ model Tenant {
   pipelineEtapas           PipelineEtapa[]
   users                    User[]
   visitas                  Visita[]
+  caracteristicas          Caracteristica[]
 
   @@map("tenants")
 }
@@ -165,6 +166,12 @@ model Imovel {
   cep          String?         @db.VarChar(9)
   codigoOrigem String?         @db.VarChar(255)
   urlImovel    String?         @db.VarChar(500)
+  iptu             Decimal?        @db.Decimal(10, 2)
+  seguroIncendio   Decimal?        @db.Decimal(10, 2)
+  condominio       Decimal?        @db.Decimal(10, 2)
+  andar            Int?
+  suites           Int?
+  nomeCondominio   String?         @db.VarChar(255)
   cidadeId     Int
   comissoes    ComissaoVenda[]
   cidade       Cidade          @relation(fields: [cidadeId], references: [id])
@@ -172,11 +179,25 @@ model Imovel {
   tipo         TipoImovel      @relation(fields: [tipoId], references: [id])
   matches      Match[]
   visitas      Visita[]
+  caracteristicas  Caracteristica[] @relation("ImovelCaracteristicas")
 
   @@index([tenantId, status])
   @@index([tenantId, finalidade, tipoId])
   @@index([tenantId, cidadeId])
   @@map("imoveis")
+}
+
+model Caracteristica {
+  id        String   @id @default(cuid())
+  nome      String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  imoveis   Imovel[] @relation("ImovelCaracteristicas")
+
+  @@unique([tenantId, nome])
+  @@map("caracteristicas")
 }
 
 model PerfilBusca {
