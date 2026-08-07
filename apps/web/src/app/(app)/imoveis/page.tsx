@@ -35,6 +35,13 @@ interface Imovel {
   quartos?: number
   banheiros?: number
   vagas?: number
+  suites?: number
+  andar?: number
+  nomeCondominio?: string
+  iptu?: number
+  seguroIncendio?: number
+  condominio?: number
+  caracteristicas?: { id: string; nome: string }[]
   bairro: string
   cidadeId: number
   cidade: { id: number; nome: string; estado: { id: number; sigla: string; nome: string } }
@@ -67,7 +74,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 const BLANK_FORM = {
   titulo: '', tipoId: '', finalidade: '', preco: '', areaM2: '',
-  quartos: '', banheiros: '', vagas: '', logradouro: '', numero: '',
+  quartos: '', banheiros: '', vagas: '', suites: '', andar: '', nomeCondominio: '',
+  iptu: '', seguroIncendio: '', condominio: '',
+  logradouro: '', numero: '',
   complemento: '', bairro: '', cidade: '', estado: '', cep: '',
   codigoOrigem: '', descricao: '', urlImovel: '',
 }
@@ -83,6 +92,9 @@ function ImoveisContent() {
   const [cidades, setCidades]     = useState<Cidade[]>([])
   const [loading, setLoading]     = useState(true)
   const [idsComMatch, setIdsComMatch] = useState<Set<string>>(new Set())
+  const [caracteristicas, setCaracteristicas] = useState<{ id: string; nome: string }[]>([])
+  const [selectedCaracteristicas, setSelectedCaracteristicas] = useState<string[]>([])
+  const [buscaCarac, setBuscaCarac] = useState('')
 
   // Filtros
   const [filtroTipo, setFiltroTipo]           = useState('__todos__')
@@ -127,14 +139,16 @@ function ImoveisContent() {
         api.get<Imovel[]>('/imoveis'),
         api.get<TipoImovel[]>('/tipos'),
         api.get<Estado[]>('/localidades/estados'),
+        api.get<{ id: string; nome: string }[]>('/caracteristicas'),
       ]
       if (semMatchParam) {
         requests.push(api.get<{ imovel: { id: string } }[]>('/matches'))
       }
-      const [imoveisData, tiposData, estadosData, matchesData] = await Promise.all(requests)
+      const [imoveisData, tiposData, estadosData, caracData, matchesData] = await Promise.all(requests)
       setImoveis(imoveisData)
       setTipos(tiposData)
       setEstados(estadosData)
+      setCaracteristicas(caracData)
       if (matchesData) {
         setIdsComMatch(new Set((matchesData as { imovel: { id: string } }[]).map((m) => m.imovel.id)))
       }
@@ -271,6 +285,8 @@ function ImoveisContent() {
   function abrirCriar() {
     setFormData({ ...BLANK_FORM })
     setEditId(null)
+    setSelectedCaracteristicas([])
+    setBuscaCarac('')
     setFormMode('criar')
   }
 
@@ -288,6 +304,12 @@ function ImoveisContent() {
       quartos:       imovel.quartos != null ? String(imovel.quartos) : '',
       banheiros:     imovel.banheiros != null ? String(imovel.banheiros) : '',
       vagas:         imovel.vagas != null ? String(imovel.vagas) : '',
+      suites:        imovel.suites != null ? String(imovel.suites) : '',
+      andar:         imovel.andar != null ? String(imovel.andar) : '',
+      nomeCondominio: imovel.nomeCondominio ?? '',
+      iptu:          imovel.iptu != null ? String(imovel.iptu) : '',
+      seguroIncendio: imovel.seguroIncendio != null ? String(imovel.seguroIncendio) : '',
+      condominio:    imovel.condominio != null ? String(imovel.condominio) : '',
       logradouro:    (imovel as any).logradouro ?? '',
       numero:        (imovel as any).numero ?? '',
       complemento:   (imovel as any).complemento ?? '',
@@ -299,6 +321,8 @@ function ImoveisContent() {
       descricao:     imovel.descricao ?? '',
       urlImovel:     imovel.urlImovel ?? '',
     })
+    setSelectedCaracteristicas(imovel.caracteristicas?.map((c) => c.id) ?? [])
+    setBuscaCarac('')
     setEditId(imovel.id)
     setFormMode('editar')
   }
@@ -326,6 +350,13 @@ function ImoveisContent() {
       quartos:     formData.quartos   ? Number(formData.quartos)   : undefined,
       banheiros:   formData.banheiros ? Number(formData.banheiros) : undefined,
       vagas:       formData.vagas     ? Number(formData.vagas)     : undefined,
+      suites:      formData.suites    ? Number(formData.suites)    : undefined,
+      andar:       formData.andar     ? Number(formData.andar)     : undefined,
+      nomeCondominio: formData.nomeCondominio || undefined,
+      iptu:        formData.iptu      ? Number(formData.iptu)      : undefined,
+      seguroIncendio: formData.seguroIncendio ? Number(formData.seguroIncendio) : undefined,
+      condominio:  formData.condominio ? Number(formData.condominio) : undefined,
+      caracteristicaIds: selectedCaracteristicas,
       logradouro:  formData.logradouro,
       numero:      formData.numero,
       complemento: formData.complemento || undefined,
@@ -754,8 +785,24 @@ function ImoveisContent() {
               <Label>Área (m²) *</Label>
               <Input type="number" min="1" {...field('areaM2')} />
             </div>
+            <div className="sm:col-span-2">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Condomínio (R$/mês)</Label>
+                  <Input type="number" min={0} step="0.01" placeholder="0,00" {...field('condominio')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>IPTU (R$/mês)</Label>
+                  <Input type="number" min={0} step="0.01" placeholder="0,00" {...field('iptu')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Seguro Incêndio (R$/mês)</Label>
+                  <Input type="number" min={0} step="0.01" placeholder="0,00" {...field('seguroIncendio')} />
+                </div>
+              </div>
+            </div>
             <div className="space-y-1">
-              <Label>Quartos</Label>
+              <Label>Dormitórios</Label>
               <Input type="number" min="0" {...field('quartos')} />
             </div>
             <div className="space-y-1">
@@ -765,6 +812,22 @@ function ImoveisContent() {
             <div className="space-y-1">
               <Label>Vagas</Label>
               <Input type="number" min="0" {...field('vagas')} />
+            </div>
+            <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Suítes</Label>
+                  <Input type="number" min={0} placeholder="0" {...field('suites')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Andar</Label>
+                  <Input type="number" min={0} placeholder="—" {...field('andar')} />
+                </div>
+              </div>
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Condomínio / Edifício</Label>
+              <Input placeholder="Ex: Edifício Solar das Flores" {...field('nomeCondominio')} />
             </div>
             <div className="sm:col-span-2 space-y-1">
               <Label>Logradouro *</Label>
@@ -846,6 +909,49 @@ function ImoveisContent() {
             <div className="sm:col-span-2 space-y-1">
               <Label>URL do imóvel no site</Label>
               <Input {...field('urlImovel')} />
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label>Características</Label>
+              <div className="border border-border rounded-md">
+                <div className="p-2 border-b border-border">
+                  <Input
+                    placeholder="Pesquisar..."
+                    value={buscaCarac}
+                    onChange={(e) => setBuscaCarac(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto p-2 grid grid-cols-2 gap-1">
+                  {caracteristicas
+                    .filter((c) => c.nome.toLowerCase().includes(buscaCarac.toLowerCase()))
+                    .map((c) => {
+                      const checked = selectedCaracteristicas.includes(c.id)
+                      return (
+                        <label
+                          key={c.id}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted/50 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setSelectedCaracteristicas((prev) =>
+                                checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                              )
+                            }
+                            className="accent-blue-600"
+                          />
+                          {c.nome}
+                        </label>
+                      )
+                    })}
+                </div>
+                {selectedCaracteristicas.length > 0 && (
+                  <div className="px-3 py-2 border-t border-border text-xs text-muted-foreground">
+                    {selectedCaracteristicas.length} selecionada(s)
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter className="mt-2">
