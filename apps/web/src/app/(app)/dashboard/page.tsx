@@ -84,7 +84,7 @@ function StatTile({
   )
 }
 
-// ── Funil SVG ─────────────────────────────────────────────────────────────────
+// ── Funil SVG — visual por posição (largura decresce por rank, não por valor) ──
 function FunnelChart({ data }: { data: { name: string; total: number; color: string }[] }) {
   if (!data.length || data.every((d) => d.total === 0)) {
     return (
@@ -94,113 +94,78 @@ function FunnelChart({ data }: { data: { name: string; total: number; color: str
     )
   }
 
-  // Dimensões do funil — ocupa toda a largura do card via viewBox + preserveAspectRatio
-  const STEP_H   = 52          // altura de cada banda
-  const LABEL_W  = 110         // espaço à esquerda para os labels
-  const FUNNEL_W = 400         // largura da área do funil
-  const SVG_W    = LABEL_W + FUNNEL_W + 16
-  const MIN_HALF = 18          // mínimo de metade da base (último segmento)
-  const TOP_HALF = FUNNEL_W / 2
+  const n       = data.length
+  const STEP_H  = 44          // altura de cada banda
+  const GAP     = 1           // separador branco entre bandas
+  const TOP_W   = 340         // metade-topo da primeira banda
+  const BOT_W   = 36          // metade-base da última banda
+  const LABEL_W = 120         // espaço à esquerda para labels
+  const SVG_W   = LABEL_W + TOP_W * 2 + 24
+  const cx      = LABEL_W + TOP_W  // centro horizontal do funil
+  const totalH  = n * STEP_H + (n - 1) * GAP
 
-  const maxVal = Math.max(...data.map((d) => d.total), 1)
-  const totalH = data.length * STEP_H
-
-  // Metade da largura de cada banda — escala raiz quadrada para comprimir skew extremo,
-  // com mínimo de 32% do topo para que todas as bandas sejam visíveis.
-  const sqrtMax = Math.sqrt(maxVal)
-  const halves = data.map((d) => {
-    const ratio = sqrtMax > 0 ? Math.sqrt(d.total) / sqrtMax : 0
-    return Math.max(MIN_HALF, Math.round(TOP_HALF * Math.max(0.32, ratio)))
-  })
-
-  // cx é o centro do funil (deslocado pelo espaço dos labels)
-  const cx = LABEL_W + FUNNEL_W / 2
+  // Largura de cada borda (topo/base) decresce linearmente por rank
+  const halfAt = (rank: number) =>
+    Math.round(TOP_W - (TOP_W - BOT_W) * (rank / (n - 1 || 1)))
 
   const stages = data.map((d, i) => {
-    const topH = halves[i]
-    const botH = i < data.length - 1 ? halves[i + 1] : Math.max(MIN_HALF * 0.6, halves[i] * 0.72)
-    const y    = i * STEP_H
+    const topH = halfAt(i)
+    const botH = i < n - 1 ? halfAt(i + 1) : BOT_W
+    const y    = i * (STEP_H + GAP)
     const pct  = data[0].total > 0 ? Math.round((d.total / data[0].total) * 100) : 0
-    return {
-      ...d,
-      topH, botH, y, pct,
-      points: `${cx - topH},${y} ${cx + topH},${y} ${cx + botH},${y + STEP_H} ${cx - botH},${y + STEP_H}`,
-    }
+    const midY = y + STEP_H / 2
+    // Largura mínima da banda no centro para decidir se mostra label interno
+    const midW = (topH + botH) / 2
+    return { ...d, topH, botH, y, pct, midY, midW,
+      points: `${cx-topH},${y} ${cx+topH},${y} ${cx+botH},${y+STEP_H} ${cx-botH},${y+STEP_H}` }
   })
 
   return (
-    <svg
-      width="100%"
-      viewBox={`0 0 ${SVG_W} ${totalH}`}
-      style={{ display: 'block', overflow: 'visible' }}
-    >
-      {stages.map((s, i) => {
-        const midY = s.y + STEP_H / 2
-        return (
-          <g key={i}>
-            {/* Banda do funil */}
-            <polygon points={s.points} fill={s.color} />
+    <svg width="100%" viewBox={`0 0 ${SVG_W} ${totalH}`} style={{ display: 'block' }}>
+      {stages.map((s, i) => (
+        <g key={i}>
+          <polygon points={s.points} fill={s.color} />
 
-            {/* Separador entre bandas (linha branca fina) */}
-            {i < stages.length - 1 && (
-              <line
-                x1={cx - s.botH} y1={s.y + STEP_H}
-                x2={cx + s.botH} y2={s.y + STEP_H}
-                stroke="#fff" strokeWidth={1.5}
-              />
-            )}
+          {/* Label à esquerda com linha tracejada */}
+          <text x={LABEL_W - 10} y={s.midY + 4}
+            textAnchor="end" fontSize={12} fill="#6B7B8D" fontFamily="inherit">
+            {s.name}
+          </text>
+          <line
+            x1={LABEL_W - 4} y1={s.midY}
+            x2={cx - s.topH + 8} y2={s.midY}
+            stroke="#DDE5F0" strokeWidth={1} strokeDasharray="3 2"
+          />
 
-            {/* Label à esquerda */}
-            <text
-              x={LABEL_W - 10}
-              y={midY + 4}
-              textAnchor="end"
-              fontSize={12}
-              fill="#6B7B8D"
-              fontFamily="inherit"
-            >
-              {s.name}
-            </text>
-
-            {/* Linha de conexão label → funil */}
-            <line
-              x1={LABEL_W - 6} y1={midY}
-              x2={cx - s.topH + 6} y2={midY}
-              stroke="#DDE5F0" strokeWidth={1}
-              strokeDasharray="3 2"
-            />
-
-            {/* Valor + % dentro da banda (só se larga o suficiente) */}
-            {s.topH > 40 && (
-              <>
-                <text
-                  x={cx}
-                  y={midY - 3}
-                  textAnchor="middle"
-                  fontSize={13}
-                  fontWeight="700"
-                  fill="#fff"
-                  fontFamily="inherit"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {s.total}
-                </text>
-                <text
-                  x={cx}
-                  y={midY + 13}
-                  textAnchor="middle"
-                  fontSize={11}
-                  fill="rgba(255,255,255,0.85)"
-                  fontFamily="inherit"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {s.pct}%
-                </text>
-              </>
-            )}
-          </g>
-        )
-      })}
+          {/* Valor + % dentro da banda */}
+          {s.midW > 30 ? (
+            <>
+              <text x={cx} y={s.midY - 4} textAnchor="middle"
+                fontSize={13} fontWeight="700" fill="#fff" fontFamily="inherit">
+                {s.total}
+              </text>
+              <text x={cx} y={s.midY + 12} textAnchor="middle"
+                fontSize={11} fill="rgba(255,255,255,0.82)" fontFamily="inherit">
+                {s.pct}%
+              </text>
+            </>
+          ) : (
+            /* Banda muito estreita: label externo à direita */
+            <>
+              <line x1={cx + s.topH} y1={s.midY} x2={cx + s.topH + 10} y2={s.midY}
+                stroke={s.color} strokeWidth={1} strokeDasharray="2 2"/>
+              <text x={cx + s.topH + 14} y={s.midY - 3}
+                fontSize={11} fontWeight="700" fill={s.color} fontFamily="inherit">
+                {s.total}
+              </text>
+              <text x={cx + s.topH + 14} y={s.midY + 10}
+                fontSize={10} fill="#6B7B8D" fontFamily="inherit">
+                {s.pct}%
+              </text>
+            </>
+          )}
+        </g>
+      ))}
     </svg>
   )
 }
