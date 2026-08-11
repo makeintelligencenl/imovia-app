@@ -84,7 +84,7 @@ function StatTile({
   )
 }
 
-// ── Funil SVG — visual por posição (largura decresce por rank, não por valor) ──
+// ── Funil — taxa de conversão entre etapas (drop-off) ─────────────────────────
 function FunnelChart({ data }: { data: { name: string; total: number; color: string }[] }) {
   if (!data.length || data.every((d) => d.total === 0)) {
     return (
@@ -94,79 +94,80 @@ function FunnelChart({ data }: { data: { name: string; total: number; color: str
     )
   }
 
-  const n       = data.length
-  const STEP_H  = 44          // altura de cada banda
-  const GAP     = 1           // separador branco entre bandas
-  const TOP_W   = 340         // metade-topo da primeira banda
-  const BOT_W   = 36          // metade-base da última banda
-  const LABEL_W = 120         // espaço à esquerda para labels
-  const SVG_W   = LABEL_W + TOP_W * 2 + 24
-  const cx      = LABEL_W + TOP_W  // centro horizontal do funil
-  const totalH  = n * STEP_H + (n - 1) * GAP
+  const maxVal = Math.max(...data.map((d) => d.total), 1)
+  const totalGeral = data[0].total > 0
+    ? Math.round((data.filter(d => d.color).reduce((_, d) => d, data[data.length - 2] ?? data[0])).total / data[0].total * 100)
+    : 0
 
-  // Largura de cada borda (topo/base) decresce linearmente por rank
-  const halfAt = (rank: number) =>
-    Math.round(TOP_W - (TOP_W - BOT_W) * (rank / (n - 1 || 1)))
-
-  const stages = data.map((d, i) => {
-    const topH = halfAt(i)
-    const botH = i < n - 1 ? halfAt(i + 1) : BOT_W
-    const y    = i * (STEP_H + GAP)
-    const pct  = data[0].total > 0 ? Math.round((d.total / data[0].total) * 100) : 0
-    const midY = y + STEP_H / 2
-    // Largura mínima da banda no centro para decidir se mostra label interno
-    const midW = (topH + botH) / 2
-    return { ...d, topH, botH, y, pct, midY, midW,
-      points: `${cx-topH},${y} ${cx+topH},${y} ${cx+botH},${y+STEP_H} ${cx-botH},${y+STEP_H}` }
+  // Taxa de conversão entre etapas consecutivas
+  const rows = data.map((d, i) => {
+    const prev     = i > 0 ? data[i - 1].total : null
+    const dropPct  = prev ? Math.round(((prev - d.total) / prev) * 100) : null
+    const convPct  = prev ? Math.round((d.total / prev) * 100) : 100
+    const barPct   = Math.round((d.total / maxVal) * 100)
+    return { ...d, prev, dropPct, convPct, barPct }
   })
 
+  // Taxa de fechamento geral (primeiro → penúltimo, excluindo "Encerrado")
+  const etapaFechada = data.length >= 2 ? data[data.length - 2] : data[data.length - 1]
+  const taxaFechamento = data[0].total > 0
+    ? Math.round((etapaFechada.total / data[0].total) * 100)
+    : 0
+
   return (
-    <svg width="100%" viewBox={`0 0 ${SVG_W} ${totalH}`} style={{ display: 'block' }}>
-      {stages.map((s, i) => (
-        <g key={i}>
-          <polygon points={s.points} fill={s.color} />
+    <div className="space-y-2">
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center gap-3">
+          {/* Nome da etapa */}
+          <div className="w-32 shrink-0 text-right">
+            <span className="text-xs text-muted-foreground">{r.name}</span>
+          </div>
 
-          {/* Label à esquerda com linha tracejada */}
-          <text x={LABEL_W - 10} y={s.midY + 4}
-            textAnchor="end" fontSize={12} fill="#6B7B8D" fontFamily="inherit">
-            {s.name}
-          </text>
-          <line
-            x1={LABEL_W - 4} y1={s.midY}
-            x2={cx - s.topH + 8} y2={s.midY}
-            stroke="#DDE5F0" strokeWidth={1} strokeDasharray="3 2"
-          />
+          {/* Barra proporcional ao volume */}
+          <div className="flex-1 h-8 bg-[#F0F4FA] rounded-md overflow-hidden relative">
+            <div
+              className="h-full rounded-md flex items-center px-3 transition-all"
+              style={{ width: `${Math.max(r.barPct, 4)}%`, backgroundColor: r.color }}
+            >
+              {r.barPct >= 12 && (
+                <span className="text-xs font-bold text-white">{r.total}</span>
+              )}
+            </div>
+            {r.barPct < 12 && (
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold"
+                style={{ color: r.color }}>
+                {r.total}
+              </span>
+            )}
+          </div>
 
-          {/* Valor + % dentro da banda */}
-          {s.midW > 30 ? (
-            <>
-              <text x={cx} y={s.midY - 4} textAnchor="middle"
-                fontSize={13} fontWeight="700" fill="#fff" fontFamily="inherit">
-                {s.total}
-              </text>
-              <text x={cx} y={s.midY + 12} textAnchor="middle"
-                fontSize={11} fill="rgba(255,255,255,0.82)" fontFamily="inherit">
-                {s.pct}%
-              </text>
-            </>
-          ) : (
-            /* Banda muito estreita: label externo à direita */
-            <>
-              <line x1={cx + s.topH} y1={s.midY} x2={cx + s.topH + 10} y2={s.midY}
-                stroke={s.color} strokeWidth={1} strokeDasharray="2 2"/>
-              <text x={cx + s.topH + 14} y={s.midY - 3}
-                fontSize={11} fontWeight="700" fill={s.color} fontFamily="inherit">
-                {s.total}
-              </text>
-              <text x={cx + s.topH + 14} y={s.midY + 10}
-                fontSize={10} fill="#6B7B8D" fontFamily="inherit">
-                {s.pct}%
-              </text>
-            </>
-          )}
-        </g>
+          {/* Conversão da etapa anterior */}
+          <div className="w-16 shrink-0 text-right">
+            {r.dropPct !== null ? (
+              <div>
+                <span className="text-xs font-semibold" style={{
+                  color: r.convPct >= 50 ? '#16A34A' : r.convPct >= 25 ? '#D97706' : '#DC2626'
+                }}>
+                  {r.convPct}%
+                </span>
+                <div className="text-[10px] text-muted-foreground">conv.</div>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">base</span>
+            )}
+          </div>
+        </div>
       ))}
-    </svg>
+
+      {/* Resumo */}
+      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+        <span>{data[0].total} matches totais</span>
+        <span>
+          Taxa de fechamento:{' '}
+          <span className="font-semibold text-foreground">{taxaFechamento}%</span>
+        </span>
+      </div>
+    </div>
   )
 }
 
