@@ -105,10 +105,13 @@ function FunnelChart({ data }: { data: { name: string; total: number; color: str
   const maxVal = Math.max(...data.map((d) => d.total), 1)
   const totalH = data.length * STEP_H
 
-  // Metade da largura de cada banda (proporcional ao valor)
-  const halves = data.map((d) =>
-    Math.max(MIN_HALF, Math.round(TOP_HALF * (d.total / maxVal)))
-  )
+  // Metade da largura de cada banda — escala raiz quadrada para comprimir skew extremo,
+  // com mínimo de 32% do topo para que todas as bandas sejam visíveis.
+  const sqrtMax = Math.sqrt(maxVal)
+  const halves = data.map((d) => {
+    const ratio = sqrtMax > 0 ? Math.sqrt(d.total) / sqrtMax : 0
+    return Math.max(MIN_HALF, Math.round(TOP_HALF * Math.max(0.32, ratio)))
+  })
 
   // cx é o centro do funil (deslocado pelo espaço dos labels)
   const cx = LABEL_W + FUNNEL_W / 2
