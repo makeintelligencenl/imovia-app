@@ -94,73 +94,111 @@ function FunnelChart({ data }: { data: { name: string; total: number; color: str
     )
   }
 
-  const SVG_W  = 260
-  const STEP_H = 44
-  const GAP    = 3
-  const MIN_W  = 28
-  const cx     = SVG_W / 2
-  const maxVal = Math.max(...data.map((d) => d.total), 1)
-  const totalH = data.length * STEP_H + (data.length - 1) * GAP
+  // Dimensões do funil — ocupa toda a largura do card via viewBox + preserveAspectRatio
+  const STEP_H   = 52          // altura de cada banda
+  const LABEL_W  = 110         // espaço à esquerda para os labels
+  const FUNNEL_W = 400         // largura da área do funil
+  const SVG_W    = LABEL_W + FUNNEL_W + 16
+  const MIN_HALF = 18          // mínimo de metade da base (último segmento)
+  const TOP_HALF = FUNNEL_W / 2
 
-  const widths = data.map((d) => Math.max(MIN_W, Math.round(SVG_W * (d.total / maxVal))))
+  const maxVal = Math.max(...data.map((d) => d.total), 1)
+  const totalH = data.length * STEP_H
+
+  // Metade da largura de cada banda (proporcional ao valor)
+  const halves = data.map((d) =>
+    Math.max(MIN_HALF, Math.round(TOP_HALF * (d.total / maxVal)))
+  )
+
+  // cx é o centro do funil (deslocado pelo espaço dos labels)
+  const cx = LABEL_W + FUNNEL_W / 2
 
   const stages = data.map((d, i) => {
-    const topW = widths[i]
-    const botW = i < data.length - 1 ? widths[i + 1] : Math.max(MIN_W * 0.7, widths[i] * 0.75)
-    const y    = i * (STEP_H + GAP)
+    const topH = halves[i]
+    const botH = i < data.length - 1 ? halves[i + 1] : Math.max(MIN_HALF * 0.6, halves[i] * 0.72)
+    const y    = i * STEP_H
+    const pct  = data[0].total > 0 ? Math.round((d.total / data[0].total) * 100) : 0
     return {
       ...d,
-      topW, botW, y,
-      points: `${cx - topW / 2},${y} ${cx + topW / 2},${y} ${cx + botW / 2},${y + STEP_H} ${cx - botW / 2},${y + STEP_H}`,
+      topH, botH, y, pct,
+      points: `${cx - topH},${y} ${cx + topH},${y} ${cx + botH},${y + STEP_H} ${cx - botH},${y + STEP_H}`,
     }
   })
 
   return (
-    <div className="flex flex-wrap items-start gap-6">
-      <svg width={SVG_W} height={totalH} viewBox={`0 0 ${SVG_W} ${totalH}`} style={{ flexShrink: 0 }}>
-        {stages.map((s, i) => (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${SVG_W} ${totalH}`}
+      style={{ display: 'block', overflow: 'visible' }}
+    >
+      {stages.map((s, i) => {
+        const midY = s.y + STEP_H / 2
+        return (
           <g key={i}>
+            {/* Banda do funil */}
             <polygon points={s.points} fill={s.color} />
-            {s.topW > 72 && (
-              <text
-                x={cx}
-                y={s.y + STEP_H / 2 + 4}
-                textAnchor="middle"
-                fontSize={11}
-                fontWeight="600"
-                fill="#fff"
-                style={{ pointerEvents: 'none' }}
-              >
-                {s.name}
-              </text>
+
+            {/* Separador entre bandas (linha branca fina) */}
+            {i < stages.length - 1 && (
+              <line
+                x1={cx - s.botH} y1={s.y + STEP_H}
+                x2={cx + s.botH} y2={s.y + STEP_H}
+                stroke="#fff" strokeWidth={1.5}
+              />
+            )}
+
+            {/* Label à esquerda */}
+            <text
+              x={LABEL_W - 10}
+              y={midY + 4}
+              textAnchor="end"
+              fontSize={12}
+              fill="#6B7B8D"
+              fontFamily="inherit"
+            >
+              {s.name}
+            </text>
+
+            {/* Linha de conexão label → funil */}
+            <line
+              x1={LABEL_W - 6} y1={midY}
+              x2={cx - s.topH + 6} y2={midY}
+              stroke="#DDE5F0" strokeWidth={1}
+              strokeDasharray="3 2"
+            />
+
+            {/* Valor + % dentro da banda (só se larga o suficiente) */}
+            {s.topH > 40 && (
+              <>
+                <text
+                  x={cx}
+                  y={midY - 3}
+                  textAnchor="middle"
+                  fontSize={13}
+                  fontWeight="700"
+                  fill="#fff"
+                  fontFamily="inherit"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {s.total}
+                </text>
+                <text
+                  x={cx}
+                  y={midY + 13}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill="rgba(255,255,255,0.85)"
+                  fontFamily="inherit"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {s.pct}%
+                </text>
+              </>
             )}
           </g>
-        ))}
-      </svg>
-
-      {/* Legenda */}
-      <div className="flex flex-col" style={{ paddingTop: 2 }}>
-        {data.map((d, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-2 text-sm"
-            style={{ height: STEP_H + GAP }}
-          >
-            <span
-              className="inline-block w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: d.color }}
-            />
-            <span className="text-muted-foreground min-w-0" style={{ maxWidth: 140 }}>
-              {d.name}
-            </span>
-            <span className="font-bold text-foreground tabular-nums ml-1">{d.total}</span>
-            <span className="text-xs text-muted-foreground w-8 text-right">
-              {data[0].total > 0 ? Math.round((d.total / data[0].total) * 100) : 0}%
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+        )
+      })}
+    </svg>
   )
 }
 
@@ -395,54 +433,71 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ── Leads por mês + Donut status ── */}
+      {/* ── Leads por mês (linha única) ── */}
+      <Card className="rounded-xl shadow-sm">
+        <CardHeader className="pb-1">
+          <CardTitle className="text-sm font-semibold">Leads por mês</CardTitle>
+          <p className="text-xs text-muted-foreground">Perfis criados — últimos 6 meses</p>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {loading ? (
+            <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+              Carregando...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={leadsPerMonth} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="grad-primary" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#2563EB" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#DDE5F0" vertical={false} />
+                <XAxis
+                  dataKey="mes"
+                  tick={{ fill: '#6B7B8D', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: '#6B7B8D', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={32}
+                  allowDecimals={false}
+                />
+                <ReTooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="leads"
+                  name="Leads"
+                  stroke="#2563EB"
+                  strokeWidth={2}
+                  fill="url(#grad-primary)"
+                  dot={{ r: 4, strokeWidth: 2, stroke: '#fff', fill: '#2563EB' }}
+                  activeDot={{ r: 6 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Funil do pipeline + Donut status ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 rounded-xl shadow-sm">
           <CardHeader className="pb-1">
-            <CardTitle className="text-sm font-semibold">Leads por mês</CardTitle>
-            <p className="text-xs text-muted-foreground">Perfis criados — últimos 6 meses</p>
+            <CardTitle className="text-sm font-semibold">Funil do pipeline</CardTitle>
+            <p className="text-xs text-muted-foreground">Matches por etapa</p>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-3">
             {loading ? (
-              <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+              <div className="flex items-center justify-center h-52 text-sm text-muted-foreground">
                 Carregando...
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={leadsPerMonth} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="grad-primary" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#2563EB" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#DDE5F0" vertical={false} />
-                  <XAxis
-                    dataKey="mes"
-                    tick={{ fill: '#6B7B8D', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: '#6B7B8D', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={32}
-                    allowDecimals={false}
-                  />
-                  <ReTooltip content={<CustomTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="leads"
-                    name="Leads"
-                    stroke="#2563EB"
-                    strokeWidth={2}
-                    fill="url(#grad-primary)"
-                    dot={{ r: 4, strokeWidth: 2, stroke: '#fff', fill: '#2563EB' }}
-                    activeDot={{ r: 6 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <FunnelChart data={funilData} />
             )}
           </CardContent>
         </Card>
@@ -463,23 +518,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* ── Funil do pipeline ── */}
-      <Card className="rounded-xl shadow-sm">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-semibold">Funil do pipeline</CardTitle>
-          <p className="text-xs text-muted-foreground">Matches por etapa</p>
-        </CardHeader>
-        <CardContent className="pt-3">
-          {loading ? (
-            <div className="flex items-center justify-center h-52 text-sm text-muted-foreground">
-              Carregando...
-            </div>
-          ) : (
-            <FunnelChart data={funilData} />
-          )}
-        </CardContent>
-      </Card>
 
       {/* ── Últimos matches + Imóveis sem match ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
