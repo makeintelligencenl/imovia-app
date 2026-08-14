@@ -73,6 +73,25 @@ export class FinanceiroController {
     return this.financeiroService.listar(req.user.tenantId, { tipo, status, corretorId, periodo }, req.user)
   }
 
+  @Get('config/aluguel')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Retorna configuração de comissão de aluguel do tenant' })
+  getConfigAluguel(@Request() req: any) {
+    return this.financeiroService.getConfigAluguel(req.user.tenantId)
+  }
+
+  @Patch('config/aluguel')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Atualiza configuração de comissão de aluguel do tenant' })
+  updateConfigAluguel(
+    @Request() req: any,
+    @Body() dto: { comissaoTipo: string; percTaxaUnica: number; splitImobiliaria: number; splitCorretor: number },
+  ) {
+    return this.financeiroService.updateConfigAluguel(req.user.tenantId, dto)
+  }
+
   @Patch('comissoes/:id/pagar')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')

@@ -305,6 +305,50 @@ export class FinanceiroService {
     }
   }
 
+  // ── Configuração de comissão de aluguel do tenant ──────────────────────────
+
+  async getConfigAluguel(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        aluguelComissaoTipo:     true,
+        aluguelPercTaxaUnica:    true,
+        aluguelSplitImobiliaria: true,
+        aluguelSplitCorretor:    true,
+      },
+    })
+    if (!tenant) throw new NotFoundException('Tenant não encontrado')
+    return {
+      comissaoTipo:     tenant.aluguelComissaoTipo,
+      percTaxaUnica:    Number(tenant.aluguelPercTaxaUnica    ?? 100),
+      splitImobiliaria: Number(tenant.aluguelSplitImobiliaria ?? 50),
+      splitCorretor:    Number(tenant.aluguelSplitCorretor    ?? 50),
+    }
+  }
+
+  async updateConfigAluguel(tenantId: string, dto: {
+    comissaoTipo:     string
+    percTaxaUnica:    number
+    splitImobiliaria: number
+    splitCorretor:    number
+  }) {
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        aluguelComissaoTipo:     dto.comissaoTipo as any,
+        aluguelPercTaxaUnica:    dto.percTaxaUnica,
+        aluguelSplitImobiliaria: dto.splitImobiliaria,
+        aluguelSplitCorretor:    dto.splitCorretor,
+      },
+      select: {
+        aluguelComissaoTipo:     true,
+        aluguelPercTaxaUnica:    true,
+        aluguelSplitImobiliaria: true,
+        aluguelSplitCorretor:    true,
+      },
+    })
+  }
+
   private periodoToRange(periodo: string): { gte: Date; lte: Date } {
     const now = new Date()
     const lte = new Date(now)
