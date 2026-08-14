@@ -8,6 +8,7 @@ const MODEL_DELEGATES = new Set([
   'tenant', 'user', 'refreshToken', 'cliente', 'estado', 'cidade',
   'demoRequest', 'tipoImovel', 'imovel', 'perfilBusca', 'pipelineEtapa',
   'match', 'matchHistorico', 'visita', 'comissaoVenda', 'caracteristica',
+  'contratoAluguel',
 ])
 
 // Operações de model que precisam passar pelo RLS
