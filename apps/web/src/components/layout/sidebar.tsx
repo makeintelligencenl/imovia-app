@@ -18,7 +18,7 @@ const NAV_ITEMS_BASE = [
   { href: '/agenda',            label: 'Agenda',        icon: CalendarDays,  adminOnly: false },
   { href: '/relatorios',        label: 'Relatórios',    icon: BarChart2,     adminOnly: true  },
   { href: '/financeiro',        label: 'Financeiro',    icon: DollarSign,    adminOnly: true  },
-  { href: '/dashboard/aluguel', label: 'Aluguel',       icon: KeyRound,      adminOnly: true  },
+  { href: '/aluguel',           label: 'Aluguel',       icon: KeyRound,      adminOnly: true  },
   { href: '/chats',             label: 'Chats',         icon: MessageSquare, adminOnly: true  },
   { href: '/settings/pipeline', label: 'Configurações', icon: Settings2,     adminOnly: true  },
 ]
