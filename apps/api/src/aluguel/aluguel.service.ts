@@ -70,6 +70,10 @@ export class AluguelService {
     dataVencimento.setMonth(dataVencimento.getMonth() + dto.duracaoMeses)
 
     await this.prisma.$transaction(async (tx) => {
+      // Valida que a etapa pertence ao mesmo tenant
+      const etapa = await tx.pipelineEtapa.findFirst({ where: { id: dto.etapaId, tenantId } })
+      if (!etapa) throw new BadRequestException('Etapa inválida para este tenant')
+
       // 1. Move etapa
       await tx.match.update({
         where: { id: dto.matchId },
