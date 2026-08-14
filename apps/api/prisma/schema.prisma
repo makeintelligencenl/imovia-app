@@ -21,6 +21,13 @@ model Tenant {
   comissaoPercentualTotal  Decimal?        @default(6.00) @db.Decimal(5, 2)
   comissaoSplitCorretor    Decimal?        @default(50.00) @db.Decimal(5, 2)
   comissaoSplitImobiliaria Decimal?        @default(50.00) @db.Decimal(5, 2)
+
+  // Configuração de comissão de aluguel
+  aluguelComissaoTipo          AluguelComissaoTipo @default(TAXA_UNICA)
+  aluguelPercTaxaUnica         Decimal?            @default(100.00) @db.Decimal(5, 2)
+  aluguelSplitImobiliaria      Decimal?            @default(50.00)  @db.Decimal(5, 2)
+  aluguelSplitCorretor         Decimal?            @default(50.00)  @db.Decimal(5, 2)
+
   clientes                 Cliente[]
   comissoes                ComissaoVenda[]
   imoveis                  Imovel[]
@@ -30,6 +37,7 @@ model Tenant {
   users                    User[]
   visitas                  Visita[]
   caracteristicas          Caracteristica[]
+  contratos                ContratoAluguel[]
 
   @@map("tenants")
 }
@@ -52,6 +60,7 @@ model User {
   refreshTokens     RefreshToken[]
   tenant            Tenant           @relation(fields: [tenantId], references: [id])
   visitas           Visita[]         @relation("VisitaCorretor")
+  contratos         ContratoAluguel[] @relation("ContratoCorretor")
 
   @@map("users")
 }
@@ -180,6 +189,7 @@ model Imovel {
   matches      Match[]
   visitas      Visita[]
   caracteristicas  Caracteristica[] @relation("ImovelCaracteristicas")
+  contratos    ContratoAluguel[]
 
   @@index([tenantId, status])
   @@index([tenantId, finalidade, tipoId])
@@ -273,6 +283,7 @@ model Match {
   perfil     PerfilBusca      @relation(fields: [perfilId], references: [id])
   tenant     Tenant           @relation(fields: [tenantId], references: [id])
   visitas    Visita[]
+  contrato   ContratoAluguel?
 
   @@unique([perfilId, imovelId])
   @@index([tenantId])
@@ -352,6 +363,39 @@ model ComissaoVenda {
   @@map("comissoes_venda")
 }
 
+// ─────────────────────────────────────────
+// Contratos de aluguel
+// ─────────────────────────────────────────
+model ContratoAluguel {
+  id                   String          @id @default(cuid())
+  tenantId             String
+  matchId              String
+  imovelId             String
+  corretorId           String?
+  dataInicio           DateTime
+  duracaoMeses         Int
+  dataVencimento       DateTime
+  valorMensal          Decimal         @db.Decimal(12, 2)
+  status               ContratoStatus  @default(ATIVO)
+  dataEncerramento     DateTime?
+  percTaxaUnica        Decimal?        @db.Decimal(5, 2)
+  valorTaxaUnicaImob   Decimal?        @db.Decimal(12, 2)
+  valorTaxaUnicaCorr   Decimal?        @db.Decimal(12, 2)
+  statusTaxaUnica      ComissaoStatus  @default(PENDENTE)
+  dataPagamentoTaxa    DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  corretor             User?           @relation("ContratoCorretor", fields: [corretorId], references: [id])
+  imovel               Imovel          @relation(fields: [imovelId], references: [id])
+  match                Match           @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  tenant               Tenant          @relation(fields: [tenantId], references: [id])
+
+  @@unique([matchId])
+  @@index([tenantId, status])
+  @@index([tenantId, corretorId])
+  @@map("contratos_aluguel")
+}
+
 enum Role {
   SUPERADMIN
   ADMIN
@@ -393,4 +437,15 @@ enum ComissaoTipo {
 enum ComissaoStatus {
   PENDENTE
   PAGO
+}
+
+enum AluguelComissaoTipo {
+  TAXA_UNICA
+  MENSAL
+  AMBOS
+}
+
+enum ContratoStatus {
+  ATIVO
+  ENCERRADO
 }

@@ -75,6 +75,20 @@ interface Match {
   }
 }
 
+interface DadosFechamentoAluguel {
+  matchId:             string
+  imovelTitulo:        string
+  corretorNome:        string | null
+  valorMensalSugerido: number
+  comissaoTipo:        'TAXA_UNICA' | 'MENSAL' | 'AMBOS'
+  percTaxaUnica:       number
+  splitImobiliaria:    number
+  splitCorretor:       number
+  valorTaxaUnicaImob:  number
+  valorTaxaUnicaCorr:  number
+  etapaId:             string
+}
+
 interface MatchHistoricoItem {
   id: string
   tipo: 'MATCH_CRIADO' | 'ETAPA_ALTERADA' | 'CORRETOR_ATRIBUIDO' | 'CORRETOR_REMOVIDO'
@@ -541,6 +555,16 @@ function MatchesContent() {
   const [visitaRapida,    setVisitaRapida]    = useState<VisitaRapidaData | null>(null)
   const [visitaLoading,   setVisitaLoading]   = useState(false)
   const [fecharVenda,     setFecharVenda]     = useState<FecharVendaData | null>(null)
+  const [modalAluguel,   setModalAluguel]   = useState<DadosFechamentoAluguel | null>(null)
+  const [aluguelForm,    setAluguelForm]    = useState({
+    dataInicio:         new Date().toISOString().split('T')[0],
+    duracaoMeses:       12,
+    valorMensal:        0,
+    percTaxaUnica:      0,
+    valorTaxaUnicaImob: 0,
+    valorTaxaUnicaCorr: 0,
+  })
+  const [fechandoAluguel, setFechandoAluguel] = useState(false)
 
   const [filtroTexto,      setFiltroTexto]      = useState('')
   const [filtroEtapa,      setFiltroEtapa]      = useState('__todos__')
@@ -631,6 +655,23 @@ function MatchesContent() {
       setFecharVenda({ matchId, etapaId })
       return
     }
+    if (isFechado && oldMatch.imovel.finalidade === 'ALUGUEL') {
+      try {
+        const dados = await api.get<Omit<DadosFechamentoAluguel, 'etapaId'>>(`/aluguel/dados-fechamento/${matchId}`)
+        setAluguelForm({
+          dataInicio:         new Date().toISOString().split('T')[0],
+          duracaoMeses:       12,
+          valorMensal:        dados.valorMensalSugerido,
+          percTaxaUnica:      dados.percTaxaUnica,
+          valorTaxaUnicaImob: dados.valorTaxaUnicaImob,
+          valorTaxaUnicaCorr: dados.valorTaxaUnicaCorr,
+        })
+        setModalAluguel({ ...dados, matchId, etapaId })
+      } catch {
+        toast.error('Erro ao carregar dados de fechamento de aluguel')
+      }
+      return
+    }
 
     const isVisitaEtapa = (etapa as any).tipo === 'VISITA' || etapa.nome.toLowerCase().includes('visita')
 
@@ -666,6 +707,36 @@ function MatchesContent() {
         prev.map((m) => m.id === matchId ? { ...m, etapaId: oldMatch.etapaId, etapa: oldMatch.etapa } : m),
       )
       toast.error('Erro ao atualizar etapa')
+    }
+  }
+
+  async function handleFecharAluguel(e: React.FormEvent) {
+    e.preventDefault()
+    if (!modalAluguel) return
+    setFechandoAluguel(true)
+    try {
+      await api.post('/aluguel/fechar', {
+        matchId:            modalAluguel.matchId,
+        etapaId:            modalAluguel.etapaId,
+        dataInicio:         aluguelForm.dataInicio,
+        duracaoMeses:       aluguelForm.duracaoMeses,
+        valorMensal:        aluguelForm.valorMensal,
+        percTaxaUnica:      aluguelForm.percTaxaUnica,
+        valorTaxaUnicaImob: aluguelForm.valorTaxaUnicaImob,
+        valorTaxaUnicaCorr: aluguelForm.valorTaxaUnicaCorr,
+      })
+      const etapa = etapas.find((e) => e.id === modalAluguel.etapaId)
+      if (etapa) {
+        setMatches((prev) =>
+          prev.map((m) => m.id === modalAluguel.matchId ? { ...m, etapaId: modalAluguel.etapaId, etapa } : m),
+        )
+      }
+      toast.success('Aluguel registrado com sucesso')
+      setModalAluguel(null)
+    } catch {
+      toast.error('Erro ao registrar aluguel')
+    } finally {
+      setFechandoAluguel(false)
     }
   }
 
@@ -783,6 +854,95 @@ function MatchesContent() {
         }}
         onCancel={() => setFecharVenda(null)}
       />
+
+      {/* Modal de fechamento de aluguel */}
+      {modalAluguel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-base font-bold mb-1">Registrar Aluguel</h2>
+            <p className="text-sm text-muted-foreground mb-4">{modalAluguel.imovelTitulo}</p>
+
+            <form onSubmit={handleFecharAluguel} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Data de início</label>
+                  <input
+                    type="date"
+                    className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
+                    value={aluguelForm.dataInicio}
+                    onChange={e => setAluguelForm(f => ({ ...f, dataInicio: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Duração (meses)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
+                    value={aluguelForm.duracaoMeses}
+                    onChange={e => setAluguelForm(f => ({ ...f, duracaoMeses: Number(e.target.value) }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Valor mensal (R$)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
+                  value={aluguelForm.valorMensal}
+                  onChange={e => {
+                    const val = Number(e.target.value)
+                    const imob = val * (modalAluguel.percTaxaUnica / 100) * (modalAluguel.splitImobiliaria / 100)
+                    const corr = val * (modalAluguel.percTaxaUnica / 100) * (modalAluguel.splitCorretor / 100)
+                    setAluguelForm(f => ({ ...f, valorMensal: val, valorTaxaUnicaImob: imob, valorTaxaUnicaCorr: corr }))
+                  }}
+                  required
+                />
+              </div>
+
+              {(modalAluguel.comissaoTipo === 'TAXA_UNICA' || modalAluguel.comissaoTipo === 'AMBOS') && (
+                <div className="rounded-lg bg-muted/40 p-3 text-xs space-y-1">
+                  <p className="font-medium text-foreground">Taxa única ({modalAluguel.percTaxaUnica}% do 1º mês)</p>
+                  <p className="text-muted-foreground">
+                    Imobiliária:{' '}
+                    <span className="font-semibold text-foreground">
+                      R$ {aluguelForm.valorTaxaUnicaImob.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Corretor{modalAluguel.corretorNome ? ` (${modalAluguel.corretorNome})` : ''}:{' '}
+                    <span className="font-semibold text-foreground">
+                      R$ {aluguelForm.valorTaxaUnicaCorr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  className="flex-1 rounded-lg border border-border py-2 text-sm font-medium"
+                  onClick={() => setModalAluguel(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={fechandoAluguel}
+                  className="flex-1 rounded-lg bg-primary text-primary-foreground py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {fechandoAluguel ? 'Registrando...' : 'Confirmar aluguel'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Cabecalho */}
       <div className="flex items-center justify-between">

@@ -3,6 +3,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { FinanceiroService } from './financeiro.service'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard, Roles } from '../auth/guards/roles.guard'
+import { UpdateConfigAluguelDto } from './dto/update-config-aluguel.dto'
 
 @ApiTags('financeiro')
 @ApiBearerAuth()
@@ -73,6 +74,22 @@ export class FinanceiroController {
     @Query('periodo')    periodo?:    string,
   ) {
     return this.financeiroService.listar(req.user.tenantId, { tipo, status, corretorId, periodo }, req.user)
+  }
+
+  @Get('config/aluguel')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Retorna configuração de comissão de aluguel do tenant' })
+  getConfigAluguel(@Request() req: any) {
+    return this.financeiroService.getConfigAluguel(req.user.tenantId)
+  }
+
+  @Patch('config/aluguel')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Atualiza configuração de comissão de aluguel do tenant' })
+  updateConfigAluguel(@Request() req: any, @Body() dto: UpdateConfigAluguelDto) {
+    return this.financeiroService.updateConfigAluguel(req.user.tenantId, dto)
   }
 
   @Patch('comissoes/:id/pagar')

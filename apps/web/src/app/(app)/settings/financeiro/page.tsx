@@ -14,16 +14,34 @@ function round2(n: number) {
   return Math.round(n * 100) / 100
 }
 
+interface ConfigAluguel {
+  comissaoTipo:     'TAXA_UNICA' | 'MENSAL' | 'AMBOS'
+  percTaxaUnica:    number
+  splitImobiliaria: number
+  splitCorretor:    number
+}
+
 export default function FinanceiroSettingsPage() {
   const [config, setConfig]   = useState<Config>({ percentualTotal: 6, percImobiliaria: 3, percCorretor: 3 })
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
   const [msg,     setMsg]     = useState<{ ok: boolean; text: string } | null>(null)
 
+  const [configAluguel, setConfigAluguel] = useState<ConfigAluguel>({
+    comissaoTipo:     'TAXA_UNICA',
+    percTaxaUnica:    100,
+    splitImobiliaria: 50,
+    splitCorretor:    50,
+  })
+  const [savingAluguel, setSavingAluguel] = useState(false)
+  const [msgAluguel, setMsgAluguel]       = useState<{ ok: boolean; text: string } | null>(null)
+
   useEffect(() => {
-    fetch(`${API}/financeiro/config`, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((d) => {
+    Promise.all([
+      fetch(`${API}/financeiro/config`, { credentials: 'include' }).then((r) => r.json()),
+      fetch(`${API}/financeiro/config/aluguel`, { credentials: 'include' }).then((r) => r.json()),
+    ])
+      .then(([d, da]) => {
         const total = Number(d.percentualTotal  ?? 6)
         const splitI = Number(d.splitImobiliaria ?? 50)
         const splitC = Number(d.splitCorretor    ?? 50)
@@ -32,6 +50,14 @@ export default function FinanceiroSettingsPage() {
           percImobiliaria: round2(total * splitI / 100),
           percCorretor:    round2(total * splitC / 100),
         })
+        if (da && !da.error) {
+          setConfigAluguel({
+            comissaoTipo:     da.comissaoTipo     ?? 'TAXA_UNICA',
+            percTaxaUnica:    Number(da.percTaxaUnica    ?? 100),
+            splitImobiliaria: Number(da.splitImobiliaria ?? 50),
+            splitCorretor:    Number(da.splitCorretor    ?? 50),
+          })
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -54,6 +80,26 @@ export default function FinanceiroSettingsPage() {
   function handlePercCorr(v: number) {
     const corr = Math.round(v)
     setConfig((c) => ({ ...c, percCorretor: corr, percImobiliaria: Math.round(c.percentualTotal) - corr }))
+  }
+
+  async function saveAluguel(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingAluguel(true)
+    setMsgAluguel(null)
+    try {
+      const r = await fetch(`${API}/financeiro/config/aluguel`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(configAluguel),
+      })
+      if (!r.ok) throw new Error()
+      setMsgAluguel({ ok: true, text: 'Configuração de aluguel salva com sucesso.' })
+    } catch {
+      setMsgAluguel({ ok: false, text: 'Erro ao salvar. Tente novamente.' })
+    } finally {
+      setSavingAluguel(false)
+    }
   }
 
   async function save() {
@@ -210,6 +256,90 @@ export default function FinanceiroSettingsPage() {
         <Save className="h-4 w-4" />
         {saving ? 'Salvando…' : 'Salvar configurações'}
       </button>
+
+      {/* ── Comissão de Aluguel ── */}
+      <hr className="border-border" />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Comissão de Aluguel</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Configuração da comissão cobrada nas locações.
+          </p>
+        </div>
+
+        <form onSubmit={saveAluguel} className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Tipo de comissão</label>
+            <select
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={configAluguel.comissaoTipo}
+              onChange={(e) => setConfigAluguel((p) => ({ ...p, comissaoTipo: e.target.value as ConfigAluguel['comissaoTipo'] }))}
+            >
+              <option value="TAXA_UNICA">Taxa única no fechamento</option>
+              <option value="MENSAL">Percentual mensal recorrente</option>
+              <option value="AMBOS">Ambos</option>
+            </select>
+          </div>
+
+          {(configAluguel.comissaoTipo === 'TAXA_UNICA' || configAluguel.comissaoTipo === 'AMBOS') && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                Taxa única (% sobre 1º mês)
+              </label>
+              <div className="relative max-w-[160px]">
+                <input
+                  type="number" min={0} max={200} step={0.5}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={configAluguel.percTaxaUnica}
+                  onChange={(e) => setConfigAluguel((p) => ({ ...p, percTaxaUnica: Number(e.target.value) }))}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Split Imobiliária (%)</label>
+              <div className="relative">
+                <input
+                  type="number" min={0} max={100} step={1}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={configAluguel.splitImobiliaria}
+                  onChange={(e) => setConfigAluguel((p) => ({ ...p, splitImobiliaria: Number(e.target.value) }))}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Split Corretor (%)</label>
+              <div className="relative">
+                <input
+                  type="number" min={0} max={100} step={1}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={configAluguel.splitCorretor}
+                  onChange={(e) => setConfigAluguel((p) => ({ ...p, splitCorretor: Number(e.target.value) }))}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+          </div>
+
+          {msgAluguel && (
+            <p className={`text-sm ${msgAluguel.ok ? 'text-green-600' : 'text-red-500'}`}>{msgAluguel.text}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={savingAluguel}
+            className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Save className="h-4 w-4" />
+            {savingAluguel ? 'Salvando…' : 'Salvar configuração de aluguel'}
+          </button>
+        </form>
+      </section>
     </div>
   )
 }

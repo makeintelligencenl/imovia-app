@@ -22,6 +22,7 @@ import { FinanceiroModule } from './financeiro/financeiro.module'
 import { ChatsModule } from './chats/chats.module'
 import { DemoRequestsModule } from './demo-requests/demo-requests.module'
 import { CaracteristicasModule } from './caracteristicas/caracteristicas.module'
+import { AluguelModule } from './aluguel/aluguel.module'
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { CaracteristicasModule } from './caracteristicas/caracteristicas.module'
     ChatsModule,
     DemoRequestsModule,
     CaracteristicasModule,
+    AluguelModule,
   ],
   providers: [
     { provide: APP_GUARD,       useClass: ThrottlerGuard },
