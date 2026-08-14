@@ -6,6 +6,14 @@ import { KeyRound, CheckCircle, XCircle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getCurrentUser } from '@/lib/auth'
 
+interface ContaReceber {
+  id:           string
+  tipo:         'IMOBILIARIA' | 'CORRETOR'
+  valor:        number
+  status:       'PENDENTE' | 'PAGO'
+  dataPagamento: string | null
+}
+
 interface Contrato {
   id:                  string
   status:              'ATIVO' | 'ENCERRADO'
@@ -17,11 +25,9 @@ interface Contrato {
   percTaxaUnica:       number | null
   valorTaxaUnicaImob:  number | null
   valorTaxaUnicaCorr:  number | null
-  statusTaxaUnica:     'PENDENTE' | 'PAGO'
-  dataPagamentoTaxa:   string | null
   imovel:   { id: string; titulo: string; bairro: string; cidade: { nome: string } }
   corretor: { id: string; name: string } | null
-  match:    { id: string; perfil: { cliente: { nome: string } } }
+  match:    { id: string; perfil: { cliente: { nome: string } }; contasReceber: ContaReceber[] }
 }
 
 function fmt(n: number) {
@@ -158,32 +164,37 @@ export default function AluguelPage() {
                   </div>
                 </div>
 
-                {/* Taxa única */}
-                {c.valorTaxaUnicaImob !== null && (
-                  <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">
-                      Taxa única — Imob: <span className="font-semibold text-foreground">R$ {fmt(Number(c.valorTaxaUnicaImob))}</span>
-                      {c.valorTaxaUnicaCorr !== null && (
-                        <> · Corretor: <span className="font-semibold text-foreground">R$ {fmt(Number(c.valorTaxaUnicaCorr))}</span></>
+                {/* Taxa única — derivada de contasReceber */}
+                {c.valorTaxaUnicaImob !== null && (() => {
+                  const contas   = c.match.contasReceber
+                  const taxaPaga = contas.every(cr => cr.status === 'PAGO')
+                  const dataPag  = contas.find(cr => cr.status === 'PAGO')?.dataPagamento ?? null
+                  return (
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        Taxa única — Imob: <span className="font-semibold text-foreground">R$ {fmt(Number(c.valorTaxaUnicaImob))}</span>
+                        {c.valorTaxaUnicaCorr !== null && (
+                          <> · Corretor: <span className="font-semibold text-foreground">R$ {fmt(Number(c.valorTaxaUnicaCorr))}</span></>
+                        )}
+                      </div>
+                      {c.status === 'ATIVO' && (
+                        taxaPaga ? (
+                          <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold">
+                            <CheckCircle className="h-3.5 w-3.5" /> Taxa paga {dataPag ? fmtDate(dataPag) : ''}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => pagarTaxa(c.id)}
+                            disabled={pagando === c.id}
+                            className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                          >
+                            {pagando === c.id ? 'Salvando...' : 'Marcar taxa como paga'}
+                          </button>
+                        )
                       )}
                     </div>
-                    {c.status === 'ATIVO' && (
-                      c.statusTaxaUnica === 'PAGO' ? (
-                        <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold">
-                          <CheckCircle className="h-3.5 w-3.5" /> Taxa paga {c.dataPagamentoTaxa ? fmtDate(c.dataPagamentoTaxa) : ''}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => pagarTaxa(c.id)}
-                          disabled={pagando === c.id}
-                          className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
-                        >
-                          {pagando === c.id ? 'Salvando...' : 'Marcar taxa como paga'}
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Ação encerrar */}
                 {c.status === 'ATIVO' && (

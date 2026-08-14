@@ -64,16 +64,17 @@ export class FinanceiroController {
     return this.financeiroService.resumo(req.user.tenantId, periodo)
   }
 
-  @Get('comissoes')
-  @ApiOperation({ summary: 'Lista comissões com filtros (CORRETOR vê apenas as próprias)' })
+  @Get('contas-receber')
+  @ApiOperation({ summary: 'Lista contas a receber com filtros (CORRETOR vê apenas as próprias)' })
   listar(
     @Request() req: any,
+    @Query('categoria')  categoria?:  string,
     @Query('tipo')       tipo?:       string,
     @Query('status')     status?:     string,
     @Query('corretorId') corretorId?: string,
     @Query('periodo')    periodo?:    string,
   ) {
-    return this.financeiroService.listar(req.user.tenantId, { tipo, status, corretorId, periodo }, req.user)
+    return this.financeiroService.listar(req.user.tenantId, { categoria, tipo, status, corretorId, periodo }, req.user)
   }
 
   @Get('config/aluguel')
@@ -92,10 +93,10 @@ export class FinanceiroController {
     return this.financeiroService.updateConfigAluguel(req.user.tenantId, dto)
   }
 
-  @Patch('comissoes/:id/pagar')
+  @Patch('contas-receber/:id/pagar')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Marca uma comissão como paga' })
+  @ApiOperation({ summary: 'Marca uma conta a receber como paga' })
   marcarPago(@Request() req: any, @Param('id') id: string) {
     return this.financeiroService.marcarPago(req.user.tenantId, id)
   }

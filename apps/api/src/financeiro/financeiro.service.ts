@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service'
 export class FinanceiroService {
   constructor(private prisma: PrismaService) {}
 
-  // ── Configuração de comissão do tenant ──────────────────────────────────────
+  // ── Configuração de comissão de venda do tenant ─────────────────────────────
 
   async getConfig(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -44,11 +44,8 @@ export class FinanceiroService {
     })
   }
 
-  // ── Criação automática de comissões ao fechar uma venda ─────────────────────
-  // Chamado por MatchingService.moverEtapa quando a etapa destino é "Fechado"
-  // e o imóvel tem finalidade VENDA.
+  // ── Dados pré-preenchidos para modal de fechamento de venda ─────────────────
 
-  // Retorna dados do match + config do tenant para pré-preencher o modal de fechamento
   async dadosFechamento(tenantId: string, matchId: string) {
     const [match, config] = await Promise.all([
       this.prisma.match.findFirst({
@@ -83,70 +80,7 @@ export class FinanceiroService {
     }
   }
 
-  async gerarComissoesVenda(
-    tenantId: string,
-    matchId:  string,
-    valores?: {
-      valorImovel:      number
-      percImobiliaria:  number
-      valorImobiliaria: number
-      percCorretor:     number
-      valorCorretor:    number
-    },
-  ) {
-    const match = await this.prisma.match.findFirst({
-      where: { id: matchId, tenantId },
-      include: { imovel: { select: { id: true, preco: true, finalidade: true } } },
-    })
-    if (!match || match.imovel.finalidade !== 'VENDA') return
-
-    // Idempotente: apaga registros anteriores se valores foram recalculados
-    await this.prisma.comissaoVenda.deleteMany({ where: { matchId, tenantId } })
-
-    let valorImovel: number
-    let percImob:    number
-    let valImob:     number
-    let percCorr:    number
-    let valCorr:     number
-
-    if (valores) {
-      valorImovel = valores.valorImovel
-      percImob    = valores.percImobiliaria
-      valImob     = valores.valorImobiliaria
-      percCorr    = valores.percCorretor
-      valCorr     = valores.valorCorretor
-    } else {
-      const config = await this.getConfig(tenantId)
-      valorImovel  = Number(match.imovel.preco)
-      percImob     = config.percentualTotal * (config.splitImobiliaria / 100)
-      percCorr     = config.percentualTotal * (config.splitCorretor    / 100)
-      valImob      = valorImovel * percImob  / 100
-      valCorr      = valorImovel * percCorr  / 100
-    }
-
-    await this.prisma.$transaction([
-      this.prisma.comissaoVenda.create({
-        data: {
-          tenantId, matchId,
-          imovelId:   match.imovelId,
-          corretorId: match.corretorId ?? null,
-          tipo:       'IMOBILIARIA',
-          valorImovel, percentual: percImob, valor: valImob,
-        },
-      }),
-      this.prisma.comissaoVenda.create({
-        data: {
-          tenantId, matchId,
-          imovelId:   match.imovelId,
-          corretorId: match.corretorId ?? null,
-          tipo:       'CORRETOR',
-          valorImovel, percentual: percCorr, valor: valCorr,
-        },
-      }),
-    ])
-  }
-
-  // ── Fechar venda: move etapa + grava comissões em uma operação ─────────────
+  // ── Fechar venda: move etapa + grava contas a receber ──────────────────────
 
   async fecharVenda(
     tenantId: string,
@@ -168,48 +102,39 @@ export class FinanceiroService {
     if (!match) throw new NotFoundException('Match não encontrado')
 
     await this.prisma.$transaction(async (tx) => {
-      // 1. Move a etapa
-      await tx.match.update({
-        where: { id: dto.matchId },
-        data:  { etapaId: dto.etapaId },
-      })
+      await tx.match.update({ where: { id: dto.matchId }, data: { etapaId: dto.etapaId } })
 
-      // 2. Registra histórico
       await tx.matchHistorico.create({
-        data: {
-          matchId:        dto.matchId,
-          tenantId,
-          tipo:           'ETAPA_ALTERADA',
-          userId,
-          etapaDestinoId: dto.etapaId,
-        },
+        data: { matchId: dto.matchId, tenantId, tipo: 'ETAPA_ALTERADA', userId, etapaDestinoId: dto.etapaId },
       })
 
-      // 3. Remove comissões anteriores (idempotente) e recria com valores confirmados
-      await tx.comissaoVenda.deleteMany({ where: { matchId: dto.matchId, tenantId } })
+      // Idempotente: remove contas a receber anteriores de venda deste match
+      await tx.contaReceber.deleteMany({ where: { matchId: dto.matchId, tenantId, categoria: 'VENDA' } })
 
       if (match.imovel.finalidade === 'VENDA') {
-        await tx.comissaoVenda.createMany({
+        await tx.contaReceber.createMany({
           data: [
             {
               tenantId,
               matchId:    dto.matchId,
               imovelId:   match.imovelId,
               corretorId: match.corretorId ?? null,
+              categoria:  'VENDA',
               tipo:       'IMOBILIARIA',
-              valorImovel: dto.valorImovel,
-              percentual:  dto.percImobiliaria,
-              valor:       dto.valorImobiliaria,
+              valorBase:  dto.valorImovel,
+              percentual: dto.percImobiliaria,
+              valor:      dto.valorImobiliaria,
             },
             {
               tenantId,
               matchId:    dto.matchId,
               imovelId:   match.imovelId,
               corretorId: match.corretorId ?? null,
+              categoria:  'VENDA',
               tipo:       'CORRETOR',
-              valorImovel: dto.valorImovel,
-              percentual:  dto.percCorretor,
-              valor:       dto.valorCorretor,
+              valorBase:  dto.valorImovel,
+              percentual: dto.percCorretor,
+              valor:      dto.valorCorretor,
             },
           ],
         })
@@ -219,17 +144,19 @@ export class FinanceiroService {
     return { ok: true }
   }
 
-  // ── Listagem de comissões ───────────────────────────────────────────────────
+  // ── Listagem de contas a receber ────────────────────────────────────────────
 
   async listar(tenantId: string, params: {
+    categoria?:  string
     tipo?:       string
     status?:     string
     corretorId?: string
     periodo?:    string
   }, requester?: { id: string; role: string }) {
     const where: any = { tenantId }
-    if (params.status) where.status = params.status
-    // CORRETOR só vê as próprias comissões (tipo CORRETOR com seu corretorId)
+    if (params.status)    where.status    = params.status
+    if (params.categoria) where.categoria = params.categoria
+
     if (requester?.role === 'CORRETOR') {
       where.corretorId = requester.id
       where.tipo = 'CORRETOR'
@@ -242,11 +169,11 @@ export class FinanceiroService {
       where.createdAt = { gte, lte }
     }
 
-    return this.prisma.comissaoVenda.findMany({
+    return this.prisma.contaReceber.findMany({
       where,
       include: {
-        match:   { select: { id: true, perfil: { select: { cliente: { select: { nome: true } } } } } },
-        imovel:  { select: { id: true, titulo: true, preco: true, cidade: { select: { nome: true } } } },
+        match:    { select: { id: true, perfil: { select: { cliente: { select: { nome: true } } } } } },
+        imovel:   { select: { id: true, titulo: true, cidade: { select: { nome: true } } } },
         corretor: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -256,10 +183,10 @@ export class FinanceiroService {
   // ── Marcar como pago ────────────────────────────────────────────────────────
 
   async marcarPago(tenantId: string, id: string) {
-    const comissao = await this.prisma.comissaoVenda.findFirst({ where: { id, tenantId } })
-    if (!comissao) throw new NotFoundException('Comissão não encontrada')
+    const conta = await this.prisma.contaReceber.findFirst({ where: { id, tenantId } })
+    if (!conta) throw new NotFoundException('Conta a receber não encontrada')
 
-    return this.prisma.comissaoVenda.update({
+    return this.prisma.contaReceber.update({
       where: { id },
       data:  { status: 'PAGO', dataPagamento: new Date() },
     })
@@ -275,28 +202,28 @@ export class FinanceiroService {
     }
 
     const [totalImob, totalCorretor, pendentes, pagas] = await Promise.all([
-      this.prisma.comissaoVenda.aggregate({
+      this.prisma.contaReceber.aggregate({
         where: { ...where, tipo: 'IMOBILIARIA' },
         _sum: { valor: true },
         _count: true,
       }),
-      this.prisma.comissaoVenda.aggregate({
+      this.prisma.contaReceber.aggregate({
         where: { ...where, tipo: 'CORRETOR' },
         _sum: { valor: true },
         _count: true,
       }),
-      this.prisma.comissaoVenda.aggregate({
+      this.prisma.contaReceber.aggregate({
         where: { ...where, status: 'PENDENTE' },
         _sum: { valor: true },
       }),
-      this.prisma.comissaoVenda.aggregate({
+      this.prisma.contaReceber.aggregate({
         where: { ...where, status: 'PAGO' },
         _sum: { valor: true },
       }),
     ])
 
     return {
-      totalImobiliaria: Number(totalImob._sum.valor   ?? 0),
+      totalImobiliaria: Number(totalImob._sum.valor    ?? 0),
       totalCorretor:    Number(totalCorretor._sum.valor ?? 0),
       totalGeral:       Number(totalImob._sum.valor ?? 0) + Number(totalCorretor._sum.valor ?? 0),
       pendente:         Number(pendentes._sum.valor  ?? 0),

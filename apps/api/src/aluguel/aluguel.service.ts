@@ -31,27 +31,27 @@ export class AluguelService {
       throw new BadRequestException('Este match não é de aluguel')
     }
 
-    const valorMensal       = Number(match.imovel.preco)
-    const percTaxaUnica     = Number(tenant?.aluguelPercTaxaUnica ?? 100)
-    const splitImob         = Number(tenant?.aluguelSplitImobiliaria ?? 50)
-    const splitCorr         = Number(tenant?.aluguelSplitCorretor ?? 50)
-    const valorTaxaBruta    = valorMensal * (percTaxaUnica / 100)
-    const valorTaxaImob     = valorTaxaBruta * (splitImob / 100)
-    const valorTaxaCorr     = valorTaxaBruta * (splitCorr / 100)
+    const valorMensal    = Number(match.imovel.preco)
+    const percTaxaUnica  = Number(tenant?.aluguelPercTaxaUnica ?? 100)
+    const splitImob      = Number(tenant?.aluguelSplitImobiliaria ?? 50)
+    const splitCorr      = Number(tenant?.aluguelSplitCorretor ?? 50)
+    const valorTaxaBruta = valorMensal * (percTaxaUnica / 100)
+    const valorTaxaImob  = valorTaxaBruta * (splitImob / 100)
+    const valorTaxaCorr  = valorTaxaBruta * (splitCorr / 100)
 
     return {
-      matchId:          match.id,
-      imovelId:         match.imovelId,
-      imovelTitulo:     match.imovel.titulo,
-      corretorId:       match.corretorId,
-      corretorNome:     match.corretor?.name ?? null,
+      matchId:             match.id,
+      imovelId:            match.imovelId,
+      imovelTitulo:        match.imovel.titulo,
+      corretorId:          match.corretorId,
+      corretorNome:        match.corretor?.name ?? null,
       valorMensalSugerido: valorMensal,
-      comissaoTipo:     tenant?.aluguelComissaoTipo ?? 'TAXA_UNICA',
+      comissaoTipo:        tenant?.aluguelComissaoTipo ?? 'TAXA_UNICA',
       percTaxaUnica,
-      splitImobiliaria: splitImob,
-      splitCorretor:    splitCorr,
-      valorTaxaUnicaImob: valorTaxaImob,
-      valorTaxaUnicaCorr: valorTaxaCorr,
+      splitImobiliaria:    splitImob,
+      splitCorretor:       splitCorr,
+      valorTaxaUnicaImob:  valorTaxaImob,
+      valorTaxaUnicaCorr:  valorTaxaCorr,
     }
   }
 
@@ -70,34 +70,17 @@ export class AluguelService {
     dataVencimento.setMonth(dataVencimento.getMonth() + dto.duracaoMeses)
 
     await this.prisma.$transaction(async (tx) => {
-      // Valida que a etapa pertence ao mesmo tenant
       const etapa = await tx.pipelineEtapa.findFirst({ where: { id: dto.etapaId, tenantId } })
       if (!etapa) throw new BadRequestException('Etapa inválida para este tenant')
 
-      // 1. Move etapa
-      await tx.match.update({
-        where: { id: dto.matchId },
-        data:  { etapaId: dto.etapaId },
-      })
+      await tx.match.update({ where: { id: dto.matchId }, data: { etapaId: dto.etapaId } })
 
-      // 2. Registra histórico
       await tx.matchHistorico.create({
-        data: {
-          matchId:        dto.matchId,
-          tenantId,
-          tipo:           'ETAPA_ALTERADA',
-          userId,
-          etapaDestinoId: dto.etapaId,
-        },
+        data: { matchId: dto.matchId, tenantId, tipo: 'ETAPA_ALTERADA', userId, etapaDestinoId: dto.etapaId },
       })
 
-      // 3. Muda status do imóvel para ALUGADO
-      await tx.imovel.update({
-        where: { id: match.imovelId },
-        data:  { status: 'ALUGADO' },
-      })
+      await tx.imovel.update({ where: { id: match.imovelId }, data: { status: 'ALUGADO' } })
 
-      // 4. Cria contrato (upsert — idempotente)
       await tx.contratoAluguel.upsert({
         where:  { matchId: dto.matchId },
         create: {
@@ -121,10 +104,43 @@ export class AluguelService {
           percTaxaUnica:      dto.percTaxaUnica     ?? null,
           valorTaxaUnicaImob: dto.valorTaxaUnicaImob ?? null,
           valorTaxaUnicaCorr: dto.valorTaxaUnicaCorr ?? null,
-          status: 'ATIVO',
-          dataEncerramento: null,
+          status:            'ATIVO',
+          dataEncerramento:  null,
         },
       })
+
+      // Contas a receber da taxa única (idempotente)
+      await tx.contaReceber.deleteMany({ where: { matchId: dto.matchId, tenantId, categoria: 'ALUGUEL' } })
+      const contasData: any[] = []
+      if (dto.valorTaxaUnicaImob != null && dto.valorTaxaUnicaImob > 0) {
+        contasData.push({
+          tenantId,
+          matchId:    dto.matchId,
+          imovelId:   match.imovelId,
+          corretorId: match.corretorId ?? null,
+          categoria:  'ALUGUEL',
+          tipo:       'IMOBILIARIA',
+          valorBase:  dto.valorMensal,
+          percentual: dto.percTaxaUnica ?? 0,
+          valor:      dto.valorTaxaUnicaImob,
+        })
+      }
+      if (dto.valorTaxaUnicaCorr != null && dto.valorTaxaUnicaCorr > 0) {
+        contasData.push({
+          tenantId,
+          matchId:    dto.matchId,
+          imovelId:   match.imovelId,
+          corretorId: match.corretorId ?? null,
+          categoria:  'ALUGUEL',
+          tipo:       'CORRETOR',
+          valorBase:  dto.valorMensal,
+          percentual: dto.percTaxaUnica ?? 0,
+          valor:      dto.valorTaxaUnicaCorr,
+        })
+      }
+      if (contasData.length > 0) {
+        await tx.contaReceber.createMany({ data: contasData })
+      }
     })
 
     return { ok: true }
@@ -140,7 +156,16 @@ export class AluguelService {
       include: {
         imovel:   { select: { id: true, titulo: true, bairro: true, cidade: { select: { nome: true } } } },
         corretor: { select: { id: true, name: true } },
-        match:    { select: { id: true, perfil: { select: { cliente: { select: { nome: true } } } } } },
+        match: {
+          select: {
+            id:    true,
+            perfil: { select: { cliente: { select: { nome: true } } } },
+            contasReceber: {
+              where:  { categoria: 'ALUGUEL' },
+              select: { id: true, tipo: true, valor: true, status: true, dataPagamento: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -169,9 +194,11 @@ export class AluguelService {
     const contrato = await this.prisma.contratoAluguel.findFirst({ where: { id, tenantId } })
     if (!contrato) throw new NotFoundException('Contrato não encontrado')
 
-    return this.prisma.contratoAluguel.update({
-      where: { id },
-      data:  { statusTaxaUnica: 'PAGO', dataPagamentoTaxa: new Date() },
+    await this.prisma.contaReceber.updateMany({
+      where: { matchId: contrato.matchId, tenantId, categoria: 'ALUGUEL', status: 'PENDENTE' },
+      data:  { status: 'PAGO', dataPagamento: new Date() },
     })
+
+    return { ok: true }
   }
 }

@@ -18,18 +18,19 @@ interface Resumo {
 
 interface Corretor { id: string; name: string }
 
-interface Comissao {
+interface ContaReceber {
   id:           string
+  categoria:    'VENDA' | 'ALUGUEL'
   tipo:         'IMOBILIARIA' | 'CORRETOR'
   status:       'PENDENTE' | 'PAGO'
-  valorImovel:  number
+  valorBase:    number
   percentual:   number
   valor:        number
   dataPagamento: string | null
   createdAt:    string
-  imovel:  { id: string; titulo: string; cidade: { nome: string } }
+  imovel:  { id: string; titulo: string; cidade: { nome: string } } | null
   corretor: { id: string; name: string } | null
-  match:   { id: string; perfil: { cliente: { nome: string } } }
+  match:   { id: string; perfil: { cliente: { nome: string } } } | null
 }
 
 const PERIODOS = [
@@ -47,11 +48,12 @@ export default function FinanceiroPage() {
   const router = useRouter()
   const [allowed,    setAllowed]    = useState(false)
   const [periodo,    setPeriodo]    = useState('mes_atual')
+  const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroCorretor, setFiltroCorretor] = useState('')
   const [resumo,     setResumo]     = useState<Resumo | null>(null)
-  const [comissoes,  setComissoes]  = useState<Comissao[]>([])
+  const [comissoes,  setComissoes]  = useState<ContaReceber[]>([])
   const [corretores, setCorretores] = useState<Corretor[]>([])
   const [loading,    setLoading]    = useState(true)
   const [pagando,    setPagando]    = useState<string | null>(null)
@@ -69,26 +71,27 @@ export default function FinanceiroPage() {
     if (!allowed) return
     setLoading(true)
     const qs = new URLSearchParams({ periodo })
-    if (filtroTipo)     qs.set('tipo',       filtroTipo)
-    if (filtroStatus)   qs.set('status',     filtroStatus)
-    if (filtroCorretor) qs.set('corretorId', filtroCorretor)
+    if (filtroCategoria) qs.set('categoria',  filtroCategoria)
+    if (filtroTipo)      qs.set('tipo',        filtroTipo)
+    if (filtroStatus)    qs.set('status',      filtroStatus)
+    if (filtroCorretor)  qs.set('corretorId',  filtroCorretor)
 
     Promise.all([
       api.get<Resumo>(`/financeiro/resumo?periodo=${periodo}`),
-      api.get<Comissao[]>(`/financeiro/comissoes?${qs.toString()}`),
+      api.get<ContaReceber[]>(`/financeiro/contas-receber?${qs.toString()}`),
     ]).then(([r, c]) => {
       setResumo(r)
       setComissoes(c)
     }).catch(() => toast.error('Erro ao carregar dados financeiros.'))
       .finally(() => setLoading(false))
-  }, [allowed, periodo, filtroTipo, filtroStatus, filtroCorretor])
+  }, [allowed, periodo, filtroCategoria, filtroTipo, filtroStatus, filtroCorretor])
 
   useEffect(() => { fetchData() }, [fetchData])
 
   async function marcarPago(id: string) {
     setPagando(id)
     try {
-      await api.patch(`/financeiro/comissoes/${id}/pagar`, {})
+      await api.patch(`/financeiro/contas-receber/${id}/pagar`, {})
       toast.success('Comissão marcada como paga.')
       fetchData()
     } catch {
@@ -107,7 +110,7 @@ export default function FinanceiroPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Financeiro</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Comissões de vendas fechadas</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Comissões de venda e taxas de aluguel</p>
         </div>
         <select
           value={periodo}
@@ -139,6 +142,15 @@ export default function FinanceiroPage() {
 
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
+        <select
+          value={filtroCategoria}
+          onChange={(e) => setFiltroCategoria(e.target.value)}
+          className="text-sm border border-input rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Venda + Aluguel</option>
+          <option value="VENDA">Só Venda</option>
+          <option value="ALUGUEL">Só Aluguel</option>
+        </select>
         <select
           value={filtroTipo}
           onChange={(e) => setFiltroTipo(e.target.value)}
@@ -172,11 +184,12 @@ export default function FinanceiroPage() {
         <table className="w-full text-sm">
           <thead className="bg-secondary/40">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Imóvel</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Imóvel / Cliente</th>
+              <th className="text-left px-3 py-3 font-medium text-muted-foreground">Origem</th>
               <th className="text-left px-3 py-3 font-medium text-muted-foreground">Tipo</th>
               <th className="text-left px-3 py-3 font-medium text-muted-foreground">Corretor</th>
-              <th className="text-right px-3 py-3 font-medium text-muted-foreground">Valor imóvel</th>
-              <th className="text-right px-3 py-3 font-medium text-muted-foreground">Comissão</th>
+              <th className="text-right px-3 py-3 font-medium text-muted-foreground">Base</th>
+              <th className="text-right px-3 py-3 font-medium text-muted-foreground">Valor</th>
               <th className="text-center px-3 py-3 font-medium text-muted-foreground">Status</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">Ação</th>
             </tr>
@@ -184,19 +197,30 @@ export default function FinanceiroPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={7} className="text-center py-10 text-muted-foreground text-sm">Carregando…</td>
+                <td colSpan={8} className="text-center py-10 text-muted-foreground text-sm">Carregando…</td>
               </tr>
             )}
             {!loading && comissoes.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-10 text-muted-foreground text-sm">Nenhuma comissão encontrada.</td>
+                <td colSpan={8} className="text-center py-10 text-muted-foreground text-sm">Nenhum registro encontrado.</td>
               </tr>
             )}
             {!loading && comissoes.map((c, i) => (
               <tr key={c.id} className={i % 2 === 0 ? '' : 'bg-secondary/20'}>
                 <td className="px-4 py-3">
-                  <p className="font-medium leading-snug line-clamp-1">{c.imovel.titulo}</p>
-                  <p className="text-xs text-muted-foreground">{c.imovel.cidade.nome}</p>
+                  <p className="font-medium leading-snug line-clamp-1">{c.imovel?.titulo ?? '—'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.imovel?.cidade.nome ?? ''}{c.match?.perfil.cliente.nome ? ` · ${c.match.perfil.cliente.nome}` : ''}
+                  </p>
+                </td>
+                <td className="px-3 py-3">
+                  <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${
+                    c.categoria === 'VENDA'
+                      ? 'bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300'
+                      : 'bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300'
+                  }`}>
+                    {c.categoria === 'VENDA' ? 'Venda' : 'Aluguel'}
+                  </span>
                 </td>
                 <td className="px-3 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${
@@ -210,8 +234,8 @@ export default function FinanceiroPage() {
                 <td className="px-3 py-3 text-muted-foreground">
                   {c.corretor?.name ?? '—'}
                 </td>
-                <td className="px-3 py-3 text-right">
-                  R$ {fmt(Number(c.valorImovel))}
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  R$ {fmt(Number(c.valorBase))}
                 </td>
                 <td className="px-3 py-3 text-right font-medium">
                   <span>R$ {fmt(Number(c.valor))}</span>
@@ -249,7 +273,7 @@ export default function FinanceiroPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Cada venda gera 2 registros — um para a imobiliária e um para o corretor.
+        Cada negócio fechado gera 2 registros — um para a imobiliária e um para o corretor.
       </p>
     </div>
     </MobileBlock>

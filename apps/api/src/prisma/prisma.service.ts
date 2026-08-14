@@ -7,7 +7,7 @@ import { TENANT_ID_KEY } from '../auth/interceptors/tenant.interceptor'
 const MODEL_DELEGATES = new Set([
   'tenant', 'user', 'refreshToken', 'cliente', 'estado', 'cidade',
   'demoRequest', 'tipoImovel', 'imovel', 'perfilBusca', 'pipelineEtapa',
-  'match', 'matchHistorico', 'visita', 'comissaoVenda', 'caracteristica',
+  'match', 'matchHistorico', 'visita', 'contaReceber', 'caracteristica',
   'contratoAluguel',
 ])
 
