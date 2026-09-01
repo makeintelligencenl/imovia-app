@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -11,16 +11,44 @@ import { cn } from '@/lib/utils'
 
 interface UserInfo { name: string; email: string; role: string; tenantName?: string }
 
-const NAV_ITEMS_BASE = [
-  { href: '/imoveis',           label: 'Imóveis',       icon: Home,          adminOnly: false },
-  { href: '/clientes',          label: 'Clientes',      icon: UserRound,     adminOnly: false },
-  { href: '/matches',           label: 'Matches',       icon: GitMerge,      adminOnly: false },
-  { href: '/agenda',            label: 'Agenda',        icon: CalendarDays,  adminOnly: false },
-  { href: '/relatorios',        label: 'Relatórios',    icon: BarChart2,     adminOnly: true  },
-  { href: '/financeiro',        label: 'Financeiro',    icon: DollarSign,    adminOnly: true  },
-  { href: '/aluguel',           label: 'Aluguel',       icon: KeyRound,      adminOnly: true  },
-  { href: '/chats',             label: 'Chats',         icon: MessageSquare, adminOnly: true  },
-  { href: '/settings/pipeline', label: 'Configurações', icon: Settings2,     adminOnly: true  },
+interface NavItem { href: string; label: string; icon: React.ElementType; adminOnly: boolean }
+interface NavGroup { label: string; items: NavItem[] }
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Cadastros',
+    items: [
+      { href: '/imoveis',  label: 'Imóveis',  icon: Home,      adminOnly: false },
+      { href: '/clientes', label: 'Clientes', icon: UserRound, adminOnly: false },
+    ],
+  },
+  {
+    label: 'Operações',
+    items: [
+      { href: '/matches', label: 'Matches', icon: GitMerge,      adminOnly: false },
+      { href: '/agenda',  label: 'Agenda',  icon: CalendarDays,  adminOnly: false },
+      { href: '/aluguel', label: 'Aluguel', icon: KeyRound,      adminOnly: true  },
+      { href: '/chats',   label: 'Chats',   icon: MessageSquare, adminOnly: true  },
+    ],
+  },
+  {
+    label: 'Financeiro',
+    items: [
+      { href: '/financeiro', label: 'Contas a Receber', icon: DollarSign, adminOnly: true },
+    ],
+  },
+  {
+    label: 'Análise',
+    items: [
+      { href: '/relatorios', label: 'Relatórios', icon: BarChart2, adminOnly: true },
+    ],
+  },
+  {
+    label: 'Sistema',
+    items: [
+      { href: '/settings/pipeline', label: 'Configurações', icon: Settings2, adminOnly: true },
+    ],
+  },
 ]
 
 interface SidebarProps {
@@ -36,10 +64,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   const dashboardHref = user?.role === 'CORRETOR' ? '/corretor' : '/dashboard'
 
-  const NAV_ITEMS = [
-    { href: dashboardHref, label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
-    ...NAV_ITEMS_BASE,
-  ]
+  const DASHBOARD_ITEM: NavItem = { href: dashboardHref, label: 'Dashboard', icon: LayoutDashboard, adminOnly: false }
 
   useEffect(() => {
     try {
@@ -70,36 +95,55 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
   }
 
+  function NavLink({ item, drawer = false }: { item: NavItem; drawer?: boolean }) {
+    const isDash = item.href === '/dashboard' || item.href === '/corretor'
+    const isActive = isDash
+      ? pathname === '/dashboard' || pathname === '/corretor'
+      : pathname.startsWith(item.href)
+    return (
+      <Link
+        href={item.href}
+        title={!drawer && collapsed ? item.label : undefined}
+        className={cn(
+          'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+          !drawer && collapsed && 'justify-center px-2',
+          isActive ? 'bg-blue-500/15 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200',
+        )}
+      >
+        <item.icon className={cn('h-[18px] w-[18px] shrink-0', isActive && 'text-blue-400')} />
+        {(drawer || !collapsed) && (
+          <>
+            {item.label}
+            {isActive && <span className="ml-auto w-1 h-4 rounded-full bg-blue-400" />}
+          </>
+        )}
+      </Link>
+    )
+  }
+
   function NavLinks({ drawer = false }: { drawer?: boolean }) {
     return (
-      <nav className="flex-1 px-2 py-4 space-y-0.5">
-        {(drawer || !collapsed) && (
-          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Menu</p>
-        )}
-        {NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === 'ADMIN').map((item) => {
-          const isDash = item.href === '/dashboard' || item.href === '/corretor'
-          const isActive = isDash
-            ? pathname === '/dashboard' || pathname === '/corretor'
-            : pathname.startsWith(item.href)
+      <nav className="flex-1 px-2 py-4 overflow-y-auto">
+        {/* Dashboard — sempre no topo, sem grupo */}
+        <NavLink item={DASHBOARD_ITEM} drawer={drawer} />
+
+        {NAV_GROUPS.map((group) => {
+          const visibleItems = group.items.filter((item) => !item.adminOnly || user?.role === 'ADMIN')
+          if (visibleItems.length === 0) return null
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={!drawer && collapsed ? item.label : undefined}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-                !drawer && collapsed && 'justify-center px-2',
-                isActive ? 'bg-blue-500/15 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200',
-              )}
-            >
-              <item.icon className={cn('h-[18px] w-[18px] shrink-0', isActive && 'text-blue-400')} />
+            <div key={group.label} className="mt-4">
               {(drawer || !collapsed) && (
-                <>
-                  {item.label}
-                  {isActive && <span className="ml-auto w-1 h-4 rounded-full bg-blue-400" />}
-                </>
+                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                  {group.label}
+                </p>
               )}
-            </Link>
+              {collapsed && !drawer && <div className="mx-3 my-2 border-t border-white/10" />}
+              <div className="space-y-0.5">
+                {visibleItems.map((item) => (
+                  <NavLink key={item.href} item={item} drawer={drawer} />
+                ))}
+              </div>
+            </div>
           )
         })}
       </nav>
