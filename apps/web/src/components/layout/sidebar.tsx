@@ -126,7 +126,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             onClick={() => navRef.current?.scrollBy({ top: -80, behavior: 'smooth' })}
             className="absolute top-0 left-0 right-0 z-10 flex justify-center py-1 bg-gradient-to-b from-[#0F172A] to-transparent pointer-events-auto"
           >
-            <ChevronUp className="h-3.5 w-3.5 text-slate-500" />
+            <ChevronUp className="h-4 w-4 text-slate-400 stroke-[2.5]" />
           </button>
         )}
 
@@ -161,7 +161,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             onClick={() => navRef.current?.scrollBy({ top: 80, behavior: 'smooth' })}
             className="absolute bottom-0 left-0 right-0 z-10 flex justify-center py-1 bg-gradient-to-t from-[#0F172A] to-transparent pointer-events-auto"
           >
-            <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+            <ChevronDown className="h-4 w-4 text-slate-400 stroke-[2.5]" />
           </button>
         )}
       </div>
