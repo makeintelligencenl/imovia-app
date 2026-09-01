@@ -1,10 +1,10 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Building2, LayoutDashboard, Home, GitMerge, LogOut, ChevronLeft,
-  ChevronRight, Settings2, CalendarDays, UserRound, BarChart2,
+  ChevronRight, ChevronUp, ChevronDown, Settings2, CalendarDays, UserRound, BarChart2,
   DollarSign, MessageSquare, X, KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -95,6 +95,79 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
   }
 
+  function NavLinks({ drawer = false }: { drawer?: boolean }) {
+    const navRef = useRef<HTMLElement>(null)
+    const [canScrollUp,   setCanScrollUp]   = useState(false)
+    const [canScrollDown, setCanScrollDown] = useState(false)
+
+    function checkScroll() {
+      const el = navRef.current
+      if (!el) return
+      setCanScrollUp(el.scrollTop > 4)
+      setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4)
+    }
+
+    useEffect(() => {
+      checkScroll()
+      const el = navRef.current
+      el?.addEventListener('scroll', checkScroll)
+      window.addEventListener('resize', checkScroll)
+      return () => {
+        el?.removeEventListener('scroll', checkScroll)
+        window.removeEventListener('resize', checkScroll)
+      }
+    }, [])
+
+    return (
+      <div className="flex-1 flex flex-col min-h-0 relative">
+        {/* seta cima */}
+        {canScrollUp && (
+          <button
+            onClick={() => navRef.current?.scrollBy({ top: -80, behavior: 'smooth' })}
+            className="absolute top-0 left-0 right-0 z-10 flex justify-center py-1 bg-gradient-to-b from-[#0F172A] to-transparent pointer-events-auto"
+          >
+            <ChevronUp className="h-3.5 w-3.5 text-slate-500" />
+          </button>
+        )}
+
+        <nav ref={navRef} className="flex-1 px-2 py-4 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+          {/* Dashboard — sempre no topo, sem grupo */}
+          <NavLink item={DASHBOARD_ITEM} drawer={drawer} />
+
+          {NAV_GROUPS.map((group) => {
+            const visibleItems = group.items.filter((item) => !item.adminOnly || user?.role === 'ADMIN')
+            if (visibleItems.length === 0) return null
+            return (
+              <div key={group.label} className="mt-4">
+                {(drawer || !collapsed) && (
+                  <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                    {group.label}
+                  </p>
+                )}
+                {collapsed && !drawer && <div className="mx-3 my-2 border-t border-white/10" />}
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => (
+                    <NavLink key={item.href} item={item} drawer={drawer} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </nav>
+
+        {/* seta baixo */}
+        {canScrollDown && (
+          <button
+            onClick={() => navRef.current?.scrollBy({ top: 80, behavior: 'smooth' })}
+            className="absolute bottom-0 left-0 right-0 z-10 flex justify-center py-1 bg-gradient-to-t from-[#0F172A] to-transparent pointer-events-auto"
+          >
+            <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+          </button>
+        )}
+      </div>
+    )
+  }
+
   function NavLink({ item, drawer = false }: { item: NavItem; drawer?: boolean }) {
     const isDash = item.href === '/dashboard' || item.href === '/corretor'
     const isActive = isDash
@@ -118,35 +191,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           </>
         )}
       </Link>
-    )
-  }
-
-  function NavLinks({ drawer = false }: { drawer?: boolean }) {
-    return (
-      <nav className="flex-1 px-2 py-4 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-        {/* Dashboard — sempre no topo, sem grupo */}
-        <NavLink item={DASHBOARD_ITEM} drawer={drawer} />
-
-        {NAV_GROUPS.map((group) => {
-          const visibleItems = group.items.filter((item) => !item.adminOnly || user?.role === 'ADMIN')
-          if (visibleItems.length === 0) return null
-          return (
-            <div key={group.label} className="mt-4">
-              {(drawer || !collapsed) && (
-                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                  {group.label}
-                </p>
-              )}
-              {collapsed && !drawer && <div className="mx-3 my-2 border-t border-white/10" />}
-              <div className="space-y-0.5">
-                {visibleItems.map((item) => (
-                  <NavLink key={item.href} item={item} drawer={drawer} />
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </nav>
     )
   }
 
