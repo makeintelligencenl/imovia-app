@@ -123,7 +123,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   function NavLinks({ drawer = false }: { drawer?: boolean }) {
     return (
-      <nav className="flex-1 px-2 py-4 overflow-y-auto">
+      <nav className="flex-1 px-2 py-4">
         {/* Dashboard — sempre no topo, sem grupo */}
         <NavLink item={DASHBOARD_ITEM} drawer={drawer} />
 
