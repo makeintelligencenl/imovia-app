@@ -235,8 +235,8 @@ export default function CorretorDashboardPage() {
       setLoading(false)
     })
 
-    api.get<{ id: string; valor: number; percentual: number; status: 'PENDENTE' | 'PAGO'; createdAt: string; imovel: { titulo: string } }[]>(
-      '/financeiro/comissoes?periodo=mes_atual'
+    api.get<{ id: string; valor: number; percentual: number; status: 'PENDENTE' | 'PAGO'; createdAt: string; imovel: { titulo: string } | null }[]>(
+      '/financeiro/contas-receber?periodo=mes_atual&tipo=CORRETOR'
     ).then((lista) => {
       const totalGanho = lista.reduce((s, c) => s + Number(c.valor), 0)
       const pago       = lista.filter(c => c.status === 'PAGO').reduce((s, c) => s + Number(c.valor), 0)
@@ -244,7 +244,7 @@ export default function CorretorDashboardPage() {
       setComissaoData({
         totalGanho, pago, pendente,
         lista: lista.map(c => ({
-          id: c.id, imovelTitulo: c.imovel.titulo,
+          id: c.id, imovelTitulo: c.imovel?.titulo ?? '—',
           valor: Number(c.valor), percentual: Number(c.percentual),
           status: c.status, createdAt: c.createdAt,
         })),
@@ -980,10 +980,15 @@ export default function CorretorDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Funil — barras horizontais */}
+        {/* Funil — barra empilhada */}
         <Card className="rounded-xl shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Meu funil</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold">Pipeline atual</CardTitle>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {funil.reduce((s, f) => s + f.n, 0)} matches
+              </span>
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
             {loading ? (
@@ -994,17 +999,31 @@ export default function CorretorDashboardPage() {
                 <p className="text-sm text-muted-foreground">Nenhum match atribuído ainda</p>
               </div>
             ) : (
-              <div className="space-y-2.5">
-                {funil.map(f => (
-                  <div key={f.nome} className="flex items-center gap-3">
-                    <span className="text-[11px] text-muted-foreground w-36 truncate shrink-0">{f.nome}</span>
-                    <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all"
-                           style={{ width: `${Math.round((f.n / funilMax) * 100)}%`, background: f.cor }} />
-                    </div>
-                    <span className="text-xs font-bold text-slate-700 tabular-nums w-4 text-right">{f.n}</span>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {/* Barra empilhada */}
+                <div className="flex h-5 rounded-full overflow-hidden gap-px">
+                  {funil.filter(f => f.n > 0).map(f => {
+                    const total = funil.reduce((s, x) => s + x.n, 0)
+                    return (
+                      <div
+                        key={f.nome}
+                        title={`${f.nome}: ${f.n}`}
+                        className="h-full transition-all"
+                        style={{ width: `${(f.n / total) * 100}%`, background: f.cor }}
+                      />
+                    )
+                  })}
+                </div>
+                {/* Legenda */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-1">
+                  {funil.filter(f => f.n > 0).map(f => (
+                    <span key={f.nome} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: f.cor }} />
+                      {f.nome}
+                      <span className="font-semibold text-foreground">({f.n})</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
