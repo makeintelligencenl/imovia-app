@@ -13,16 +13,15 @@ import { PerfisModule } from './perfis/perfis.module'
 import { MatchingModule } from './matching/matching.module'
 import { NotificacoesModule } from './notificacoes/notificacoes.module'
 import { LocalidadesModule } from './localidades/localidades.module'
-import { BotModule } from './bot/bot.module'
 import { PipelineModule } from './pipeline/pipeline.module'
 import { UsersModule } from './users/users.module'
 import { VisitasModule } from './visitas/visitas.module'
 import { ClientesModule } from './clientes/clientes.module'
 import { FinanceiroModule } from './financeiro/financeiro.module'
-import { ChatsModule } from './chats/chats.module'
 import { DemoRequestsModule } from './demo-requests/demo-requests.module'
 import { CaracteristicasModule } from './caracteristicas/caracteristicas.module'
 import { AluguelModule } from './aluguel/aluguel.module'
+import { WhatsappModule } from './whatsapp/whatsapp.module'
 
 @Module({
   imports: [
@@ -42,15 +41,14 @@ import { AluguelModule } from './aluguel/aluguel.module'
     MatchingModule,
     NotificacoesModule,
     LocalidadesModule,
-    BotModule,
     PipelineModule,
     UsersModule,
     VisitasModule,
     FinanceiroModule,
-    ChatsModule,
     DemoRequestsModule,
     CaracteristicasModule,
     AluguelModule,
+    WhatsappModule,
   ],
   providers: [
     { provide: APP_GUARD,       useClass: ThrottlerGuard },

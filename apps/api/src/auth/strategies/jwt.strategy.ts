@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../../prisma/prisma.service'
 
 // S1 FIX: extrai JWT do cookie HttpOnly (frontend web) com fallback para
-// Bearer header (MCP, integrações externas, Swagger). A ordem importa:
+// Bearer header (integrações externas, Swagger). A ordem importa:
 // o cookie tem prioridade por ser mais seguro.
 function extractJwt(req: Request): string | null {
   const fromCookie = req?.cookies?.['auth_token']

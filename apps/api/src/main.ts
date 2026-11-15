@@ -7,7 +7,7 @@ const cookieParser = require('cookie-parser')
 import { AppModule } from './app.module'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create(AppModule, { rawBody: true })
 
   // Security headers — API pura (sem HTML), CSP desabilitado, CORP cross-origin para o web app
   app.use(helmet({

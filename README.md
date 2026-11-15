@@ -10,7 +10,6 @@ corretor-imoveis-inteligente/
 │   ├── api/          # NestJS — API REST + motor de matching
 │   └── web/          # Next.js — portal da imobiliária e do cliente
 ├── packages/
-│   ├── mcp-server/   # MCP Server — integração com sistemas de terceiros via tool calls
 │   └── shared/       # Tipos TypeScript compartilhados
 ```
 
@@ -19,7 +18,7 @@ corretor-imoveis-inteligente/
 ```
 Cliente cadastra perfil de busca
         ↓
-Imóvel é cadastrado (manual ou via MCP)
+Imóvel é cadastrado (manual)
         ↓
 Job assíncrono (BullMQ) cruza perfis × imóvel
         ↓
@@ -63,40 +62,9 @@ npm run dev
 - API: http://localhost:3001
 - Swagger: http://localhost:3001/docs
 
-## MCP Server
-
-O MCP Server permite que sistemas externos (ou um agente Claude) integrem com a plataforma via tool calls.
-
-### Tools disponíveis
-
-| Tool | Descrição |
-|------|-----------|
-| `registrar_imovel` | Cadastra imóvel e dispara matching |
-| `listar_perfis` | Lista perfis de busca ativos |
-| `consultar_matches` | Retorna matches gerados |
-| `atualizar_status_imovel` | Atualiza status (vendido, alugado, etc.) |
-
-### Configurar no Claude Code
-
-```json
-{
-  "mcpServers": {
-    "corretor-imoveis": {
-      "command": "node",
-      "args": ["packages/mcp-server/dist/index.js"],
-      "env": {
-        "CORRETOR_API_URL": "http://localhost:3001/api/v1",
-        "CORRETOR_API_KEY": "seu-jwt-token-aqui"
-      }
-    }
-  }
-}
-```
-
 ## Stack
 
 - **API**: NestJS + Prisma + PostgreSQL + BullMQ + Redis
 - **Email**: Resend
 - **WhatsApp**: Evolution API (self-hosted)
-- **MCP**: @modelcontextprotocol/sdk
 - **Monorepo**: Turborepo + npm workspaces
