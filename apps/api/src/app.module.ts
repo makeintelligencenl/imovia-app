@@ -21,6 +21,7 @@ import { FinanceiroModule } from './financeiro/financeiro.module'
 import { DemoRequestsModule } from './demo-requests/demo-requests.module'
 import { CaracteristicasModule } from './caracteristicas/caracteristicas.module'
 import { AluguelModule } from './aluguel/aluguel.module'
+import { WhatsappModule } from './whatsapp/whatsapp.module'
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AluguelModule } from './aluguel/aluguel.module'
     DemoRequestsModule,
     CaracteristicasModule,
     AluguelModule,
+    WhatsappModule,
   ],
   providers: [
     { provide: APP_GUARD,       useClass: ThrottlerGuard },

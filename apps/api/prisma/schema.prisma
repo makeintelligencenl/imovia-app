@@ -36,8 +36,22 @@ model Tenant {
   visitas                  Visita[]
   caracteristicas          Caracteristica[]
   contratos                ContratoAluguel[]
+  configuracaoWhatsapp     ConfiguracaoWhatsapp?
 
   @@map("tenants")
+}
+
+model ConfiguracaoWhatsapp {
+  id                       String   @id @default(cuid())
+  tenantId                 String   @unique
+  phoneNumberId            String   @unique
+  businessAccountId        String
+  accessTokenCriptografado String
+  atualizadoEm             DateTime @default(now()) @updatedAt
+  tenant                   Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([businessAccountId])
+  @@map("configuracoes_whatsapp")
 }
 
 model User {
