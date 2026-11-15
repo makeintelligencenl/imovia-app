@@ -13,8 +13,6 @@ model Tenant {
   slug                     String          @unique
   email                    String?
   telefone                 String?
-  gptMakerWorkspaceId      String?
-  gptMakerAgentId          String?
   ativo                    Boolean         @default(true)
   createdAt                DateTime        @default(now())
   updatedAt                DateTime        @updatedAt
@@ -86,7 +84,6 @@ model Cliente {
   telefone        String?
   cpf             String?
   observacoes     String?
-  gptMakerChatId  String?
   ativo           Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -100,7 +97,6 @@ model Cliente {
   @@index([tenantId])
   @@index([tenantId, email])
   @@index([tenantId, corretorId])
-  @@index([tenantId, gptMakerChatId])
   @@map("clientes")
 }
 
