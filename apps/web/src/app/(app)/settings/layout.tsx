@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings2, Users, DollarSign, Tag, MessageCircle } from 'lucide-react'
+import { Settings2, Users, DollarSign, Tag, MessageCircle, Bot, KeyRound, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MobileBlock } from '@/components/layout/mobile-block'
 
@@ -11,6 +11,9 @@ const TABS = [
   { href: '/settings/financeiro',      label: 'Financeiro',      icon: DollarSign },
   { href: '/settings/caracteristicas', label: 'Características', icon: Tag        },
   { href: '/settings/whatsapp',        label: 'WhatsApp',        icon: MessageCircle },
+  { href: '/settings/agente',          label: 'Agente',          icon: Bot },
+  { href: '/settings/base-conhecimento', label: 'Base de conhecimento', icon: BookOpen },
+  { href: '/settings/integracoes-ia',  label: 'Integrações de IA', icon: KeyRound },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

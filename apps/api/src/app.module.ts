@@ -22,6 +22,8 @@ import { DemoRequestsModule } from './demo-requests/demo-requests.module'
 import { CaracteristicasModule } from './caracteristicas/caracteristicas.module'
 import { AluguelModule } from './aluguel/aluguel.module'
 import { WhatsappModule } from './whatsapp/whatsapp.module'
+import { AgenteModule } from './agente/agente.module'
+import { IaModule } from './ia/ia.module'
 
 @Module({
   imports: [
@@ -49,6 +51,8 @@ import { WhatsappModule } from './whatsapp/whatsapp.module'
     CaracteristicasModule,
     AluguelModule,
     WhatsappModule,
+    AgenteModule,
+    IaModule,
   ],
   providers: [
     { provide: APP_GUARD,       useClass: ThrottlerGuard },
