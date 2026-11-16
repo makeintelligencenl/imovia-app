@@ -1,4 +1,4 @@
-// Estrutura mínima do webhook da Meta. Mensagens e statuses entram na etapa do agente.
+// Estrutura mínima do webhook da Meta. Statuses ainda não são processados.
 export type WhatsappWebhookPayload = {
   entry?: {
     id?: string
@@ -8,10 +8,60 @@ export type WhatsappWebhookPayload = {
       value?: {
         event?: string
         waba_info?: { waba_id?: string }
-        messages?: unknown[]
+        metadata?: { phone_number_id?: string }
+        contacts?: { wa_id?: string; profile?: { name?: string } }[]
+        messages?: {
+          id?: string
+          from?: string
+          timestamp?: string
+          type?: string
+          text?: { body?: string }
+        }[]
       }
     }[]
   }[]
+}
+
+export type MensagemRecebida = {
+  waMessageId: string
+  de: string
+  nomeContato: string | null
+  tipo: string
+  texto: string | null
+  criadaEm: Date
+}
+
+export type MensagensRecebidasDoNumero = {
+  phoneNumberId: string
+  mensagens: MensagemRecebida[]
+}
+
+export function extrairMensagensRecebidas(payload: WhatsappWebhookPayload): MensagensRecebidasDoNumero[] {
+  const porNumero: MensagensRecebidasDoNumero[] = []
+  for (const entrada of payload.entry ?? []) {
+    for (const mudanca of entrada.changes ?? []) {
+      const valor = mudanca.value
+      const phoneNumberId = valor?.metadata?.phone_number_id
+      if (mudanca.field !== 'messages' || !phoneNumberId || !valor?.messages?.length) continue
+
+      const mensagens: MensagemRecebida[] = []
+      for (const msg of valor.messages) {
+        if (!msg.id || !msg.from) continue
+        const nomeContato = valor.contacts?.find((c) => c.wa_id === msg.from)?.profile?.name ?? null
+        const segundos = Number(msg.timestamp)
+        mensagens.push({
+          waMessageId: msg.id,
+          de: msg.from,
+          nomeContato,
+          tipo: msg.type ?? 'desconhecido',
+          texto: msg.text?.body ?? null,
+          criadaEm: Number.isFinite(segundos) ? new Date(segundos * 1000) : new Date(),
+        })
+      }
+      if (mensagens.length) porNumero.push({ phoneNumberId, mensagens })
+    }
+  }
+  return porNumero
 }
 
 export function payloadValido(body: unknown): body is WhatsappWebhookPayload {

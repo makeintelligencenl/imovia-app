@@ -3,9 +3,10 @@ import { ConfigService } from '@nestjs/config'
 import { WhatsappClientService } from './whatsapp-client.service'
 import { ConfiguracaoWhatsappService } from './configuracao-whatsapp.service'
 import { criptografar, descriptografar } from './crypto.util'
-import { payloadValido, extrairEventosConta } from './webhook-payload.util'
+import { payloadValido, extrairEventosConta, extrairMensagensRecebidas } from './webhook-payload.util'
 import { WhatsappWebhookController } from './whatsapp-webhook.controller'
 import { ConexaoWhatsappService } from './conexao-whatsapp.service'
+import { MensagensWhatsappService } from './mensagens-whatsapp.service'
 
 const SECRET = 'app-secret-teste'
 const VERIFY = 'verify-token-teste'
@@ -48,6 +49,7 @@ describe('WhatsappWebhookController.verificar', () => {
     {} as WhatsappClientService,
     configDe({ WHATSAPP_VERIFY_TOKEN: VERIFY }),
     {} as ConexaoWhatsappService,
+    {} as MensagensWhatsappService,
   )
   const resposta = () => {
     const r = { status: jest.fn(), type: jest.fn(), send: jest.fn() }
@@ -98,5 +100,40 @@ describe('payload do webhook', () => {
     expect(eventos).toHaveLength(1)
     expect(eventos[0].evento).toBe('PARTNER_REMOVED')
     expect(eventos[0].wabaId).toBe('waba-1')
+  })
+
+  it('extrai mensagens de texto recebidas agrupadas pelo phone_number_id', () => {
+    const lotes = extrairMensagensRecebidas({
+      entry: [
+        {
+          id: 'waba-1',
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                metadata: { phone_number_id: 'pn-1' },
+                contacts: [{ wa_id: '5511999', profile: { name: 'Ana' } }],
+                messages: [
+                  { id: 'wamid.A', from: '5511999', timestamp: '1700000000', type: 'text', text: { body: 'Oi' } },
+                  { from: 'sem-id', type: 'text' },
+                ],
+              },
+            },
+            { field: 'messages', value: { metadata: { phone_number_id: 'pn-2' } } },
+          ],
+        },
+      ],
+    })
+    expect(lotes).toHaveLength(1)
+    expect(lotes[0].phoneNumberId).toBe('pn-1')
+    expect(lotes[0].mensagens).toHaveLength(1)
+    expect(lotes[0].mensagens[0]).toMatchObject({
+      waMessageId: 'wamid.A',
+      de: '5511999',
+      nomeContato: 'Ana',
+      tipo: 'text',
+      texto: 'Oi',
+    })
+    expect(lotes[0].mensagens[0].criadaEm.getTime()).toBe(1700000000 * 1000)
   })
 })

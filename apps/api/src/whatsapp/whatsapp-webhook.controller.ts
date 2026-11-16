@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config'
 import { SkipThrottle } from '@nestjs/throttler'
 import type { Request, Response } from 'express'
 import { ConexaoWhatsappService } from './conexao-whatsapp.service'
+import { MensagensWhatsappService } from './mensagens-whatsapp.service'
 import { WhatsappClientService } from './whatsapp-client.service'
-import { extrairEventosConta, payloadValido } from './webhook-payload.util'
+import { extrairEventosConta, extrairMensagensRecebidas, payloadValido } from './webhook-payload.util'
 
 @SkipThrottle()
 @Controller('whatsapp/webhook')
@@ -13,6 +14,7 @@ export class WhatsappWebhookController {
     private readonly whatsapp: WhatsappClientService,
     private readonly config: ConfigService,
     private readonly conexao: ConexaoWhatsappService,
+    private readonly mensagens: MensagensWhatsappService,
   ) {}
 
   @Get()
@@ -58,6 +60,12 @@ export class WhatsappWebhookController {
       await this.conexao.tratarEventosDeConta(extrairEventosConta(req.body))
     } catch (erro) {
       console.error('[WhatsappWebhook] Falha ao tratar evento de conta:', erro)
+    }
+
+    try {
+      await this.mensagens.registrarRecebidas(extrairMensagensRecebidas(req.body))
+    } catch (erro) {
+      console.error('[WhatsappWebhook] Falha ao gravar mensagens recebidas:', erro)
     }
 
     res.status(200).send()
