@@ -37,8 +37,42 @@ model Tenant {
   caracteristicas          Caracteristica[]
   contratos                ContratoAluguel[]
   configuracaoWhatsapp     ConfiguracaoWhatsapp?
+  conversasWhatsapp        ConversaWhatsapp[]
 
   @@map("tenants")
+}
+
+model ConversaWhatsapp {
+  id           String             @id @default(cuid())
+  tenantId     String
+  telefone     String
+  nomeContato  String?
+  criadaEm     DateTime           @default(now())
+  atualizadaEm DateTime           @updatedAt
+  tenant       Tenant             @relation(fields: [tenantId], references: [id])
+  mensagens    MensagemWhatsapp[]
+
+  @@unique([tenantId, telefone])
+  @@map("conversas_whatsapp")
+}
+
+model MensagemWhatsapp {
+  id          String           @id @default(cuid())
+  conversaId  String
+  waMessageId String           @unique
+  direcao     DirecaoMensagem
+  tipo        String
+  texto       String?
+  criadaEm    DateTime
+  conversa    ConversaWhatsapp @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+
+  @@index([conversaId, criadaEm])
+  @@map("mensagens_whatsapp")
+}
+
+enum DirecaoMensagem {
+  ENTRADA
+  SAIDA
 }
 
 model ConfiguracaoWhatsapp {
