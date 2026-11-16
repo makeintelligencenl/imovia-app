@@ -1,4 +1,6 @@
 import { createHmac } from 'crypto'
+import { BadRequestException } from '@nestjs/common'
+import { WhatsappApiError } from './whatsapp-client.errors'
 import { ConfigService } from '@nestjs/config'
 import { WhatsappClientService } from './whatsapp-client.service'
 import { ConfiguracaoWhatsappService } from './configuracao-whatsapp.service'
@@ -135,5 +137,21 @@ describe('payload do webhook', () => {
       texto: 'Oi',
     })
     expect(lotes[0].mensagens[0].criadaEm.getTime()).toBe(1700000000 * 1000)
+  })
+})
+
+describe('ConexaoWhatsappService.concluirConexao', () => {
+  it('traduz erro da Meta em 400 com a mensagem da Meta', async () => {
+    const whatsapp = {
+      trocarCodigoPorToken: jest
+        .fn()
+        .mockRejectedValue(new WhatsappApiError(400, '/oauth/access_token', 'This authorization code has expired.')),
+    } as unknown as WhatsappClientService
+    const servico = new ConexaoWhatsappService(whatsapp, {} as ConfiguracaoWhatsappService)
+
+    const erro = await servico.concluirConexao('tenant-1', { codigo: 'abc' }).catch((e) => e)
+    expect(erro).toBeInstanceOf(BadRequestException)
+    expect(erro.message).toContain('This authorization code has expired.')
+    expect(erro.message).toContain('/oauth/access_token')
   })
 })
