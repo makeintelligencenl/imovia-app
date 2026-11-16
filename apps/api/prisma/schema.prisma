@@ -38,8 +38,90 @@ model Tenant {
   contratos                ContratoAluguel[]
   configuracaoWhatsapp     ConfiguracaoWhatsapp?
   conversasWhatsapp        ConversaWhatsapp[]
+  configuracaoAgente       ConfiguracaoAgente?
+  chavesIa                 ChaveIaProvedor[]
+  itensBaseConhecimento    BaseConhecimentoItem[]
 
   @@map("tenants")
+}
+
+enum ProvedorIa {
+  anthropic
+  openai
+}
+
+model ConfiguracaoAgente {
+  id                    String           @id @default(cuid())
+  tenantId              String           @unique
+  ativo                 Boolean          @default(false)
+  nome                  String           @default("Atendente")
+  instrucoes            String
+  provedor              ProvedorIa
+  modelo                String
+  tempoRespostaSegundos Int              @default(5)
+  transferirParaHumano  Boolean          @default(true)
+  mensagemTransferencia String?
+  usarEmojis            Boolean          @default(true)
+  assinarNome           Boolean          @default(false)
+  restringirTemas       Boolean          @default(false)
+  camposObrigatorios    String[]         @default([])
+  maxMatches            Int              @default(5)
+  ultimaFalhaEm         DateTime?
+  ultimaFalhaMensagem   String?
+  atualizadoEm          DateTime         @updatedAt
+  tenant                Tenant           @relation(fields: [tenantId], references: [id])
+  itensBase             AgenteItemBase[]
+
+  @@map("configuracoes_agente")
+}
+
+model AgenteItemBase {
+  configuracaoId String
+  itemId         String
+  configuracao   ConfiguracaoAgente     @relation(fields: [configuracaoId], references: [id], onDelete: Cascade)
+  item           BaseConhecimentoItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([configuracaoId, itemId])
+  @@map("agente_itens_base")
+}
+
+model BaseConhecimentoItem {
+  id           String                  @id @default(cuid())
+  tenantId     String
+  titulo       String
+  tipo         String
+  conteudo     String
+  criadoEm     DateTime                @default(now())
+  atualizadoEm DateTime                @updatedAt
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id])
+  chunks       BaseConhecimentoChunk[]
+  agentes      AgenteItemBase[]
+
+  @@index([tenantId])
+  @@map("base_conhecimento_itens")
+}
+
+model BaseConhecimentoChunk {
+  id       String                @id @default(cuid())
+  itemId   String
+  ordem    Int
+  conteudo String
+  vetor    Unsupported("vector(1536)")?
+  item     BaseConhecimentoItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("base_conhecimento_chunks")
+}
+
+model ChaveIaProvedor {
+  tenantId            String
+  provedor            ProvedorIa
+  apiKeyCriptografada String
+  atualizadoEm        DateTime   @updatedAt
+  tenant              Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@id([tenantId, provedor])
+  @@map("chaves_ia_provedor")
 }
 
 model ConversaWhatsapp {
@@ -47,6 +129,9 @@ model ConversaWhatsapp {
   tenantId     String
   telefone     String
   nomeContato  String?
+  humanTalk    Boolean            @default(false)
+  assumidoPorId String?
+  assumidoPor  User?              @relation("ConversaAssumidaPor", fields: [assumidoPorId], references: [id], onDelete: SetNull)
   criadaEm     DateTime           @default(now())
   atualizadaEm DateTime           @updatedAt
   tenant       Tenant             @relation(fields: [tenantId], references: [id])
@@ -107,6 +192,7 @@ model User {
   tenant            Tenant           @relation(fields: [tenantId], references: [id])
   visitas           Visita[]         @relation("VisitaCorretor")
   contratos         ContratoAluguel[] @relation("ContratoCorretor")
+  conversasAssumidas ConversaWhatsapp[] @relation("ConversaAssumidaPor")
 
   @@map("users")
 }
@@ -127,7 +213,7 @@ model RefreshToken {
 model Cliente {
   id          String        @id @default(cuid())
   nome        String
-  email       String
+  email       String?
   whatsapp        String?
   telefone        String?
   cpf             String?
