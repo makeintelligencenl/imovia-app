@@ -27,7 +27,14 @@ async function requisitar<T>(method: string, path: string, body?: unknown): Prom
 
   if (!res.ok) {
     const texto = await res.text()
-    throw new WhatsappApiError(texto || `Erro ${res.status}`)
+    let mensagem = texto || `Erro ${res.status}`
+    try {
+      const corpo = JSON.parse(texto) as { message?: unknown }
+      if (typeof corpo.message === 'string') mensagem = corpo.message
+    } catch {
+      // corpo não é JSON: mantém o texto original
+    }
+    throw new WhatsappApiError(mensagem)
   }
 
   const texto = await res.text()

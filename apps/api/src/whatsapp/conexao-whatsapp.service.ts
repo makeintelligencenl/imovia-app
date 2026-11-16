@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { ConfiguracaoWhatsappPublica, ConfiguracaoWhatsappService } from './configuracao-whatsapp.service'
 import { ConectarWhatsappDto } from './dto/conectar-whatsapp.dto'
+import { WhatsappApiError } from './whatsapp-client.errors'
 import { WhatsappClientService } from './whatsapp-client.service'
 import type { EventoConta } from './webhook-payload.util'
 
@@ -16,6 +17,12 @@ export class ConexaoWhatsappService {
       return await this.executarConexao(tenantId, dto)
     } catch (erro) {
       console.error('[ConexaoWhatsapp] Falha ao concluir a conexão:', (erro as Error).message)
+      // Erro devolvido pela Meta vira 400 com a mensagem dela, para aparecer na tela em vez de um 500 genérico.
+      if (erro instanceof WhatsappApiError) {
+        throw new BadRequestException(
+          `A Meta recusou a conexão em ${erro.path} (HTTP ${erro.status}): ${erro.message}`,
+        )
+      }
       throw erro
     }
   }
