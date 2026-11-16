@@ -11,8 +11,42 @@ export type EntradaGeracao = {
   mensagens: MensagemLlm[]
 }
 
+// Ferramenta que o modelo pode chamar. O esquema segue JSON Schema.
+export type FerramentaLlm = {
+  nome: string
+  descricao: string
+  esquema: Record<string, unknown>
+}
+
+export type ChamadaFerramenta = {
+  id: string
+  nome: string
+  argumentos: Record<string, unknown>
+}
+
+// Devolve o texto do resultado, que volta ao modelo. Não deve lançar erro por regra de negócio.
+export type ExecutorFerramenta = (chamada: ChamadaFerramenta) => Promise<string>
+
+export type EntradaComFerramentas = EntradaGeracao & { ferramentas: FerramentaLlm[] }
+
+// Limite de rodadas de chamadas de ferramenta por resposta (evita laço infinito).
+export const MAX_RODADAS_FERRAMENTAS = 4
+
 export interface ClienteLlm {
   gerar(entrada: EntradaGeracao): Promise<string>
+  gerarComFerramentas(entrada: EntradaComFerramentas, executor: ExecutorFerramenta): Promise<string>
+}
+
+// Argumentos chegam como texto JSON na OpenAI. Texto inválido vira objeto vazio.
+export function lerArgumentos(bruto: unknown): Record<string, unknown> {
+  if (typeof bruto === 'object' && bruto !== null) return bruto as Record<string, unknown>
+  if (typeof bruto !== 'string' || !bruto.trim()) return {}
+  try {
+    const valor = JSON.parse(bruto)
+    return typeof valor === 'object' && valor !== null ? (valor as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
 }
 
 export const TIMEOUT_GERACAO_MS = 25_000

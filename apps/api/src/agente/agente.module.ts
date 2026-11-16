@@ -1,16 +1,18 @@
-import { Module } from '@nestjs/common'
+import { forwardRef, Module } from '@nestjs/common'
+import { IaModule } from '../ia/ia.module'
+import { MatchingModule } from '../matching/matching.module'
 import { PrismaModule } from '../prisma/prisma.module'
+import { WhatsappModule } from '../whatsapp/whatsapp.module'
 import { AgenteController } from './agente.controller'
-import { AnthropicClientService } from './llm/anthropic-client.service'
-import { OpenAiClientService } from './llm/openai-client.service'
-import { ChavesIaController } from './chaves-ia.controller'
-import { ChavesIaService } from './chaves-ia.service'
+import { AgenteAtendimentoService } from './agente-atendimento.service'
 import { ConfiguracaoAgenteService } from './configuracao-agente.service'
+import { FerramentasAgenteService } from './ferramentas-agente.service'
 
+// WhatsappModule usa forwardRef porque o webhook também chama o atendimento.
 @Module({
-  imports: [PrismaModule],
-  controllers: [AgenteController, ChavesIaController],
-  providers: [ConfiguracaoAgenteService, ChavesIaService, AnthropicClientService, OpenAiClientService],
-  exports: [ConfiguracaoAgenteService, ChavesIaService, AnthropicClientService, OpenAiClientService],
+  imports: [PrismaModule, IaModule, MatchingModule, forwardRef(() => WhatsappModule)],
+  controllers: [AgenteController],
+  providers: [ConfiguracaoAgenteService, FerramentasAgenteService, AgenteAtendimentoService],
+  exports: [ConfiguracaoAgenteService, AgenteAtendimentoService],
 })
 export class AgenteModule {}

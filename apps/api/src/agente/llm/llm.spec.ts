@@ -122,3 +122,64 @@ describe('clientes de LLM (fetch simulado)', () => {
     expect(erro.tentavel).toBe(false)
   })
 })
+
+describe('ferramentas nos clientes de LLM', () => {
+  const fetchOriginal = global.fetch
+  afterEach(() => {
+    global.fetch = fetchOriginal
+  })
+
+  const ferramentas = [{ nome: 'buscar_imoveis', descricao: 'Busca imóveis', esquema: { type: 'object', properties: {} } }]
+
+  it('Anthropic: executa a ferramenta e devolve o resultado ao modelo', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        respostaHttp(200, {
+          stop_reason: 'tool_use',
+          content: [{ type: 'tool_use', id: 'tu_1', name: 'buscar_imoveis', input: {} }],
+        }),
+      )
+      .mockResolvedValueOnce(respostaHttp(200, { content: [{ type: 'text', text: 'Encontrei 2 imóveis.' }] }))
+
+    const executor = jest.fn().mockResolvedValue('Imóvel A; Imóvel B')
+    const texto = await new AnthropicClientService().gerarComFerramentas({ ...entrada, ferramentas }, executor)
+
+    expect(texto).toBe('Encontrei 2 imóveis.')
+    expect(executor).toHaveBeenCalledWith({ id: 'tu_1', nome: 'buscar_imoveis', argumentos: {} })
+    const segundoCorpo = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body)
+    expect(segundoCorpo.messages[2].content[0]).toMatchObject({ type: 'tool_result', tool_use_id: 'tu_1' })
+  })
+
+  it('OpenAI: devolve function_call_output ao modelo e lê argumentos em texto', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        respostaHttp(200, {
+          output: [{ type: 'function_call', call_id: 'call_1', name: 'buscar_imoveis', arguments: '{"quartos":2}' }],
+        }),
+      )
+      .mockResolvedValueOnce(respostaHttp(200, { output_text: 'Pronto.' }))
+
+    const executor = jest.fn().mockResolvedValue('ok')
+    const texto = await new OpenAiClientService().gerarComFerramentas({ ...entrada, ferramentas }, executor)
+
+    expect(texto).toBe('Pronto.')
+    expect(executor).toHaveBeenCalledWith({ id: 'call_1', nome: 'buscar_imoveis', argumentos: { quartos: 2 } })
+    const segundoCorpo = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body)
+    expect(segundoCorpo.input.at(-1)).toMatchObject({ type: 'function_call_output', call_id: 'call_1', output: 'ok' })
+  })
+
+  it('para com erro quando o modelo pede ferramentas sem parar', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      respostaHttp(200, {
+        content: [{ type: 'tool_use', id: 'tu', name: 'buscar_imoveis', input: {} }],
+      }),
+    )
+    const erro = await new AnthropicClientService()
+      .gerarComFerramentas({ ...entrada, ferramentas }, async () => 'x')
+      .catch((e) => e)
+    expect(erro).toBeInstanceOf(ErroLlm)
+    expect((global.fetch as jest.Mock).mock.calls.length).toBe(4)
+  })
+})

@@ -44,7 +44,7 @@ export class MatchingService {
   }
 
   // ─── Disparado quando um PERFIL é cadastrado ─────────────────────────────
-  async executarMatchingParaPerfil(tenantId: string, perfilId: string) {
+  async executarMatchingParaPerfil(tenantId: string, perfilId: string, limite?: number) {
     const perfil = await this.prisma.perfilBusca.findFirst({
       where:   { id: perfilId, tenantId, ativo: true },
       include: { tipos: true, cliente: { select: { email: true, nome: true, telefone: true, corretorId: true } } },
@@ -56,8 +56,17 @@ export class MatchingService {
       include: { cidade: true },
     })
 
+    // Com limite, só os melhores por leadScore viram match (o agente cria no máximo N por perfil).
+    const escolhidos = limite === undefined
+      ? imoveisCompativeis
+      : imoveisCompativeis
+          .map((imovel) => ({ imovel, score: this.scoring.compute({ perfil, imovel }) }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limite)
+          .map((x) => x.imovel)
+
     const resultados = await Promise.all(
-      imoveisCompativeis.map(imovel => this.gerarMatch(perfil, imovel, tenantId)),
+      escolhidos.map(imovel => this.gerarMatch(perfil, imovel, tenantId)),
     )
     const matchesEncontrados = resultados.filter(Boolean).length
     this.logger.log(`[Perfil ${perfilId}] ${matchesEncontrados} matches gerados`)

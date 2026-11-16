@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
+import { AgenteAtendimentoService } from '../agente/agente-atendimento.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { MensagensRecebidasDoNumero } from './webhook-payload.util'
 
@@ -7,7 +8,10 @@ import { MensagensRecebidasDoNumero } from './webhook-payload.util'
 export class MensagensWhatsappService {
   private readonly logger = new Logger(MensagensWhatsappService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly atendimento: AgenteAtendimentoService,
+  ) {}
 
   // Vincula cada número ao tenant pela configuração salva e grava as mensagens recebidas.
   // Mensagens já gravadas (mesmo waMessageId) são ignoradas, pois a Meta pode reenviar o webhook.
@@ -42,6 +46,10 @@ export class MensagensWhatsappService {
             },
           })
           gravadas++
+          // Mensagem nova: o agente agenda a resposta. Falha aqui não pode afetar o webhook.
+          await this.atendimento
+            .agendarResposta(configuracao.tenantId, conversa.id, msg.de)
+            .catch((erro: Error) => this.logger.error(`Falha ao agendar resposta do agente: ${erro.name}`))
         } catch (erro) {
           // P2002 = waMessageId já existe (reenvio do webhook): não é erro.
           if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002') continue
