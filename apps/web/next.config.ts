@@ -3,6 +3,8 @@ import type { NextConfig } from 'next'
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'
 // Garante que a URL sempre tem protocolo (Railway pode receber sem https://)
 const apiUrl = rawApiUrl.startsWith('http') ? rawApiUrl : `https://${rawApiUrl}`
+// Origem da API (ex.: https://imovia-api-production.apps.upuai.cloud), liberada no connect-src
+const apiOrigin = new URL(apiUrl).origin
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options',   value: 'nosniff' },
@@ -21,7 +23,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://api-imovia.makeintelligence.com.br https://challenges.cloudflare.com",
+      `connect-src 'self' ${apiOrigin} https://api-imovia.makeintelligence.com.br https://challenges.cloudflare.com`,
       "frame-src https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
       "form-action 'self'",
