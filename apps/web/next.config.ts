@@ -23,7 +23,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      `connect-src 'self' ${apiOrigin} https://api-imovia.makeintelligence.com.br https://challenges.cloudflare.com`,
+      `connect-src 'self' ${apiOrigin} https://api-imovia.makeintelligence.com.br https://challenges.cloudflare.com https://connect.facebook.net https://www.facebook.com`,
       "frame-src https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
       "form-action 'self'",
