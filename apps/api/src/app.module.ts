@@ -23,6 +23,7 @@ import { CaracteristicasModule } from './caracteristicas/caracteristicas.module'
 import { AluguelModule } from './aluguel/aluguel.module'
 import { WhatsappModule } from './whatsapp/whatsapp.module'
 import { AgenteModule } from './agente/agente.module'
+import { BaseConhecimentoModule } from './base-conhecimento/base-conhecimento.module'
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AgenteModule } from './agente/agente.module'
     AluguelModule,
     WhatsappModule,
     AgenteModule,
+    BaseConhecimentoModule,
   ],
   providers: [
     { provide: APP_GUARD,       useClass: ThrottlerGuard },
