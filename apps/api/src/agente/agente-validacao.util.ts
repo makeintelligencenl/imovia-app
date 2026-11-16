@@ -15,6 +15,7 @@ export const LIMITES = {
 } as const
 
 export type AtualizacaoAgente = {
+  ativo?: boolean
   nome?: string
   instrucoes?: string
   provedor?: ProvedorIa
@@ -32,6 +33,8 @@ export type AtualizacaoAgente = {
 export type ContextoValidacao = {
   // Provedores que têm chave salva para este tenant.
   provedoresComChave: ProvedorIa[]
+  // Provedor que já está salvo; vale quando a atualização não envia um provedor novo.
+  provedorAtual: ProvedorIa
 }
 
 export function validarAtualizacaoAgente(entrada: AtualizacaoAgente, ctx: ContextoValidacao): string[] {
@@ -69,9 +72,13 @@ export function validarAtualizacaoAgente(entrada: AtualizacaoAgente, ctx: Contex
     erros.push(`Cadastre a chave do provedor ${entrada.provedor} antes de selecioná-lo.`)
   }
 
-  const provedorEfetivo = entrada.provedor
-  if (entrada.modelo !== undefined && provedorEfetivo !== undefined && !modeloValido(provedorEfetivo, entrada.modelo)) {
+  const provedorEfetivo = entrada.provedor ?? ctx.provedorAtual
+  if (entrada.modelo !== undefined && !modeloValido(provedorEfetivo, entrada.modelo)) {
     erros.push(`Modelo ${entrada.modelo} não pertence ao catálogo do provedor ${provedorEfetivo}.`)
+  }
+
+  if (entrada.ativo === true && !ctx.provedoresComChave.includes(provedorEfetivo)) {
+    erros.push(`Cadastre a chave do provedor ${provedorEfetivo} antes de ligar o agente.`)
   }
 
   return erros

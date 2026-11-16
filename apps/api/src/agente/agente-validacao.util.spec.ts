@@ -1,7 +1,7 @@
 import { ContextoValidacao, LIMITES, validarAtualizacaoAgente } from './agente-validacao.util'
 
-const semChaves: ContextoValidacao = { provedoresComChave: [] }
-const comOpenAi: ContextoValidacao = { provedoresComChave: ['openai'] }
+const semChaves: ContextoValidacao = { provedoresComChave: [], provedorAtual: 'anthropic' }
+const comOpenAi: ContextoValidacao = { provedoresComChave: ['openai'], provedorAtual: 'openai' }
 
 describe('validarAtualizacaoAgente', () => {
   it('aceita uma atualização válida', () => {
@@ -44,6 +44,17 @@ describe('validarAtualizacaoAgente', () => {
   it('não deixa escolher um provedor sem chave salva', () => {
     expect(validarAtualizacaoAgente({ provedor: 'anthropic' }, comOpenAi)).toHaveLength(1)
     expect(validarAtualizacaoAgente({ provedor: 'openai' }, comOpenAi)).toEqual([])
+  })
+
+  it('valida o modelo contra o provedor atual quando o provedor não muda', () => {
+    expect(validarAtualizacaoAgente({ modelo: 'claude-haiku-5-5' }, comOpenAi)).toHaveLength(1)
+    expect(validarAtualizacaoAgente({ modelo: 'gpt-6-luna' }, comOpenAi)).toEqual([])
+  })
+
+  it('não liga o agente sem chave do provedor escolhido', () => {
+    expect(validarAtualizacaoAgente({ ativo: true }, semChaves)).toHaveLength(1)
+    expect(validarAtualizacaoAgente({ ativo: true }, comOpenAi)).toEqual([])
+    expect(validarAtualizacaoAgente({ ativo: false }, semChaves)).toEqual([])
   })
 
   it('rejeita modelo que não pertence ao provedor informado', () => {
