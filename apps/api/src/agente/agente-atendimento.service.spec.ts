@@ -242,3 +242,48 @@ describe('funções puras do atendimento', () => {
     ])
   })
 })
+
+describe('recuperação ao iniciar', () => {
+  it('agenda só as conversas cuja última mensagem é do cliente dentro da janela', async () => {
+    const agora = new Date('2026-11-16T12:00:00Z')
+    const { servico, prisma } = montar({})
+    const db = prisma as any
+    const agendar = jest.spyOn(servico, 'agendarResposta').mockResolvedValue(undefined)
+
+    db.conversaWhatsapp.findMany = jest.fn(async () => [
+      { id: 'c-cliente', tenantId: 't1', telefone: '5531911111111' },
+      { id: 'c-agente', tenantId: 't1', telefone: '5531922222222' },
+      { id: 'c-antiga', tenantId: 't1', telefone: '5531933333333' },
+    ])
+    db.mensagemWhatsapp.findFirst = jest.fn(async ({ where }: { where: { conversaId: string } }) => {
+      if (where.conversaId === 'c-cliente') return { direcao: 'ENTRADA', criadaEm: new Date(agora.getTime() - 60_000) }
+      if (where.conversaId === 'c-agente') return { direcao: 'SAIDA', criadaEm: new Date(agora.getTime() - 60_000) }
+      return { direcao: 'ENTRADA', criadaEm: new Date(agora.getTime() - 30 * 60_000) }
+    })
+
+    const total = await servico.recuperarPendentes(agora)
+    expect(total).toBe(1)
+    expect(agendar).toHaveBeenCalledWith('t1', 'c-cliente', '5531911111111', 0)
+  })
+})
+
+describe('testar o agente', () => {
+  it('exige que a última mensagem seja do cliente', async () => {
+    const { servico } = montar({})
+    await expect(servico.testar('t1', [{ papel: 'agente', texto: 'Oi' }])).rejects.toThrow()
+  })
+
+  it('não envia nem grava nada, e devolve a resposta do modelo', async () => {
+    const { servico, whatsapp, prisma, gerar } = montar({ llmResposta: 'Temos apartamentos no Centro.' })
+    const resultado = await servico.testar('t1', [{ papel: 'cliente', texto: 'Quero um apartamento' }])
+    expect(resultado).toEqual({ tipo: 'resposta', texto: 'Temos apartamentos no Centro.' })
+    expect(whatsapp.enviarTexto).not.toHaveBeenCalled()
+    expect((prisma as any).mensagemWhatsapp.create).not.toHaveBeenCalled()
+    expect(gerar).toHaveBeenCalledTimes(1)
+  })
+
+  it('sem chave cadastrada, recusa o teste', async () => {
+    const { servico } = montar({ chave: null })
+    await expect(servico.testar('t1', [{ papel: 'cliente', texto: 'Oi' }])).rejects.toThrow('chave')
+  })
+})
