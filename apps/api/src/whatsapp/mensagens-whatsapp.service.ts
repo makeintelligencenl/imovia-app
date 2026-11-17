@@ -28,23 +28,29 @@ export class MensagensWhatsappService {
       }
 
       for (const msg of lote.mensagens) {
-        const conversa = await this.prisma.conversaWhatsapp.upsert({
-          where: { tenantId_telefone: { tenantId: configuracao.tenantId, telefone: msg.de } },
-          create: { tenantId: configuracao.tenantId, telefone: msg.de, nomeContato: msg.nomeContato },
-          update: msg.nomeContato ? { nomeContato: msg.nomeContato } : {},
-        })
+        // Gravações dentro de withTenantRLS: o webhook não tem usuário logado, então o tenant
+        // vem da configuração encontrada acima.
+        const conversa = await this.prisma.withTenantRLS(configuracao.tenantId, (tx) =>
+          tx.conversaWhatsapp.upsert({
+            where: { tenantId_telefone: { tenantId: configuracao.tenantId, telefone: msg.de } },
+            create: { tenantId: configuracao.tenantId, telefone: msg.de, nomeContato: msg.nomeContato },
+            update: msg.nomeContato ? { nomeContato: msg.nomeContato } : {},
+          }),
+        )
 
         try {
-          await this.prisma.mensagemWhatsapp.create({
-            data: {
-              conversaId: conversa.id,
-              waMessageId: msg.waMessageId,
-              direcao: 'ENTRADA',
-              tipo: msg.tipo,
-              texto: msg.texto,
-              criadaEm: msg.criadaEm,
-            },
-          })
+          await this.prisma.withTenantRLS(configuracao.tenantId, (tx) =>
+            tx.mensagemWhatsapp.create({
+              data: {
+                conversaId: conversa.id,
+                waMessageId: msg.waMessageId,
+                direcao: 'ENTRADA',
+                tipo: msg.tipo,
+                texto: msg.texto,
+                criadaEm: msg.criadaEm,
+              },
+            }),
+          )
           gravadas++
           // Mensagem nova: o agente agenda a resposta. Falha aqui não pode afetar o webhook.
           await this.atendimento

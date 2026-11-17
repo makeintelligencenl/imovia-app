@@ -45,37 +45,41 @@ export class ConfiguracaoWhatsappService {
     }
   }
 
+  // Roda dentro de withTenantRLS: o tenant vem do parâmetro, não do contexto da requisição.
+  // Sem isso, a política de RLS nega a gravação quando o contexto não chega ao banco (erro 42501).
   async salvar(tenantId: string, dto: SalvarConfiguracaoWhatsappDto): Promise<ConfiguracaoWhatsappPublica> {
-    const existente = await this.prisma.configuracaoWhatsapp.findUnique({ where: { tenantId } })
+    return this.prisma.withTenantRLS(tenantId, async (tx) => {
+      const existente = await tx.configuracaoWhatsapp.findUnique({ where: { tenantId } })
 
-    if (!dto.accessToken && !existente) {
-      throw new BadRequestException('Access token é obrigatório na primeira configuração.')
-    }
+      if (!dto.accessToken && !existente) {
+        throw new BadRequestException('Access token é obrigatório na primeira configuração.')
+      }
 
-    const tokenParaMascarar = dto.accessToken ?? descriptografar(existente!.accessTokenCriptografado, this.chaveEncriptacao)
-    const accessTokenCriptografado = dto.accessToken
-      ? criptografar(dto.accessToken, this.chaveEncriptacao)
-      : existente!.accessTokenCriptografado
+      const tokenParaMascarar = dto.accessToken ?? descriptografar(existente!.accessTokenCriptografado, this.chaveEncriptacao)
+      const accessTokenCriptografado = dto.accessToken
+        ? criptografar(dto.accessToken, this.chaveEncriptacao)
+        : existente!.accessTokenCriptografado
 
-    const dados = {
-      phoneNumberId: dto.phoneNumberId,
-      businessAccountId: dto.businessAccountId,
-      accessTokenCriptografado,
-    }
+      const dados = {
+        phoneNumberId: dto.phoneNumberId,
+        businessAccountId: dto.businessAccountId,
+        accessTokenCriptografado,
+      }
 
-    const salvo = await this.prisma.configuracaoWhatsapp.upsert({
-      where: { tenantId },
-      create: { tenantId, ...dados },
-      update: dados,
+      const salvo = await tx.configuracaoWhatsapp.upsert({
+        where: { tenantId },
+        create: { tenantId, ...dados },
+        update: dados,
+      })
+
+      return {
+        id: salvo.id,
+        phoneNumberId: salvo.phoneNumberId,
+        businessAccountId: salvo.businessAccountId,
+        accessTokenMascarado: mascarar(tokenParaMascarar),
+        atualizadoEm: salvo.atualizadoEm,
+      }
     })
-
-    return {
-      id: salvo.id,
-      phoneNumberId: salvo.phoneNumberId,
-      businessAccountId: salvo.businessAccountId,
-      accessTokenMascarado: mascarar(tokenParaMascarar),
-      atualizadoEm: salvo.atualizadoEm,
-    }
   }
 
   async remover(tenantId: string): Promise<void> {

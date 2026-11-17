@@ -34,8 +34,11 @@ export class ConexaoWhatsappService {
         )
       }
       if (erro instanceof HttpException) throw erro
-      // Erro inesperado: a tela mostra só em qual etapa parou; o detalhe técnico fica nos logs.
-      throw new InternalServerErrorException(`Falha ao ${progresso.etapa}.`)
+      // Erro inesperado: a tela mostra em qual etapa parou e, se for erro do Prisma, o código dele
+      // (ex.: P2002 = valor duplicado). A mensagem técnica completa continua só nos logs.
+      const codigo = (erro as { code?: unknown }).code
+      const sufixo = typeof codigo === 'string' && /^P\d{4}$/.test(codigo) ? ` (código ${codigo})` : ''
+      throw new InternalServerErrorException(`Falha ao ${progresso.etapa}${sufixo}.`)
     }
   }
 
