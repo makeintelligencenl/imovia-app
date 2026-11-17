@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Building2, LayoutDashboard, Home, GitMerge, LogOut, ChevronLeft,
   ChevronRight, ChevronUp, ChevronDown, Settings2, CalendarDays, UserRound, BarChart2,
-  DollarSign, X, KeyRound,
+  DollarSign, X, KeyRound, MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/matches', label: 'Matches', icon: GitMerge,      adminOnly: false },
       { href: '/agenda',  label: 'Agenda',  icon: CalendarDays,  adminOnly: false },
+      { href: '/conversas', label: 'Conversas', icon: MessageSquare, adminOnly: false },
       { href: '/aluguel', label: 'Aluguel', icon: KeyRound,      adminOnly: true  },
     ],
   },

@@ -132,6 +132,13 @@ model ConversaWhatsapp {
   humanTalk    Boolean            @default(false)
   assumidoPorId String?
   assumidoPor  User?              @relation("ConversaAssumidaPor", fields: [assumidoPorId], references: [id], onDelete: SetNull)
+  // Conversa encerrada: ninguém atua (nem o agente nem uma pessoa). Nova mensagem do cliente a reabre.
+  resolvido    Boolean            @default(false)
+  // Desde quando o cliente espera um atendente (humano sem ninguém atendendo). Null = não está em espera.
+  esperandoDesde DateTime?
+  // Última mensagem do cliente: a janela de 24h do WhatsApp para texto livre conta a partir dela.
+  ultimaMensagemClienteEm DateTime?
+  unreadCount  Int                @default(0)
   criadaEm     DateTime           @default(now())
   atualizadaEm DateTime           @updatedAt
   tenant       Tenant             @relation(fields: [tenantId], references: [id])
@@ -148,6 +155,15 @@ model MensagemWhatsapp {
   direcao     DirecaoMensagem
   tipo        String
   texto       String?
+  // CLIENTE | AGENTE | HUMANO. Mensagens SAIDA sem remetente conhecido ficam como HUMANO.
+  remetente   String           @default("CLIENTE")
+  // Caminho do arquivo no bucket de mídia (Supabase Storage). Null para texto.
+  midiaStoragePath String?
+  // Só para mensagens enviadas (SAIDA): ENVIADA | ENTREGUE | LIDA | FALHOU. Null nas recebidas.
+  status      String?
+  statusMotivo String?
+  // Texto falado de um áudio recebido (Whisper); null enquanto não transcrito ou se falhar.
+  transcricao String?
   criadaEm    DateTime
   conversa    ConversaWhatsapp @relation(fields: [conversaId], references: [id], onDelete: Cascade)
 

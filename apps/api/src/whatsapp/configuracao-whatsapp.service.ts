@@ -94,8 +94,12 @@ export class ConfiguracaoWhatsappService {
     return true
   }
 
+  // Usa o tenant explícito: o agente responde pelo webhook, onde não há usuário logado,
+  // e sem o contexto a política de RLS nega a leitura das credenciais.
   async obterCredenciais(tenantId: string): Promise<CredenciaisWhatsapp | null> {
-    const existente = await this.prisma.configuracaoWhatsapp.findUnique({ where: { tenantId } })
+    const existente = await this.prisma.withTenantRLS(tenantId, (tx) =>
+      tx.configuracaoWhatsapp.findUnique({ where: { tenantId } }),
+    )
     if (!existente) return null
     return {
       phoneNumberId: existente.phoneNumberId,

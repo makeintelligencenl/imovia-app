@@ -15,6 +15,7 @@ import { descreverTemplate, type TemplateBruto } from './template-whatsapp.util'
 const CAMPO_META_POR_TIPO: Record<WhatsappTipoMidia, string> = {
   imagem: 'image',
   audio: 'audio',
+  video: 'video',
   documento: 'document',
 }
 

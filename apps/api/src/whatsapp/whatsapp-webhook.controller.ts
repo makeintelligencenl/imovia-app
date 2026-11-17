@@ -5,7 +5,7 @@ import type { Request, Response } from 'express'
 import { ConexaoWhatsappService } from './conexao-whatsapp.service'
 import { MensagensWhatsappService } from './mensagens-whatsapp.service'
 import { WhatsappClientService } from './whatsapp-client.service'
-import { extrairEventosConta, extrairMensagensRecebidas, payloadValido } from './webhook-payload.util'
+import { extrairEventosConta, extrairMensagensRecebidas, extrairStatusEntrega, payloadValido } from './webhook-payload.util'
 
 @SkipThrottle()
 @Controller('whatsapp/webhook')
@@ -66,6 +66,12 @@ export class WhatsappWebhookController {
       await this.mensagens.registrarRecebidas(extrairMensagensRecebidas(req.body))
     } catch (erro) {
       console.error('[WhatsappWebhook] Falha ao gravar mensagens recebidas:', erro)
+    }
+
+    try {
+      await this.mensagens.atualizarStatusEntrega(extrairStatusEntrega(req.body))
+    } catch (erro) {
+      console.error('[WhatsappWebhook] Falha ao atualizar status de entrega:', erro)
     }
 
     res.status(200).send()

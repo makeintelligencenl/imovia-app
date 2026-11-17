@@ -16,6 +16,16 @@ export type WhatsappWebhookPayload = {
           timestamp?: string
           type?: string
           text?: { body?: string }
+          image?: { id?: string; mime_type?: string; caption?: string }
+          audio?: { id?: string; mime_type?: string }
+          video?: { id?: string; mime_type?: string; caption?: string }
+          document?: { id?: string; mime_type?: string; filename?: string; caption?: string }
+        }[]
+        statuses?: {
+          id?: string
+          status?: string
+          timestamp?: string
+          errors?: { code?: number; title?: string; message?: string }[]
         }[]
       }
     }[]
@@ -29,6 +39,35 @@ export type MensagemRecebida = {
   tipo: string
   texto: string | null
   criadaEm: Date
+  // Mídia recebida: id para baixar na API da Meta e mimetype declarado pela Meta.
+  midiaId: string | null
+  midiaMimeType: string | null
+}
+
+// Tipos de mídia que a Meta envia com um id para download.
+const TIPOS_COM_MIDIA = ['image', 'audio', 'video', 'document'] as const
+
+type MensagemPayload = {
+  id?: string
+  from?: string
+  timestamp?: string
+  type?: string
+  text?: { body?: string }
+  image?: { id?: string; mime_type?: string; caption?: string }
+  audio?: { id?: string; mime_type?: string }
+  video?: { id?: string; mime_type?: string; caption?: string }
+  document?: { id?: string; mime_type?: string; filename?: string; caption?: string }
+}
+
+function midiaDaMensagem(msg: MensagemPayload): { midiaId: string | null; midiaMimeType: string | null } {
+  const tipo = TIPOS_COM_MIDIA.find((t) => msg.type === t)
+  if (!tipo) return { midiaId: null, midiaMimeType: null }
+  const midia = msg[tipo]
+  return { midiaId: midia?.id ?? null, midiaMimeType: midia?.mime_type ?? null }
+}
+
+function legendaDaMensagem(msg: MensagemPayload): string | null {
+  return msg.text?.body ?? msg.image?.caption ?? msg.video?.caption ?? msg.document?.caption ?? null
 }
 
 export type MensagensRecebidasDoNumero = {
@@ -54,14 +93,66 @@ export function extrairMensagensRecebidas(payload: WhatsappWebhookPayload): Mens
           de: msg.from,
           nomeContato,
           tipo: msg.type ?? 'desconhecido',
-          texto: msg.text?.body ?? null,
+          texto: legendaDaMensagem(msg),
           criadaEm: Number.isFinite(segundos) ? new Date(segundos * 1000) : new Date(),
+          ...midiaDaMensagem(msg),
         })
       }
       if (mensagens.length) porNumero.push({ phoneNumberId, mensagens })
     }
   }
   return porNumero
+}
+
+// Status de entrega de mensagens enviadas (campo "messages" com "statuses" no payload da Meta).
+export type StatusMensagemEnviada = 'ENVIADA' | 'ENTREGUE' | 'LIDA' | 'FALHOU'
+
+export type AtualizacaoDeStatus = {
+  waMessageId: string
+  status: StatusMensagemEnviada
+  motivo: string | null
+  ocorridoEm: Date
+}
+
+const STATUS_DA_META: Record<string, StatusMensagemEnviada> = {
+  sent: 'ENVIADA',
+  delivered: 'ENTREGUE',
+  read: 'LIDA',
+  failed: 'FALHOU',
+}
+
+// Ordem de avanço: um status nunca volta para um anterior, e FALHOU só vale antes de chegar a ENTREGUE.
+const ANTERIORES_PERMITIDOS: Record<StatusMensagemEnviada, (StatusMensagemEnviada | null)[]> = {
+  ENVIADA: [null],
+  ENTREGUE: [null, 'ENVIADA'],
+  LIDA: [null, 'ENVIADA', 'ENTREGUE'],
+  FALHOU: [null, 'ENVIADA'],
+}
+
+export function podeAvancarStatus(atual: string | null, novo: StatusMensagemEnviada): boolean {
+  return (ANTERIORES_PERMITIDOS[novo] as (string | null)[]).includes(atual)
+}
+
+export function extrairStatusEntrega(payload: WhatsappWebhookPayload): AtualizacaoDeStatus[] {
+  const atualizacoes: AtualizacaoDeStatus[] = []
+  for (const entrada of payload.entry ?? []) {
+    for (const mudanca of entrada.changes ?? []) {
+      if (mudanca.field !== 'messages') continue
+      for (const st of mudanca.value?.statuses ?? []) {
+        const status = st.status ? STATUS_DA_META[st.status] : undefined
+        if (!st.id || !status) continue
+        const erro = st.errors?.[0]
+        const segundos = Number(st.timestamp)
+        atualizacoes.push({
+          waMessageId: st.id,
+          status,
+          motivo: status === 'FALHOU' ? (erro?.title ?? erro?.message ?? null) : null,
+          ocorridoEm: Number.isFinite(segundos) ? new Date(segundos * 1000) : new Date(),
+        })
+      }
+    }
+  }
+  return atualizacoes
 }
 
 export function payloadValido(body: unknown): body is WhatsappWebhookPayload {
