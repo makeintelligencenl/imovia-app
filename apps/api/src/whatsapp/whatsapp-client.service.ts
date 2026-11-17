@@ -71,6 +71,12 @@ export class WhatsappClientService {
     return escopo?.target_ids ?? []
   }
 
+  // Lê as empresas (Business Managers) do usuário que fez o login. A chamada não altera nada: serve
+  // para a Meta registrar o uso da permissão business_management pelo próprio app.
+  async listarEmpresasDoToken(accessToken: string): Promise<void> {
+    await this.request<{ data?: unknown[] }>(accessToken, 'GET', '/me/businesses')
+  }
+
   async listarNumerosDaConta(accessToken: string, businessAccountId: string): Promise<string[]> {
     const resposta = await this.request<{ data: { id: string }[] }>(
       accessToken,
