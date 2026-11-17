@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto'
-import { BadRequestException } from '@nestjs/common'
+import { BadRequestException, InternalServerErrorException } from '@nestjs/common'
 import { WhatsappApiError } from './whatsapp-client.errors'
 import { ConfigService } from '@nestjs/config'
 import { WhatsappClientService } from './whatsapp-client.service'
@@ -153,5 +153,26 @@ describe('ConexaoWhatsappService.concluirConexao', () => {
     expect(erro).toBeInstanceOf(BadRequestException)
     expect(erro.message).toContain('This authorization code has expired.')
     expect(erro.message).toContain('/oauth/access_token')
+  })
+})
+
+describe('ConexaoWhatsappService.concluirConexao (etapa que falhou)', () => {
+  it('informa a etapa do banco quando a gravação falha, sem expor o erro técnico', async () => {
+    const whatsapp = {
+      trocarCodigoPorToken: jest.fn().mockResolvedValue('token-teste'),
+      listarNumerosDaConta: jest.fn().mockResolvedValue(['111']),
+      assinarAppNaConta: jest.fn().mockResolvedValue(undefined),
+    } as unknown as WhatsappClientService
+    const configuracao = {
+      salvar: jest.fn().mockRejectedValue(new Error('coluna inexistente: xyz')),
+    } as unknown as ConfiguracaoWhatsappService
+    const servico = new ConexaoWhatsappService(whatsapp, configuracao)
+
+    const erro = await servico
+      .concluirConexao('tenant-1', { codigo: 'abc', businessAccountId: '222', phoneNumberId: '111' })
+      .catch((e) => e)
+    expect(erro).toBeInstanceOf(InternalServerErrorException)
+    expect(erro.message).toBe('Falha ao salvar a conexão no banco de dados.')
+    expect(erro.message).not.toContain('coluna inexistente')
   })
 })
