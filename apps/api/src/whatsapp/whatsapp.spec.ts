@@ -160,6 +160,7 @@ describe('ConexaoWhatsappService.concluirConexao (etapa que falhou)', () => {
   it('informa a etapa do banco quando a gravação falha, sem expor o erro técnico', async () => {
     const whatsapp = {
       trocarCodigoPorToken: jest.fn().mockResolvedValue('token-teste'),
+      listarEmpresasDoToken: jest.fn().mockResolvedValue(undefined),
       listarNumerosDaConta: jest.fn().mockResolvedValue(['111']),
       assinarAppNaConta: jest.fn().mockResolvedValue(undefined),
     } as unknown as WhatsappClientService
@@ -181,6 +182,7 @@ describe('ConexaoWhatsappService.concluirConexao (código do Prisma)', () => {
   it('inclui o código do Prisma na mensagem de erro de gravação', async () => {
     const whatsapp = {
       trocarCodigoPorToken: jest.fn().mockResolvedValue('token-teste'),
+      listarEmpresasDoToken: jest.fn().mockResolvedValue(undefined),
       listarNumerosDaConta: jest.fn().mockResolvedValue(['111']),
       assinarAppNaConta: jest.fn().mockResolvedValue(undefined),
     } as unknown as WhatsappClientService
@@ -195,5 +197,27 @@ describe('ConexaoWhatsappService.concluirConexao (código do Prisma)', () => {
       .catch((e) => e)
     expect(erro).toBeInstanceOf(InternalServerErrorException)
     expect(erro.message).toBe('Falha ao salvar a conexão no banco de dados (código P2002).')
+  })
+})
+
+describe('ConexaoWhatsappService.concluirConexao (leitura de empresas)', () => {
+  it('conclui a conexão mesmo se a leitura de empresas falhar', async () => {
+    const whatsapp = {
+      trocarCodigoPorToken: jest.fn().mockResolvedValue('token-teste'),
+      listarEmpresasDoToken: jest.fn().mockRejectedValue(new Error('sem permissão')),
+      listarNumerosDaConta: jest.fn().mockResolvedValue(['111']),
+      assinarAppNaConta: jest.fn().mockResolvedValue(undefined),
+    } as unknown as WhatsappClientService
+    const salvo = { id: 'c1', phoneNumberId: '111', businessAccountId: '222', accessTokenMascarado: '••••', atualizadoEm: new Date() }
+    const configuracao = { salvar: jest.fn().mockResolvedValue(salvo) } as unknown as ConfiguracaoWhatsappService
+    const servico = new ConexaoWhatsappService(whatsapp, configuracao)
+
+    const resultado = await servico.concluirConexao('tenant-1', {
+      codigo: 'abc',
+      businessAccountId: '222',
+      phoneNumberId: '111',
+    })
+    expect(resultado).toEqual(salvo)
+    expect(whatsapp.listarEmpresasDoToken).toHaveBeenCalledWith('token-teste')
   })
 })

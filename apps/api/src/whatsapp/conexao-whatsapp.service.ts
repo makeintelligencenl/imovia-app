@@ -49,6 +49,12 @@ export class ConexaoWhatsappService {
   ): Promise<ConfiguracaoWhatsappPublica> {
     const accessToken = await this.whatsapp.trocarCodigoPorToken(dto.codigo)
 
+    // Chamada de leitura exigida pela permissão business_management. Se falhar, a conexão segue:
+    // ela não é necessária para gravar o número.
+    await this.whatsapp.listarEmpresasDoToken(accessToken).catch((erro: Error) =>
+      console.warn('[ConexaoWhatsapp] Não foi possível ler as empresas do login:', erro.message),
+    )
+
     let businessAccountId = dto.businessAccountId
     if (!businessAccountId) {
       progresso.etapa = ETAPAS.descobrirConta
