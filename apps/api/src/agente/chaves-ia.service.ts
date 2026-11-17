@@ -56,10 +56,11 @@ export class ChavesIaService {
   }
 
   // Usado só pelo serviço do agente, nunca exposto pela API.
+  // Usa o tenant explícito: é chamado pelo webhook, onde não há usuário logado.
   async obterChave(tenantId: string, provedor: ProvedorIa): Promise<string | null> {
-    const salva = await this.prisma.chaveIaProvedor.findUnique({
-      where: { tenantId_provedor: { tenantId, provedor } },
-    })
+    const salva = await this.prisma.withTenantRLS(tenantId, (tx) =>
+      tx.chaveIaProvedor.findUnique({ where: { tenantId_provedor: { tenantId, provedor } } }),
+    )
     if (!salva) return null
     return descriptografar(salva.apiKeyCriptografada, this.chaveEncriptacao)
   }
