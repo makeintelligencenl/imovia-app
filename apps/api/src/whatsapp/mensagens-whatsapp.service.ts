@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { AgenteAtendimentoService } from '../agente/agente-atendimento.service'
 import { PrismaService } from '../prisma/prisma.service'
-import { MensagensRecebidasDoNumero } from './webhook-payload.util'
+import { AtualizacaoDeStatus, MensagensRecebidasDoNumero, podeAvancarStatus } from './webhook-payload.util'
 
 @Injectable()
 export class MensagensWhatsappService {
@@ -83,5 +83,26 @@ export class MensagensWhatsappService {
     }
 
     return gravadas
+  }
+
+  // Atualiza o status das mensagens enviadas. A tabela de mensagens não depende do tenant
+  // (política allow_all), e o status só avança: um aviso antigo não sobrescreve um mais recente.
+  async atualizarStatusEntrega(atualizacoes: AtualizacaoDeStatus[]): Promise<number> {
+    let atualizadas = 0
+    for (const atualizacao of atualizacoes) {
+      const mensagem = await this.prisma.mensagemWhatsapp.findUnique({
+        where: { waMessageId: atualizacao.waMessageId },
+        select: { id: true, direcao: true, status: true },
+      })
+      if (!mensagem || mensagem.direcao !== 'SAIDA') continue
+      if (!podeAvancarStatus(mensagem.status, atualizacao.status)) continue
+
+      await this.prisma.mensagemWhatsapp.update({
+        where: { id: mensagem.id },
+        data: { status: atualizacao.status, statusMotivo: atualizacao.motivo },
+      })
+      atualizadas++
+    }
+    return atualizadas
   }
 }
