@@ -176,3 +176,24 @@ describe('ConexaoWhatsappService.concluirConexao (etapa que falhou)', () => {
     expect(erro.message).not.toContain('coluna inexistente')
   })
 })
+
+describe('ConexaoWhatsappService.concluirConexao (código do Prisma)', () => {
+  it('inclui o código do Prisma na mensagem de erro de gravação', async () => {
+    const whatsapp = {
+      trocarCodigoPorToken: jest.fn().mockResolvedValue('token-teste'),
+      listarNumerosDaConta: jest.fn().mockResolvedValue(['111']),
+      assinarAppNaConta: jest.fn().mockResolvedValue(undefined),
+    } as unknown as WhatsappClientService
+    const erroPrisma = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' })
+    const configuracao = {
+      salvar: jest.fn().mockRejectedValue(erroPrisma),
+    } as unknown as ConfiguracaoWhatsappService
+    const servico = new ConexaoWhatsappService(whatsapp, configuracao)
+
+    const erro = await servico
+      .concluirConexao('tenant-1', { codigo: 'abc', businessAccountId: '222', phoneNumberId: '111' })
+      .catch((e) => e)
+    expect(erro).toBeInstanceOf(InternalServerErrorException)
+    expect(erro.message).toBe('Falha ao salvar a conexão no banco de dados (código P2002).')
+  })
+})
