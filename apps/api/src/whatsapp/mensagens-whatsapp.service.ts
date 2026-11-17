@@ -4,6 +4,7 @@ import { AgenteAtendimentoService } from '../agente/agente-atendimento.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { SupabaseStorageService } from '../storage/supabase-storage.service'
 import { WhatsappClientService } from './whatsapp-client.service'
+import { TranscricaoAudioService } from './transcricao-audio.service'
 import { caminhoDaMidia, extensaoPorMimetype } from './midia-whatsapp.util'
 import { AtualizacaoDeStatus, MensagensRecebidasDoNumero, podeAvancarStatus } from './webhook-payload.util'
 
@@ -18,6 +19,7 @@ export class MensagensWhatsappService {
     private readonly atendimento: AgenteAtendimentoService,
     private readonly whatsapp: WhatsappClientService,
     private readonly storage: SupabaseStorageService,
+    private readonly transcricao: TranscricaoAudioService,
   ) {}
 
   // Vincula cada número ao tenant pela configuração salva e grava as mensagens recebidas.
@@ -113,6 +115,14 @@ export class MensagensWhatsappService {
     const caminho = caminhoDaMidia(tenantId, conversaId, waMessageId, extensaoPorMimetype(mimetype))
     await this.storage.enviarArquivo(BUCKET_MIDIA, caminho, baixada.buffer, mimetype)
     await this.prisma.mensagemWhatsapp.update({ where: { id: mensagemId }, data: { midiaStoragePath: caminho } })
+
+    // Áudio recebido: transcreve com a chave OpenAI da imobiliária. Sem chave, fica sem transcrição.
+    if (mimetype.startsWith('audio/')) {
+      const transcricao = await this.transcricao.transcrever(tenantId, baixada.buffer, mimetype)
+      if (transcricao) {
+        await this.prisma.mensagemWhatsapp.update({ where: { id: mensagemId }, data: { transcricao } })
+      }
+    }
   }
 
   // Atualiza o status das mensagens enviadas. A tabela de mensagens não depende do tenant
