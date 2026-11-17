@@ -1,4 +1,4 @@
-export type WhatsappTipoMidia = 'imagem' | 'audio' | 'documento';
+export type WhatsappTipoMidia = 'imagem' | 'audio' | 'video' | 'documento';
 
 export type WhatsappMidiaBaixada = {
   buffer: Buffer;

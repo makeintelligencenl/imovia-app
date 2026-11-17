@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { ConversasService, dentroDaJanelaDeTextoLivre, JANELA_TEXTO_LIVRE_MS } from './conversas.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { WhatsappClientService } from '../whatsapp/whatsapp-client.service'
+import { SupabaseStorageService } from '../storage/supabase-storage.service'
 
 describe('dentroDaJanelaDeTextoLivre', () => {
   const agora = new Date('2026-11-17T12:00:00Z')
@@ -26,9 +27,11 @@ function montar(conversa: Record<string, unknown> | null) {
     mensagemWhatsapp: { create: jest.fn().mockResolvedValue({}) },
   }
   const whatsapp = { enviarTexto: jest.fn().mockResolvedValue('wamid.1') }
+  const storage = { enviarArquivo: jest.fn(), gerarUrlAssinada: jest.fn() }
   const servico = new ConversasService(
     prisma as unknown as PrismaService,
     whatsapp as unknown as WhatsappClientService,
+    storage as unknown as SupabaseStorageService,
   )
   return { servico, prisma, whatsapp }
 }

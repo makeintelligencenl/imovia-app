@@ -1,6 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { randomUUID } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
+import { SupabaseStorageService } from '../storage/supabase-storage.service'
+import { caminhoDaMidia, extensaoPorMimetype, tipoPorMimetype, validarMidia } from '../whatsapp/midia-whatsapp.util'
 import { WhatsappClientService } from '../whatsapp/whatsapp-client.service'
+
+const BUCKET_MIDIA = 'whatsapp-media'
+const VALIDADE_URL_MIDIA_S = 300
 
 // Janela do WhatsApp para texto livre: 24 horas a partir da última mensagem do cliente.
 export const JANELA_TEXTO_LIVRE_MS = 24 * 60 * 60 * 1000
@@ -17,6 +23,7 @@ export class ConversasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly whatsapp: WhatsappClientService,
+    private readonly storage: SupabaseStorageService,
   ) {}
 
   listar(tenantId: string) {
@@ -55,7 +62,78 @@ export class ConversasService {
       orderBy: { criadaEm: 'desc' },
       take: LIMITE_MENSAGENS,
     })
-    return mensagens.reverse()
+    // URL temporária para cada mídia: o bucket é privado.
+    const comMidia = await Promise.all(
+      mensagens.map(async (m) => ({
+        ...m,
+        midiaUrl: m.midiaStoragePath
+          ? await this.storage.gerarUrlAssinada(BUCKET_MIDIA, m.midiaStoragePath, VALIDADE_URL_MIDIA_S)
+          : null,
+      })),
+    )
+    return comMidia.reverse()
+  }
+
+  // Envio de arquivo: valida tipo e limite, guarda no bucket e envia pela Meta.
+  async enviarMidia(
+    tenantId: string,
+    userId: string,
+    id: string,
+    arquivo: { buffer: Buffer; mimetype: string; originalname: string; size: number },
+    legenda?: string,
+  ) {
+    const erro = validarMidia(arquivo.mimetype, arquivo.size)
+    if (erro) throw new BadRequestException(erro)
+    const tipo = tipoPorMimetype(arquivo.mimetype)
+    if (!tipo) throw new BadRequestException('Tipo de arquivo não aceito pelo WhatsApp.')
+
+    const conversa = await this.obter(tenantId, id)
+    if (!dentroDaJanelaDeTextoLivre(conversa.ultimaMensagemClienteEm, new Date())) {
+      throw new BadRequestException(
+        'A janela de 24 horas expirou. Envie um template aprovado para retomar a conversa.',
+      )
+    }
+
+    // O arquivo é guardado antes do envio, com um nome aleatório, porque o id da Meta só existe depois.
+    const identificador = randomUUID()
+    const caminho = caminhoDaMidia(tenantId, conversa.id, identificador, extensaoPorMimetype(arquivo.mimetype))
+    await this.storage.enviarArquivo(BUCKET_MIDIA, caminho, arquivo.buffer, arquivo.mimetype)
+
+    const legendaLimpa = legenda?.trim() || null
+    const waMessageId = await this.whatsapp.enviarMidia(
+      tenantId,
+      conversa.telefone,
+      tipo,
+      arquivo.buffer,
+      arquivo.mimetype,
+      legendaLimpa ?? undefined,
+      arquivo.originalname,
+    )
+
+    await this.prisma.mensagemWhatsapp.create({
+      data: {
+        conversaId: conversa.id,
+        waMessageId,
+        direcao: 'SAIDA',
+        remetente: 'HUMANO',
+        tipo,
+        texto: legendaLimpa,
+        midiaStoragePath: caminho,
+        criadaEm: new Date(),
+        status: 'ENVIADA',
+      },
+    })
+
+    await this.assumirSeNecessario(conversa, userId)
+    return { enviada: true, waMessageId }
+  }
+
+  private async assumirSeNecessario(conversa: { id: string; humanTalk: boolean }, userId: string): Promise<void> {
+    if (conversa.humanTalk) return
+    await this.prisma.conversaWhatsapp.update({
+      where: { id: conversa.id },
+      data: { humanTalk: true, assumidoPorId: userId, esperandoDesde: null },
+    })
   }
 
   async enviarTexto(tenantId: string, userId: string, id: string, texto: string) {
