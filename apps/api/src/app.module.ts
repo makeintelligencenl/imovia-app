@@ -24,6 +24,7 @@ import { AluguelModule } from './aluguel/aluguel.module'
 import { WhatsappModule } from './whatsapp/whatsapp.module'
 import { AgenteModule } from './agente/agente.module'
 import { IaModule } from './ia/ia.module'
+import { ConversasModule } from './conversas/conversas.module'
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { IaModule } from './ia/ia.module'
     CaracteristicasModule,
     AluguelModule,
     WhatsappModule,
+    ConversasModule,
     AgenteModule,
     IaModule,
   ],

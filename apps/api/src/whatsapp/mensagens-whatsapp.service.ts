@@ -52,6 +52,24 @@ export class MensagensWhatsappService {
             }),
           )
           gravadas++
+          // Estado da conversa para a tela: não lida, janela de 24h, reabertura e fila de espera.
+          await this.prisma
+            .withTenantRLS(configuracao.tenantId, async (tx) => {
+              await tx.conversaWhatsapp.update({
+                where: { id: conversa.id },
+                data: {
+                  unreadCount: { increment: 1 },
+                  ultimaMensagemClienteEm: msg.criadaEm,
+                  resolvido: false,
+                },
+              })
+              // Cliente esperando atendente: conversa com humano e ninguém assumiu ainda.
+              await tx.conversaWhatsapp.updateMany({
+                where: { id: conversa.id, humanTalk: true, assumidoPorId: null, esperandoDesde: null },
+                data: { esperandoDesde: msg.criadaEm },
+              })
+            })
+            .catch((erro: Error) => this.logger.error(`Falha ao atualizar estado da conversa: ${erro.name}`))
           // Mensagem nova: o agente agenda a resposta. Falha aqui não pode afetar o webhook.
           await this.atendimento
             .agendarResposta(configuracao.tenantId, conversa.id, msg.de)
