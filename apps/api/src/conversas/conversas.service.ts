@@ -13,6 +13,17 @@ export const JANELA_TEXTO_LIVRE_MS = 24 * 60 * 60 * 1000
 const LIMITE_TEXTO = 4096
 const LIMITE_MENSAGENS = 200
 
+// Compara telefones só pelos dígitos. Aceita número sem DDI quando o restante bate (mínimo de 10 dígitos).
+export function mesmoTelefone(cadastrado: string | null | undefined, digitosConversa: string): boolean {
+  if (!cadastrado) return false
+  const d = cadastrado.replace(/\D/g, '')
+  if (!d || !digitosConversa) return false
+  if (d === digitosConversa) return true
+  const curto = d.length < digitosConversa.length ? d : digitosConversa
+  const longo = d.length < digitosConversa.length ? digitosConversa : d
+  return curto.length >= 10 && longo.endsWith(curto)
+}
+
 export function dentroDaJanelaDeTextoLivre(ultimaMensagemClienteEm: Date | null, agora: Date): boolean {
   if (!ultimaMensagemClienteEm) return false
   return agora.getTime() - ultimaMensagemClienteEm.getTime() < JANELA_TEXTO_LIVRE_MS
@@ -126,6 +137,39 @@ export class ConversasService {
 
     await this.assumirSeNecessario(conversa, userId)
     return { enviada: true, waMessageId }
+  }
+
+  // Cartão do contato: cliente cadastrado com o mesmo telefone (só dígitos), ou null.
+  async contato(tenantId: string, id: string) {
+    const conversa = await this.obter(tenantId, id)
+    return this.buscarClientePorTelefone(tenantId, conversa.telefone)
+  }
+
+  async criarClienteDaConversa(tenantId: string, userId: string, id: string, nome: string) {
+    const conversa = await this.obter(tenantId, id)
+    const existente = await this.buscarClientePorTelefone(tenantId, conversa.telefone)
+    if (existente) throw new BadRequestException('Já existe um cliente com este telefone.')
+
+    return this.prisma.cliente.create({
+      data: { tenantId, nome: nome.trim(), telefone: conversa.telefone, whatsapp: conversa.telefone, corretorId: userId },
+      select: { id: true, nome: true, email: true, telefone: true, whatsapp: true },
+    })
+  }
+
+  private async buscarClientePorTelefone(tenantId: string, telefone: string) {
+    const digitos = telefone.replace(/\D/g, '')
+    const sufixo = digitos.slice(-8)
+    const candidatos = await this.prisma.cliente.findMany({
+      where: {
+        tenantId,
+        OR: [{ whatsapp: { contains: sufixo } }, { telefone: { contains: sufixo } }],
+      },
+      select: { id: true, nome: true, email: true, telefone: true, whatsapp: true },
+      take: 50,
+    })
+    return (
+      candidatos.find((c) => mesmoTelefone(c.whatsapp, digitos) || mesmoTelefone(c.telefone, digitos)) ?? null
+    )
   }
 
   private async assumirSeNecessario(conversa: { id: string; humanTalk: boolean }, userId: string): Promise<void> {

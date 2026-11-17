@@ -7,6 +7,13 @@ export class EnviarTextoDto {
   texto: string
 }
 
+export class CriarClienteDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  nome: string
+}
+
 export class IniciarConversaDto {
   // Só dígitos, com DDI e DDD (ex.: 5531999998888).
   @IsString()

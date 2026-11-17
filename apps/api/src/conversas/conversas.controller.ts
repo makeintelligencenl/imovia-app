@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Get, Param, Post, Req, UploadedF
 import { FileInterceptor } from '@nestjs/platform-express'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { ConversasService } from './conversas.service'
-import { EnviarTextoDto, IniciarConversaDto } from './dto/conversas.dto'
+import { CriarClienteDto, EnviarTextoDto, IniciarConversaDto } from './dto/conversas.dto'
 
 type RequisicaoAutenticada = { user: { id: string; tenantId: string } }
 
@@ -50,6 +50,16 @@ export class ConversasController {
   ) {
     if (!arquivo) throw new BadRequestException('Nenhum arquivo enviado.')
     return this.conversas.enviarMidia(req.user.tenantId, req.user.id, id, arquivo, legenda)
+  }
+
+  @Get(':id/contato')
+  contato(@Req() req: RequisicaoAutenticada, @Param('id') id: string) {
+    return this.conversas.contato(req.user.tenantId, id)
+  }
+
+  @Post(':id/cliente')
+  criarCliente(@Req() req: RequisicaoAutenticada, @Param('id') id: string, @Body() dto: CriarClienteDto) {
+    return this.conversas.criarClienteDaConversa(req.user.tenantId, req.user.id, id, dto.nome)
   }
 
   @Post(':id/assumir')

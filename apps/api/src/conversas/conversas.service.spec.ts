@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common'
-import { ConversasService, dentroDaJanelaDeTextoLivre, JANELA_TEXTO_LIVRE_MS } from './conversas.service'
+import { ConversasService, dentroDaJanelaDeTextoLivre, JANELA_TEXTO_LIVRE_MS, mesmoTelefone } from './conversas.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { WhatsappClientService } from '../whatsapp/whatsapp-client.service'
 import { SupabaseStorageService } from '../storage/supabase-storage.service'
@@ -73,5 +73,22 @@ describe('ConversasService.enviarTexto', () => {
   it('recusa conversa de outro tenant ou inexistente', async () => {
     const { servico } = montar(null)
     await expect(servico.enviarTexto('t1', 'u1', 'x', 'Olá')).rejects.toBeInstanceOf(NotFoundException)
+  })
+})
+
+describe('mesmoTelefone', () => {
+  it('compara só os dígitos, ignorando máscara', () => {
+    expect(mesmoTelefone('(31) 99999-8888', '5531999998888')).toBe(false)
+    expect(mesmoTelefone('+55 (31) 99999-8888', '5531999998888')).toBe(true)
+  })
+
+  it('aceita cadastro sem DDI quando o restante bate', () => {
+    expect(mesmoTelefone('31999998888', '5531999998888')).toBe(true)
+  })
+
+  it('não confunde telefones diferentes nem valores vazios', () => {
+    expect(mesmoTelefone('31988887777', '5531999998888')).toBe(false)
+    expect(mesmoTelefone(null, '5531999998888')).toBe(false)
+    expect(mesmoTelefone('', '5531999998888')).toBe(false)
   })
 })
