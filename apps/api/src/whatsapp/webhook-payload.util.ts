@@ -16,6 +16,10 @@ export type WhatsappWebhookPayload = {
           timestamp?: string
           type?: string
           text?: { body?: string }
+          image?: { id?: string; mime_type?: string; caption?: string }
+          audio?: { id?: string; mime_type?: string }
+          video?: { id?: string; mime_type?: string; caption?: string }
+          document?: { id?: string; mime_type?: string; filename?: string; caption?: string }
         }[]
         statuses?: {
           id?: string
@@ -35,6 +39,35 @@ export type MensagemRecebida = {
   tipo: string
   texto: string | null
   criadaEm: Date
+  // Mídia recebida: id para baixar na API da Meta e mimetype declarado pela Meta.
+  midiaId: string | null
+  midiaMimeType: string | null
+}
+
+// Tipos de mídia que a Meta envia com um id para download.
+const TIPOS_COM_MIDIA = ['image', 'audio', 'video', 'document'] as const
+
+type MensagemPayload = {
+  id?: string
+  from?: string
+  timestamp?: string
+  type?: string
+  text?: { body?: string }
+  image?: { id?: string; mime_type?: string; caption?: string }
+  audio?: { id?: string; mime_type?: string }
+  video?: { id?: string; mime_type?: string; caption?: string }
+  document?: { id?: string; mime_type?: string; filename?: string; caption?: string }
+}
+
+function midiaDaMensagem(msg: MensagemPayload): { midiaId: string | null; midiaMimeType: string | null } {
+  const tipo = TIPOS_COM_MIDIA.find((t) => msg.type === t)
+  if (!tipo) return { midiaId: null, midiaMimeType: null }
+  const midia = msg[tipo]
+  return { midiaId: midia?.id ?? null, midiaMimeType: midia?.mime_type ?? null }
+}
+
+function legendaDaMensagem(msg: MensagemPayload): string | null {
+  return msg.text?.body ?? msg.image?.caption ?? msg.video?.caption ?? msg.document?.caption ?? null
 }
 
 export type MensagensRecebidasDoNumero = {
@@ -60,8 +93,9 @@ export function extrairMensagensRecebidas(payload: WhatsappWebhookPayload): Mens
           de: msg.from,
           nomeContato,
           tipo: msg.type ?? 'desconhecido',
-          texto: msg.text?.body ?? null,
+          texto: legendaDaMensagem(msg),
           criadaEm: Number.isFinite(segundos) ? new Date(segundos * 1000) : new Date(),
+          ...midiaDaMensagem(msg),
         })
       }
       if (mensagens.length) porNumero.push({ phoneNumberId, mensagens })

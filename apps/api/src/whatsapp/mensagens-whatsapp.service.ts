@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { AgenteAtendimentoService } from '../agente/agente-atendimento.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { SupabaseStorageService } from '../storage/supabase-storage.service'
+import { WhatsappClientService } from './whatsapp-client.service'
+import { caminhoDaMidia, extensaoPorMimetype } from './midia-whatsapp.util'
 import { AtualizacaoDeStatus, MensagensRecebidasDoNumero, podeAvancarStatus } from './webhook-payload.util'
+
+const BUCKET_MIDIA = 'whatsapp-media'
 
 @Injectable()
 export class MensagensWhatsappService {
@@ -11,6 +16,8 @@ export class MensagensWhatsappService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly atendimento: AgenteAtendimentoService,
+    private readonly whatsapp: WhatsappClientService,
+    private readonly storage: SupabaseStorageService,
   ) {}
 
   // Vincula cada número ao tenant pela configuração salva e grava as mensagens recebidas.
@@ -39,12 +46,13 @@ export class MensagensWhatsappService {
         )
 
         try {
-          await this.prisma.withTenantRLS(configuracao.tenantId, (tx) =>
+          const criada = await this.prisma.withTenantRLS(configuracao.tenantId, (tx) =>
             tx.mensagemWhatsapp.create({
               data: {
                 conversaId: conversa.id,
                 waMessageId: msg.waMessageId,
                 direcao: 'ENTRADA',
+                remetente: 'CLIENTE',
                 tipo: msg.tipo,
                 texto: msg.texto,
                 criadaEm: msg.criadaEm,
@@ -70,6 +78,12 @@ export class MensagensWhatsappService {
               })
             })
             .catch((erro: Error) => this.logger.error(`Falha ao atualizar estado da conversa: ${erro.name}`))
+
+          // Mídia recebida: baixa da Meta e guarda no bucket privado. Falha não afeta o webhook.
+          if (msg.midiaId) {
+            await this.guardarMidia(configuracao.tenantId, conversa.id, criada.id, msg.waMessageId, msg.midiaId, msg.midiaMimeType)
+              .catch((erro: Error) => this.logger.error(`Falha ao guardar mídia recebida: ${erro.name}`))
+          }
           // Mensagem nova: o agente agenda a resposta. Falha aqui não pode afetar o webhook.
           await this.atendimento
             .agendarResposta(configuracao.tenantId, conversa.id, msg.de)
@@ -83,6 +97,22 @@ export class MensagensWhatsappService {
     }
 
     return gravadas
+  }
+
+  // Baixa a mídia da Meta, guarda no bucket privado e registra o caminho na mensagem.
+  private async guardarMidia(
+    tenantId: string,
+    conversaId: string,
+    mensagemId: string,
+    waMessageId: string,
+    midiaId: string,
+    mimeTypeDeclarado: string | null,
+  ): Promise<void> {
+    const baixada = await this.whatsapp.baixarMidia(tenantId, midiaId)
+    const mimetype = baixada.mimeType || mimeTypeDeclarado || 'application/octet-stream'
+    const caminho = caminhoDaMidia(tenantId, conversaId, waMessageId, extensaoPorMimetype(mimetype))
+    await this.storage.enviarArquivo(BUCKET_MIDIA, caminho, baixada.buffer, mimetype)
+    await this.prisma.mensagemWhatsapp.update({ where: { id: mensagemId }, data: { midiaStoragePath: caminho } })
   }
 
   // Atualiza o status das mensagens enviadas. A tabela de mensagens não depende do tenant
