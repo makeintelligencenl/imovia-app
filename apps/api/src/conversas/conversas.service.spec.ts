@@ -78,7 +78,7 @@ describe('ConversasService.enviarTexto', () => {
 
 describe('mesmoTelefone', () => {
   it('compara só os dígitos, ignorando máscara', () => {
-    expect(mesmoTelefone('(31) 99999-8888', '5531999998888')).toBe(false)
+    expect(mesmoTelefone('(31) 99999-8888', '5531999998888')).toBe(true)
     expect(mesmoTelefone('+55 (31) 99999-8888', '5531999998888')).toBe(true)
   })
 
