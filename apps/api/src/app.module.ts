@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { TenantInterceptor } from './auth/interceptors/tenant.interceptor'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
+import { JwtService } from '@nestjs/jwt'
 import { ClsModule } from 'nestjs-cls'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { PrismaModule } from './prisma/prisma.module'
@@ -25,6 +26,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module'
 import { AgenteModule } from './agente/agente.module'
 import { IaModule } from './ia/ia.module'
 import { ConversasModule } from './conversas/conversas.module'
+import { criarChaveDeLimite } from './common/chave-limite.util'
 
 @Module({
   imports: [
@@ -32,8 +34,15 @@ import { ConversasModule } from './conversas/conversas.module'
     // CLS (Continuation Local Storage) — propaga contexto de tenant por request
     // através de RxJS Observables. O middleware monta o store antes do guard/interceptor.
     ClsModule.forRoot({ middleware: { mount: true } }),
-    // Max 10 tentativas de login por minuto por IP
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
+    // Limite geral de 300 requisições por minuto, por usuário autenticado (ou por IP, sem token).
+    // Os limites das rotas sensíveis (ex.: login, 5 por minuto) continuam valendo por cima.
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [{ ttl: 60_000, limit: 300 }],
+        getTracker: criarChaveDeLimite(new JwtService({ secret: config.getOrThrow<string>('JWT_SECRET') })),
+      }),
+    }),
     PrismaModule,
     AuthModule,
     TenantsModule,
