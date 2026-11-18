@@ -1,3 +1,4 @@
+import { resumoDiagnostico } from './webhook-payload.util'
 import { Controller, Get, Post, Query, Req, Res, RawBodyRequest } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { SkipThrottle } from '@nestjs/throttler'
@@ -55,6 +56,7 @@ export class WhatsappWebhookController {
 
     const campos = (req.body.entry ?? []).flatMap((e) => (e.changes ?? []).map((c) => c.field ?? 'desconhecido'))
     console.log(`[WhatsappWebhook] Webhook recebido: ${campos.join(', ') || 'sem campos'}`)
+    console.log(`[WhatsappWebhook][diagnostico] ${resumoDiagnostico(req.body)}`)
 
     try {
       await this.conexao.tratarEventosDeConta(extrairEventosConta(req.body))
