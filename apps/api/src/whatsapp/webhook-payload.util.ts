@@ -187,3 +187,23 @@ export function extrairEventosConta(payload: WhatsappWebhookPayload): EventoCont
   }
   return eventos
 }
+
+// Resumo sem dados pessoais (sem telefones nem textos), para diagnosticar o que a Meta envia.
+export function resumoDiagnostico(payload: unknown): string {
+  const entradas: any[] = (payload as any)?.entry ?? []
+  const partes: string[] = []
+  for (const entrada of entradas) {
+    for (const mudanca of entrada?.changes ?? []) {
+      const valor = mudanca?.value ?? {}
+      const mensagens: any[] = Array.isArray(valor.messages) ? valor.messages : []
+      const statuses: any[] = Array.isArray(valor.statuses) ? valor.statuses : []
+      const tipos = mensagens.map((m) => m?.type ?? 'sem-tipo').join('+') || '-'
+      const estados = statuses.map((s) => s?.status ?? 'sem-status').join('+') || '-'
+      const temNumero = valor?.metadata?.phone_number_id ? 'sim' : 'nao'
+      partes.push(
+        `campo=${mudanca?.field ?? '?'} mensagens=${mensagens.length}(${tipos}) statuses=${statuses.length}(${estados}) phone_number_id=${temNumero}`,
+      )
+    }
+  }
+  return partes.join(' | ') || 'sem changes'
+}

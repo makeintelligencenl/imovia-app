@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config'
 import { WhatsappClientService } from './whatsapp-client.service'
 import { ConfiguracaoWhatsappService } from './configuracao-whatsapp.service'
 import { criptografar, descriptografar } from './crypto.util'
-import { payloadValido, extrairEventosConta, extrairMensagensRecebidas } from './webhook-payload.util'
+import { payloadValido, extrairEventosConta, extrairMensagensRecebidas, resumoDiagnostico } from './webhook-payload.util'
 import { WhatsappWebhookController } from './whatsapp-webhook.controller'
 import { ConexaoWhatsappService } from './conexao-whatsapp.service'
 import { MensagensWhatsappService } from './mensagens-whatsapp.service'
@@ -219,5 +219,19 @@ describe('ConexaoWhatsappService.concluirConexao (leitura de empresas)', () => {
     })
     expect(resultado).toEqual(salvo)
     expect(whatsapp.listarEmpresasDoToken).toHaveBeenCalledWith('token-teste')
+  })
+})
+
+describe('resumoDiagnostico', () => {
+  it('resume mensagens e statuses sem dados pessoais', () => {
+    const resumo = resumoDiagnostico({
+      entry: [{ changes: [{ field: 'messages', value: {
+        metadata: { phone_number_id: '111' },
+        messages: [{ type: 'text', from: '5531999990000', id: 'wamid.x' }],
+        statuses: [{ status: 'read', recipient_id: '5531999990000' }],
+      } }] }],
+    })
+    expect(resumo).toBe('campo=messages mensagens=1(text) statuses=1(read) phone_number_id=sim')
+    expect(resumo).not.toContain('5531999990000')
   })
 })
